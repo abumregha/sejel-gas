@@ -1,0 +1,46 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}سجل{% endblock %} - سجل</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
+    <link rel="stylesheet" href="{% static 'css/custom.css' %}">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#1a56db',
+                        success: '#059669',
+                        warning: '#d97706',
+                        danger: '#dc2626',
+                        sidebar: '#1e293b',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 font-sans">
+    {% if user.is_authenticated %}
+    <div class="flex min-h-screen">
+        {% include 'components/sidebar.html' %}
+        <div class="flex-1 flex flex-col mr-0 lg:mr-64">
+            {% include 'components/topbar.html' %}
+            <main class="flex-1 p-4 lg:p-6">
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+    </div>
+    {% else %}
+    {% block auth %}{% endblock %}
+    {% endif %}
+
+    <script src="{% static 'js/app.js' %}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

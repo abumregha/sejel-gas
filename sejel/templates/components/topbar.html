@@ -1,0 +1,26 @@
+<header class="bg-white shadow-sm border-b border-gray-200 px-4 lg:px-6 py-3 flex items-center justify-between sticky top-0 z-30">
+    <div class="flex items-center gap-4">
+        <button onclick="toggleSidebar()" class="lg:hidden p-2 rounded-lg hover:bg-gray-100">
+            <i data-lucide="menu" class="w-5 h-5"></i>
+        </button>
+        <h2 class="text-lg font-semibold text-gray-800">{{ page_title }}</h2>
+    </div>
+    <div class="flex items-center gap-4">
+        {% if stations|length > 1 %}
+        <select class="border border-gray-300 rounded-lg px-3 py-1.5 text-sm" onchange="switchStation(this.value)">
+            {% for station in stations %}
+            <option value="{{ station.id }}" {% if station == current_station %}selected{% endif %}>{{ station.name }}</option>
+            {% endfor %}
+        </select>
+        {% elif current_station %}
+        <span class="text-sm text-gray-600">{{ current_station.name }}</span>
+        {% endif %}
+        <div class="flex items-center gap-2">
+            <span class="text-sm text-gray-600">{{ user.get_full_name|default:user.username }}</span>
+            <span class="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary">{{ user_profile.get_role_display }}</span>
+        </div>
+        <a href="{% url 'logout' %}" class="p-2 rounded-lg hover:bg-gray-100 text-gray-500">
+            <i data-lucide="log-out" class="w-5 h-5"></i>
+        </a>
+    </div>
+</header>

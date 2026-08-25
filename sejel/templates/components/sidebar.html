@@ -1,0 +1,45 @@
+<aside class="fixed top-0 right-0 w-64 h-full bg-sidebar text-white z-40 transform transition-transform lg:translate-x-0 -translate-x-full" id="sidebar">
+    <div class="p-6">
+        <h1 class="text-2xl font-bold text-center">سجل</h1>
+        <p class="text-gray-400 text-center text-sm mt-1">نظام إدارة محطات الوقود</p>
+    </div>
+    <nav class="mt-2">
+        <a href="{% url 'dashboard' %}" class="flex items-center px-6 py-3 hover:bg-white/10 transition-colors {% if page_title == 'لوحة التحكم' %}bg-white/10{% endif %}">
+            <i data-lucide="layout-dashboard" class="w-5 h-5 ml-3"></i>
+            <span>لوحة التحكم</span>
+        </a>
+        <a href="{% url 'station_list' %}" class="flex items-center px-6 py-3 hover:bg-white/10 transition-colors">
+            <i data-lucide="fuel" class="w-5 h-5 ml-3"></i>
+            <span>المحطات</span>
+        </a>
+        <a href="{% url 'shift_list' %}" class="flex items-center px-6 py-3 hover:bg-white/10 transition-colors">
+            <i data-lucide="calendar-clock" class="w-5 h-5 ml-3"></i>
+            <span>المناوبات</span>
+        </a>
+        <a href="{% url 'employee_list' %}" class="flex items-center px-6 py-3 hover:bg-white/10 transition-colors">
+            <i data-lucide="users" class="w-5 h-5 ml-3"></i>
+            <span>الموظفون</span>
+        </a>
+        <a href="{% url 'cash_list' %}" class="flex items-center px-6 py-3 hover:bg-white/10 transition-colors">
+            <i data-lucide="banknote" class="w-5 h-5 ml-3"></i>
+            <span>المالية</span>
+        </a>
+        <a href="{% url 'tank_list' %}" class="flex items-center px-6 py-3 hover:bg-white/10 transition-colors">
+            <i data-lucide="droplets" class="w-5 h-5 ml-3"></i>
+            <span>الخزانات</span>
+        </a>
+        <a href="{% url 'expense_list' %}" class="flex items-center px-6 py-3 hover:bg-white/10 transition-colors">
+            <i data-lucide="receipt" class="w-5 h-5 ml-3"></i>
+            <span>المصروفات</span>
+        </a>
+        <a href="{% url 'report_daily' %}" class="flex items-center px-6 py-3 hover:bg-white/10 transition-colors">
+            <i data-lucide="bar-chart-3" class="w-5 h-5 ml-3"></i>
+            <span>التقارير</span>
+        </a>
+        <div class="border-t border-white/20 my-2"></div>
+        <a href="{% url 'fuel_type_list' %}" class="flex items-center px-6 py-3 hover:bg-white/10 transition-colors">
+            <i data-lucide="settings" class="w-5 h-5 ml-3"></i>
+            <span>الإعدادات</span>
+        </a>
+    </nav>
+</aside>
