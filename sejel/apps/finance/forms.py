@@ -1,13 +1,26 @@
 from django import forms
-from .models import VoucherCategory
+from .models import CashCollection, Voucher, POSRecord, Expense
 
 
-class VoucherCategoryForm(forms.ModelForm):
+class CashCollectionForm(forms.ModelForm):
     class Meta:
-        model = VoucherCategory
-        fields = ['name', 'name_en', 'description']
-        widgets = {
-            'name': forms.TextInput(attrs={'class': 'w-full border border-gray-300 rounded-lg px-4 py-2.5'}),
-            'name_en': forms.TextInput(attrs={'class': 'w-full border border-gray-300 rounded-lg px-4 py-2.5'}),
-            'description': forms.Textarea(attrs={'class': 'w-full border border-gray-300 rounded-lg px-4 py-2.5', 'rows': 3}),
-        }
+        model = CashCollection
+        fields = ['amount', 'time', 'reference', 'notes']
+
+
+class VoucherForm(forms.ModelForm):
+    class Meta:
+        model = Voucher
+        fields = ['category', 'count']
+
+
+class POSRecordForm(forms.ModelForm):
+    class Meta:
+        model = POSRecord
+        fields = ['total_amount', 'transaction_count', 'notes']
+
+
+class ExpenseForm(forms.ModelForm):
+    class Meta:
+        model = Expense
+        fields = ['station', 'shift', 'category', 'amount', 'description', 'paid_to', 'payment_method', 'attachment']
