@@ -1,0 +1,96 @@
+{% extends 'base.html' %}
+
+{% block title %}لوحة التحكم{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <h2 class="text-2xl font-bold text-gray-800">لوحة التحكم</h2>
+    <p class="text-gray-500 mt-1">مرحباً بك في نظام سجل</p>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm text-gray-500">المحطات</p>
+                <p class="text-2xl font-bold text-gray-800">{{ stations_count|default:"1" }}</p>
+            </div>
+            <div class="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
+                <i data-lucide="fuel" class="w-6 h-6 text-primary"></i>
+            </div>
+        </div>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm text-gray-500">المناوبات النشطة</p>
+                <p class="text-2xl font-bold text-gray-800">{{ active_shifts|default:"0" }}</p>
+            </div>
+            <div class="w-12 h-12 bg-success/10 rounded-lg flex items-center justify-center">
+                <i data-lucide="calendar-clock" class="w-6 h-6 text-success"></i>
+            </div>
+        </div>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm text-gray-500">الموظفون</p>
+                <p class="text-2xl font-bold text-gray-800">{{ employees_count|default:"2" }}</p>
+            </div>
+            <div class="w-12 h-12 bg-warning/10 rounded-lg flex items-center justify-center">
+                <i data-lucide="users" class="w-6 h-6 text-warning"></i>
+            </div>
+        </div>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm text-gray-500">المصروفات اليوم</p>
+                <p class="text-2xl font-bold text-gray-800">{{ today_expenses|default:"0" }}</p>
+            </div>
+            <div class="w-12 h-12 bg-danger/10 rounded-lg flex items-center justify-center">
+                <i data-lucide="receipt" class="w-6 h-6 text-danger"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+        <h3 class="font-bold text-gray-800 mb-4">آخر المناوبات</h3>
+        <div class="space-y-3">
+            {% for shift in recent_shifts %}
+            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div>
+                    <p class="font-medium text-sm">{{ shift.employee.name }}</p>
+                    <p class="text-xs text-gray-500">{{ shift.island.name }} - {{ shift.date }}</p>
+                </div>
+                <span class="px-2 py-1 rounded-full text-xs {% if shift.status == 'open' %}bg-success/10 text-success{% else %}bg-gray-100 text-gray-600{% endif %}">
+                    {{ shift.get_status_display }}
+                </span>
+            </div>
+            {% empty %}
+            <p class="text-gray-500 text-sm text-center py-4">لا توجد مناوبات حديثة</p>
+            {% endfor %}
+        </div>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+        <h3 class="font-bold text-gray-800 mb-4">مستوى الخزانات</h3>
+        <div class="space-y-3">
+            {% for tank in tanks %}
+            <div class="p-3 bg-gray-50 rounded-lg">
+                <div class="flex items-center justify-between mb-1">
+                    <span class="text-sm font-medium">{{ tank.name }}</span>
+                    <span class="text-xs text-gray-500">{{ tank.current_level }}/{{ tank.capacity }} لتر</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2">
+                    <div class="bg-primary h-2 rounded-full" style="width: {{ tank.percentage|default:'60' }}%"></div>
+                </div>
+            </div>
+            {% empty %}
+            <p class="text-gray-500 text-sm text-center py-4">لا توجد خزانات</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

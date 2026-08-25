@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+{% block title %}تفاصيل التوريد #{{ delivery.id }}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <h2 class="text-xl font-bold text-gray-800 mb-6">تفاصيل التوريد #{{ delivery.id }}</h2>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+            <h3 class="font-bold text-gray-800 mb-3">معلومات التوريد</h3>
+            <dl class="space-y-2 text-sm">
+                <div class="flex justify-between"><dt class="text-gray-500">النوع:</dt><dd>{{ delivery.fuel_type.name }}</dd></div>
+                <div class="flex justify-between"><dt class="text-gray-500">المحطة:</dt><dd>{{ delivery.station.name }}</dd></div>
+                <div class="flex justify-between"><dt class="text-gray-500">الكمية المطلوبة:</dt><dd>{{ delivery.requested_quantity }} لتر</dd></div>
+                <div class="flex justify-between"><dt class="text-gray-500">الكمية المتوقعة:</dt><dd>{{ delivery.expected_quantity }} لتر</dd></div>
+                <div class="flex justify-between"><dt class="text-gray-500">الكمية المستلمة:</dt><dd>{{ delivery.received_quantity|default:"-" }} لتر</dd></div>
+                <div class="flex justify-between"><dt class="text-gray-500">النقص:</dt><dd>{{ delivery.shortage }} لتر</dd></div>
+                <div class="flex justify-between"><dt class="text-gray-500">الحالة:</dt><dd>{{ delivery.get_status_display }}</dd></div>
+            </dl>
+        </div>
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+            <h3 class="font-bold text-gray-800 mb-3">التواريخ</h3>
+            <dl class="space-y-2 text-sm">
+                <div class="flex justify-between"><dt class="text-gray-500">تاريخ الطلب:</dt><dd>{{ delivery.order_date|date:"Y-m-d H:i" }}</dd></div>
+                <div class="flex justify-between"><dt class="text-gray-500">تاريخ الوصول:</dt><dd>{{ delivery.arrival_date|date:"Y-m-d H:i"|default:"-" }}</dd></div>
+            </dl>
+        </div>
+    </div>
+</div>
+{% endblock %}

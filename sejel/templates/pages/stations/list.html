@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+
+{% block title %}المحطات{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+    <div></div>
+    <a href="{% url 'station_create' %}" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2">
+        <i data-lucide="plus" class="w-4 h-4"></i>
+        إضافة محطة
+    </a>
+</div>
+
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead class="bg-gray-50 border-b border-gray-200">
+                <tr>
+                    <th class="px-4 py-3 text-right font-medium text-gray-600">الاسم</th>
+                    <th class="px-4 py-3 text-right font-medium text-gray-600">العنوان</th>
+                    <th class="px-4 py-3 text-right font-medium text-gray-600">نوع العلاقة</th>
+                    <th class="px-4 py-3 text-right font-medium text-gray-600">شركة التسويق</th>
+                    <th class="px-4 py-3 text-right font-medium text-gray-600">الحالة</th>
+                    <th class="px-4 py-3 text-right font-medium text-gray-600">إجراءات</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for station in stations %}
+                <tr class="hover:bg-gray-50 transition-colors">
+                    <td class="px-4 py-3 font-medium">{{ station.name }}</td>
+                    <td class="px-4 py-3 text-gray-600">{{ station.address }}</td>
+                    <td class="px-4 py-3 text-gray-600">{{ station.get_relationship_type_display }}</td>
+                    <td class="px-4 py-3 text-gray-600">{{ station.marketing_company.name|default:"-" }}</td>
+                    <td class="px-4 py-3">
+                        <span class="px-2 py-1 rounded-full text-xs {% if station.status == 'active' %}bg-success/10 text-success{% else %}bg-gray-100 text-gray-600{% endif %}">
+                            {{ station.get_status_display }}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3">
+                        <a href="{% url 'station_detail' pk=station.pk %}" class="text-primary hover:text-primary/80 transition-colors ml-2">
+                            <i data-lucide="eye" class="w-4 h-4"></i>
+                        </a>
+                        <a href="{% url 'station_edit' pk=station.pk %}" class="text-primary hover:text-primary/80 transition-colors">
+                            <i data-lucide="pencil" class="w-4 h-4"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="px-4 py-8 text-center text-gray-500">لا توجد محطات</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
