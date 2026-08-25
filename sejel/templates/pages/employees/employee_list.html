@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+    <div></div>
+    <a href="{% url 'employee_create' %}" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2">
+        <i data-lucide="plus" class="w-4 h-4"></i>
+        إضافة موظف
+    </a>
+</div>
+
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead class="bg-gray-50 border-b border-gray-200">
+                <tr>
+                    <th class="px-4 py-3 text-right font-medium text-gray-600">الاسم</th>
+                    <th class="px-4 py-3 text-right font-medium text-gray-600">المحطة</th>
+                    <th class="px-4 py-3 text-right font-medium text-gray-600">الهاتف</th>
+                    <th class="px-4 py-3 text-right font-medium text-gray-600">فترة المناوبة</th>
+                    <th class="px-4 py-3 text-right font-medium text-gray-600">الحالة</th>
+                    <th class="px-4 py-3 text-right font-medium text-gray-600">إجراءات</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for employee in employees %}
+                <tr class="hover:bg-gray-50 transition-colors">
+                    <td class="px-4 py-3 font-medium">{{ employee.name }}</td>
+                    <td class="px-4 py-3 text-gray-600">{{ employee.station.name }}</td>
+                    <td class="px-4 py-3 text-gray-600" dir="ltr">{{ employee.phone|default:"-" }}</td>
+                    <td class="px-4 py-3 text-gray-600">{{ employee.get_shift_type_display }}</td>
+                    <td class="px-4 py-3">
+                        <span class="px-2 py-1 rounded-full text-xs {% if employee.status == 'active' %}bg-success/10 text-success{% else %}bg-gray-100 text-gray-600{% endif %}">
+                            {{ employee.get_status_display }}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3">
+                        <a href="{% url 'employee_edit' pk=employee.pk %}" class="text-primary hover:text-primary/80 transition-colors">
+                            <i data-lucide="pencil" class="w-4 h-4"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="px-4 py-8 text-center text-gray-500">لا يوجد موظفون</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
