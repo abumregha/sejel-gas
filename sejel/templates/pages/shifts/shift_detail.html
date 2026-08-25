@@ -1,0 +1,128 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold">المناوبة #{{ shift.id }}</h3>
+            {% if shift.status == 'open' %}
+            <a href="{% url 'shift_close' pk=shift.pk %}" class="bg-warning text-white px-4 py-2 rounded-lg hover:bg-warning/90 transition-colors flex items-center gap-2">
+                <i data-lucide="lock" class="w-4 h-4"></i>
+                إقفال المناوبة
+            </a>
+            {% endif %}
+        </div>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div>
+                <span class="text-gray-500">المناوب:</span>
+                <span class="font-medium">{{ shift.employee.name }}</span>
+            </div>
+            <div>
+                <span class="text-gray-500">المحطة:</span>
+                <span class="font-medium">{{ shift.station.name }}</span>
+            </div>
+            <div>
+                <span class="text-gray-500">الجزيرة:</span>
+                <span class="font-medium">{{ shift.island.name }}</span>
+            </div>
+            <div>
+                <span class="text-gray-500">التاريخ:</span>
+                <span class="font-medium" dir="ltr">{{ shift.date }}</span>
+            </div>
+            <div>
+                <span class="text-gray-500">البداية:</span>
+                <span class="font-medium" dir="ltr">{{ shift.start_time|time:"H:i" }}</span>
+            </div>
+            <div>
+                <span class="text-gray-500">النهاية:</span>
+                <span class="font-medium" dir="ltr">{{ shift.end_time|time:"H:i"|default:"-" }}</span>
+            </div>
+            <div>
+                <span class="text-gray-500">الحالة:</span>
+                <span class="px-2 py-1 rounded-full text-xs {% if shift.status == 'open' %}bg-success/10 text-success{% elif shift.status == 'closed' %}bg-gray-100 text-gray-600{% else %}bg-warning/10 text-warning{% endif %}">
+                    {{ shift.get_status_display }}
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+        <h4 class="font-semibold mb-4">قراءات العدادات</h4>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead class="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                        <th class="px-4 py-3 text-right font-medium text-gray-600">العداد</th>
+                        <th class="px-4 py-3 text-right font-medium text-gray-600">الوقود</th>
+                        <th class="px-4 py-3 text-right font-medium text-gray-600">البداية</th>
+                        <th class="px-4 py-3 text-right font-medium text-gray-600">النهاية</th>
+                        <th class="px-4 py-3 text-right font-medium text-gray-600">اللترات</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {% for reading in readings %}
+                    <tr>
+                        <td class="px-4 py-3 font-medium">{{ reading.meter.code }}</td>
+                        <td class="px-4 py-3 text-gray-600">{{ reading.meter.fuel_type }}</td>
+                        <td class="px-4 py-3" dir="ltr">{{ reading.start_reading|intcomma }}</td>
+                        <td class="px-4 py-3" dir="ltr">{{ reading.end_reading|intcomma|default:"-" }}</td>
+                        <td class="px-4 py-3 font-medium" dir="ltr">{{ reading.liters_sold|intcomma }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {% if reconciliation %}
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+        <h4 class="font-semibold mb-4">المطابقة المالية</h4>
+        <div class="grid grid-cols-2 gap-6">
+            <div class="space-y-2 text-sm">
+                <div class="flex justify-between">
+                    <span class="text-gray-600">إجمالي اللترات:</span>
+                    <span class="font-medium" dir="ltr">{{ reconciliation.total_liters|intcomma }}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600">المبيعات المتوقعة:</span>
+                    <span class="font-medium" dir="ltr">{{ reconciliation.expected_sales|intcomma }} د.ل</span>
+                </div>
+            </div>
+            <div class="space-y-2 text-sm">
+                <div class="flex justify-between">
+                    <span class="text-gray-600">النقد:</span>
+                    <span class="font-medium" dir="ltr">{{ reconciliation.total_cash|intcomma }} د.ل</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600">الكوبونات:</span>
+                    <span class="font-medium" dir="ltr">{{ reconciliation.total_vouchers|intcomma }} د.ل</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600">POS:</span>
+                    <span class="font-medium" dir="ltr">{{ reconciliation.total_pos|intcomma }} د.ل</span>
+                </div>
+                <div class="border-t pt-2 flex justify-between font-medium">
+                    <span>الإجمالي:</span>
+                    <span dir="ltr">{{ reconciliation.total_collection|intcomma }} د.ل</span>
+                </div>
+            </div>
+        </div>
+        <div class="mt-4 p-4 rounded-lg {% if reconciliation.difference_type == 'matched' %}bg-success/10{% elif reconciliation.difference_type == 'surplus' %}bg-warning/10{% else %}bg-danger/10{% endif %}">
+            <div class="flex items-center justify-between">
+                <span class="font-medium {% if reconciliation.difference_type == 'matched' %}text-success{% elif reconciliation.difference_type == 'surplus' %}text-warning{% else %}text-danger{% endif %}">
+                    {{ reconciliation.get_difference_type_display }}
+                </span>
+                <span class="text-lg font-bold {% if reconciliation.difference_type == 'matched' %}text-success{% elif reconciliation.difference_type == 'surplus' %}text-warning{% else %}text-danger{% endif %}" dir="ltr">
+                    {{ reconciliation.difference|intcomma }} د.ل
+                </span>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="flex gap-3">
+        <a href="{% url 'shift_list' %}" class="px-6 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors">العودة للقائمة</a>
+    </div>
+</div>
+{% endblock %}
