@@ -23,12 +23,16 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import api from '../../api'
+import { useAuthStore } from '../../stores/auth'
 const router = useRouter(), route = useRoute()
+const auth = useAuthStore()
+const isOwner = computed(() => auth.isOwner)
 const isEdit = computed(() => !!route.params.id)
 const form = ref({ name: '', island: '' })
 const islands = ref([])
 onMounted(async () => {
-  const { data } = await api.get('/islands/'); islands.value = data.results || data
+  const params = isOwner.value ? {} : { station: auth.stationId }
+  const { data } = await api.get('/islands/', { params }); islands.value = data.results || data
   if (isEdit.value) {
     const { data: d } = await api.get(`/machines/${route.params.id}/`)
     form.value = { name: d.name, island: d.island }

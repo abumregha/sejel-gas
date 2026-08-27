@@ -37,15 +37,24 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import api from '../../api'
+import { useAuthStore } from '../../stores/auth'
 const router = useRouter(), route = useRoute()
+const auth = useAuthStore()
+const isOwner = computed(() => auth.isOwner)
 const isEdit = computed(() => !!route.params.id)
 const form = ref({ name: '', station: '', fuel_type: '', capacity: '', current_level: '' })
 const stations = ref([])
 const fuelTypes = ref([])
 onMounted(async () => {
-  const [sRes, fRes] = await Promise.all([api.get('/stations/'), api.get('/fuel-types/')])
-  stations.value = sRes.data.results || sRes.data
+  const fRes = await api.get('/fuel-types/')
   fuelTypes.value = fRes.data.results || fRes.data
+  if (isOwner.value) {
+    const { data } = await api.get('/stations/'); stations.value = data.results || data
+  } else if (auth.stationId) {
+    const { data } = await api.get('/stations/', { params: { id: auth.stationId } })
+    stations.value = data.results || data
+    form.value.station = auth.stationId
+  }
   if (isEdit.value) {
     const { data: d } = await api.get(`/tanks/${route.params.id}/`)
     form.value = { name: d.name, station: d.station, fuel_type: d.fuel_type, capacity: d.capacity, current_level: d.current_level }

@@ -36,14 +36,22 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import api from '../../api'
+import { useAuthStore } from '../../stores/auth'
 const router = useRouter(), route = useRoute()
+const auth = useAuthStore()
+const isOwner = computed(() => auth.isOwner)
 const isEdit = computed(() => !!route.params.id)
 const form = ref({ code: '', machine: '', fuel_type: '', tank: '' })
 const machines = ref([])
 const fuelTypes = ref([])
 const tanks = ref([])
 onMounted(async () => {
-  const [mRes, fRes, tRes] = await Promise.all([api.get('/machines/'), api.get('/fuel-types/'), api.get('/tanks/')])
+  const params = isOwner.value ? {} : { station: auth.stationId }
+  const [mRes, fRes, tRes] = await Promise.all([
+    api.get('/machines/', { params }),
+    api.get('/fuel-types/'),
+    api.get('/tanks/', { params }),
+  ])
   machines.value = mRes.data.results || mRes.data
   fuelTypes.value = fRes.data.results || fRes.data
   tanks.value = tRes.data.results || tRes.data
