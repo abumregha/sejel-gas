@@ -2,21 +2,15 @@
 {% load humanize %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto">
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-        <div class="flex items-center justify-between mb-4">
-            <h3 class="text-lg font-semibold">المناوبة #{{ shift.id }}</h3>
-            {% if shift.status == 'open' %}
-            <a href="{% url 'shift_close' pk=shift.pk %}" class="bg-warning text-white px-4 py-2 rounded-lg hover:bg-warning/90 transition-colors flex items-center gap-2">
-                <i data-lucide="lock" class="w-4 h-4"></i>
-                إقفال المناوبة
-            </a>
-            {% endif %}
+<div class="max-w-4xl mx-auto space-y-6">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+            <h3 class="text-lg font-semibold">المناوبة #{{ shift.id }}{% if shift.definition %} — {{ shift.definition.name }}{% endif %}</h3>
         </div>
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
             <div>
-                <span class="text-gray-500">المناوب:</span>
-                <span class="font-medium">{{ shift.employee.name }}</span>
+                <span class="text-gray-500">الموظف الفعلي:</span>
+                <span class="font-medium">{{ shift.employee.name|default:"-" }}</span>
             </div>
             <div>
                 <span class="text-gray-500">المحطة:</span>
@@ -24,7 +18,7 @@
             </div>
             <div>
                 <span class="text-gray-500">الجزيرة:</span>
-                <span class="font-medium">{{ shift.island.name }}</span>
+                <span class="font-medium">{{ shift.island.name|default:"الكل" }}</span>
             </div>
             <div>
                 <span class="text-gray-500">التاريخ:</span>
@@ -40,35 +34,216 @@
             </div>
             <div>
                 <span class="text-gray-500">الحالة:</span>
-                <span class="px-2 py-1 rounded-full text-xs {% if shift.status == 'open' %}bg-success/10 text-success{% elif shift.status == 'closed' %}bg-gray-100 text-gray-600{% else %}bg-warning/10 text-warning{% endif %}">
+                <span class="px-2 py-1 rounded-full text-xs {% if shift.status == 'open' or shift.status == 'in_progress' %}bg-success/10 text-success{% elif shift.status == 'closed' or shift.status == 'reconciled' %}bg-gray-100 text-gray-600{% else %}bg-warning/10 text-warning{% endif %}">
                     {{ shift.get_status_display }}
                 </span>
             </div>
         </div>
+        {% if can_edit and user_is_supervisor %}
+        <div class="flex gap-2 mt-4 pt-4 border-t border-gray-100">
+            <a href="{% url 'shift_edit' pk=shift.pk %}" class="text-primary text-sm hover:underline flex items-center gap-1">
+                <i data-lucide="pencil" class="w-3.5 h-3.5"></i> تعديل المناوبة / تغيير الموظف
+            </a>
+        </div>
+        {% endif %}
     </div>
 
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-        <h4 class="font-semibold mb-4">قراءات العدادات</h4>
+    {# ── Quick actions bar (always visible) ── #}
+    {% if can_edit and user_is_supervisor %}
+    <div class="flex flex-wrap gap-3">
+        <a href="{% url 'reading_add' shift_id=shift.pk %}" class="bg-primary text-white px-5 py-3 rounded-xl hover:bg-primary/90 transition-all font-bold flex items-center gap-2 shadow-sm hover:shadow-md">
+            <i data-lucide="gauge" class="w-5 h-5"></i>
+            إضافة قراءة عداد
+        </a>
+        <a href="{% url 'shift_close' pk=shift.pk %}" class="bg-warning text-white px-5 py-3 rounded-xl hover:bg-warning/90 transition-all font-bold flex items-center gap-2 shadow-sm hover:shadow-md">
+            <i data-lucide="lock" class="w-5 h-5"></i>
+            إقفال المناوبة
+        </a>
+    </div>
+    {% endif %}
+
+    {# ── Meter readings ── #}
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div class="flex items-center justify-between mb-4">
+            <h4 class="font-semibold">قراءات العدادات</h4>
+            {% if can_edit and user_is_supervisor %}
+            <a href="{% url 'reading_add' shift_id=shift.pk %}" class="text-primary text-sm hover:underline flex items-center gap-1">
+                <i data-lucide="plus" class="w-3.5 h-3.5"></i> إضافة قراءة
+            </a>
+            {% endif %}
+        </div>
         <div class="overflow-x-auto">
-            <table class="w-full text-sm">
+            <table class="w-full text-sm min-w-[540px]">
                 <thead class="bg-gray-50 border-b border-gray-200">
                     <tr>
-                        <th class="px-4 py-3 text-right font-medium text-gray-600">العداد</th>
-                        <th class="px-4 py-3 text-right font-medium text-gray-600">الوقود</th>
-                        <th class="px-4 py-3 text-right font-medium text-gray-600">البداية</th>
-                        <th class="px-4 py-3 text-right font-medium text-gray-600">النهاية</th>
-                        <th class="px-4 py-3 text-right font-medium text-gray-600">اللترات</th>
+                        <th class="px-3 py-2 text-right font-medium text-gray-600">العداد</th>
+                        <th class="px-3 py-2 text-right font-medium text-gray-600">الوقود</th>
+                        <th class="px-3 py-2 text-right font-medium text-gray-600">الموظف المسجل</th>
+                        <th class="px-3 py-2 text-right font-medium text-gray-600">البداية</th>
+                        <th class="px-3 py-2 text-right font-medium text-gray-600">النهاية</th>
+                        <th class="px-3 py-2 text-right font-medium text-gray-600">اللترات</th>
+                        <th class="px-3 py-2 text-right font-medium text-gray-600">وقت التسجيل</th>
+                        {% if can_edit and user_is_supervisor %}<th class="px-3 py-2 text-right font-medium text-gray-600">إجراءات</th>{% endif %}
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100">
                     {% for reading in readings %}
                     <tr>
-                        <td class="px-4 py-3 font-medium">{{ reading.meter.code }}</td>
-                        <td class="px-4 py-3 text-gray-600">{{ reading.meter.fuel_type }}</td>
-                        <td class="px-4 py-3" dir="ltr">{{ reading.start_reading|intcomma }}</td>
-                        <td class="px-4 py-3" dir="ltr">{{ reading.end_reading|intcomma|default:"-" }}</td>
-                        <td class="px-4 py-3 font-medium" dir="ltr">{{ reading.liters_sold|intcomma }}</td>
+                        <td class="px-3 py-2 font-medium">{{ reading.meter.code }}</td>
+                        <td class="px-3 py-2 text-gray-600">{{ reading.meter.fuel_type }}</td>
+                        <td class="px-3 py-2 text-gray-600">{{ reading.attendant.name|default:shift.employee.name|default:"-" }}</td>
+                        <td class="px-3 py-2" dir="ltr">{{ reading.start_reading|intcomma }}</td>
+                        <td class="px-3 py-2" dir="ltr">{{ reading.end_reading|intcomma|default:"-" }}</td>
+                        <td class="px-3 py-2 font-medium" dir="ltr">{{ reading.liters_sold|intcomma }}</td>
+                        <td class="px-3 py-2 text-gray-500 text-xs" dir="ltr">{{ reading.recorded_at|date:"Y-m-d H:i"|default:"-" }}</td>
+                        {% if can_edit and user_is_supervisor %}
+                        <td class="px-3 py-2">
+                            <div class="flex gap-2">
+                                <a href="{% url 'reading_edit' pk=reading.pk %}" title="تعديل" class="text-primary hover:text-primary/80"><i data-lucide="pencil" class="w-4 h-4"></i></a>
+                                <a href="{% url 'reading_delete' pk=reading.pk %}" title="حذف" class="text-danger hover:text-danger/80"><i data-lucide="trash-2" class="w-4 h-4"></i></a>
+                            </div>
+                        </td>
+                        {% endif %}
                     </tr>
+                    {% empty %}
+                    <tr><td colspan="8" class="px-6 py-10 text-center">
+                        <div class="flex flex-col items-center gap-2 text-gray-400">
+                            <i data-lucide="gauge" class="w-10 h-10 text-gray-300"></i>
+                            <p class="font-medium text-gray-500">لا توجد قراءات بعد</p>
+                            {% if can_edit and user_is_supervisor %}
+                            <a href="{% url 'reading_add' shift_id=shift.pk %}" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors text-sm flex items-center gap-1 mt-1">
+                                <i data-lucide="plus" class="w-3.5 h-3.5"></i> أضف قراءة الآن
+                            </a>
+                            {% endif %}
+                        </div>
+                    </td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Cash collections -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div class="flex items-center justify-between mb-4">
+            <h4 class="font-semibold">التحصيل النقدي</h4>
+            {% if can_edit and user_is_finance %}
+            <a href="{% url 'cash_create' shift_id=shift.pk %}" class="text-primary text-sm hover:underline flex items-center gap-1">
+                <i data-lucide="plus" class="w-3.5 h-3.5"></i> إضافة تحصيل
+            </a>
+            {% endif %}
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm min-w-[480px]">
+                <thead class="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                        <th class="px-3 py-2 text-right font-medium text-gray-600">المبلغ</th>
+                        <th class="px-3 py-2 text-right font-medium text-gray-600">الوقت</th>
+                        <th class="px-3 py-2 text-right font-medium text-gray-600">المرجع</th>
+                        {% if can_edit and user_is_finance %}<th class="px-3 py-2 text-right font-medium text-gray-600">إجراءات</th>{% endif %}
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {% for c in cash_collections %}
+                    <tr>
+                        <td class="px-3 py-2 font-medium" dir="ltr">{{ c.amount|intcomma }} د.ل</td>
+                        <td class="px-3 py-2 text-gray-600" dir="ltr">{{ c.time|date:"Y-m-d H:i" }}</td>
+                        <td class="px-3 py-2 text-gray-600">{{ c.reference|default:"-" }}</td>
+                        {% if can_edit and user_is_finance %}
+                        <td class="px-3 py-2">
+                            <div class="flex gap-2">
+                                <a href="{% url 'cash_edit' pk=c.pk %}" title="تعديل" class="text-primary hover:text-primary/80"><i data-lucide="pencil" class="w-4 h-4"></i></a>
+                                <a href="{% url 'cash_delete' pk=c.pk %}" title="إلغاء" class="text-danger hover:text-danger/80"><i data-lucide="x-circle" class="w-4 h-4"></i></a>
+                            </div>
+                        </td>
+                        {% endif %}
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="4" class="px-4 py-6 text-center text-gray-500">لا توجد تحصيلات</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Vouchers -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div class="flex items-center justify-between mb-4">
+            <h4 class="font-semibold">الكوبونات</h4>
+            {% if can_edit and user_is_finance %}
+            <a href="{% url 'voucher_create' shift_id=shift.pk %}" class="text-primary text-sm hover:underline flex items-center gap-1">
+                <i data-lucide="plus" class="w-3.5 h-3.5"></i> إضافة كوبونات
+            </a>
+            {% endif %}
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm min-w-[480px]">
+                <thead class="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                        <th class="px-3 py-2 text-right font-medium text-gray-600">الفئة</th>
+                        <th class="px-3 py-2 text-right font-medium text-gray-600">العدد</th>
+                        <th class="px-3 py-2 text-right font-medium text-gray-600">القيمة</th>
+                        {% if can_edit and user_is_finance %}<th class="px-3 py-2 text-right font-medium text-gray-600">إجراءات</th>{% endif %}
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {% for v in vouchers %}
+                    <tr>
+                        <td class="px-3 py-2 font-medium">{{ v.category.name }}</td>
+                        <td class="px-3 py-2" dir="ltr">{{ v.count }}</td>
+                        <td class="px-3 py-2 font-medium" dir="ltr">{{ v.total_value|intcomma }} د.ل</td>
+                        {% if can_edit and user_is_finance %}
+                        <td class="px-3 py-2">
+                            <div class="flex gap-2">
+                                <a href="{% url 'voucher_edit' pk=v.pk %}" title="تعديل" class="text-primary hover:text-primary/80"><i data-lucide="pencil" class="w-4 h-4"></i></a>
+                                <a href="{% url 'voucher_delete' pk=v.pk %}" title="إلغاء" class="text-danger hover:text-danger/80"><i data-lucide="x-circle" class="w-4 h-4"></i></a>
+                            </div>
+                        </td>
+                        {% endif %}
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="4" class="px-4 py-6 text-center text-gray-500">لا توجد كوبونات</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- POS -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div class="flex items-center justify-between mb-4">
+            <h4 class="font-semibold">واصلات POS</h4>
+            {% if can_edit and user_is_finance %}
+            <a href="{% url 'pos_create' shift_id=shift.pk %}" class="text-primary text-sm hover:underline flex items-center gap-1">
+                <i data-lucide="plus" class="w-3.5 h-3.5"></i> إضافة POS
+            </a>
+            {% endif %}
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm min-w-[480px]">
+                <thead class="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                        <th class="px-3 py-2 text-right font-medium text-gray-600">المبلغ</th>
+                        <th class="px-3 py-2 text-right font-medium text-gray-600">عدد العمليات</th>
+                        {% if can_edit and user_is_finance %}<th class="px-3 py-2 text-right font-medium text-gray-600">إجراءات</th>{% endif %}
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {% for p in pos_records %}
+                    <tr>
+                        <td class="px-3 py-2 font-medium" dir="ltr">{{ p.total_amount|intcomma }} د.ل</td>
+                        <td class="px-3 py-2" dir="ltr">{{ p.transaction_count|default:"-" }}</td>
+                        {% if can_edit and user_is_finance %}
+                        <td class="px-3 py-2">
+                            <div class="flex gap-2">
+                                <a href="{% url 'pos_edit' pk=p.pk %}" title="تعديل" class="text-primary hover:text-primary/80"><i data-lucide="pencil" class="w-4 h-4"></i></a>
+                                <a href="{% url 'pos_delete' pk=p.pk %}" title="إلغاء" class="text-danger hover:text-danger/80"><i data-lucide="x-circle" class="w-4 h-4"></i></a>
+                            </div>
+                        </td>
+                        {% endif %}
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="3" class="px-4 py-6 text-center text-gray-500">لا توجد سجلات POS</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
@@ -76,19 +251,48 @@
     </div>
 
     {% if reconciliation %}
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <h4 class="font-semibold mb-4">المطابقة المالية</h4>
-        <div class="grid grid-cols-2 gap-6">
-            <div class="space-y-2 text-sm">
-                <div class="flex justify-between">
-                    <span class="text-gray-600">إجمالي اللترات:</span>
-                    <span class="font-medium" dir="ltr">{{ reconciliation.total_liters|intcomma }}</span>
-                </div>
-                <div class="flex justify-between">
-                    <span class="text-gray-600">المبيعات المتوقعة:</span>
-                    <span class="font-medium" dir="ltr">{{ reconciliation.expected_sales|intcomma }} د.ل</span>
-                </div>
+
+        {# Per-fuel breakdown table #}
+        <div class="mb-5">
+            <h5 class="text-sm font-medium text-gray-700 mb-2">تفصيل حسب نوع الوقود</h5>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm min-w-[420px]">
+                    <thead class="bg-gray-50 border-b border-gray-200">
+                        <tr>
+                            <th class="px-3 py-2 text-right font-medium text-gray-600">الوقود</th>
+                            <th class="px-3 py-2 text-right font-medium text-gray-600">اللترات</th>
+                            <th class="px-3 py-2 text-right font-medium text-gray-600">سعر البيع</th>
+                            <th class="px-3 py-2 text-right font-medium text-gray-600">المتوقع</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        {% for fs in reconciliation.fuel_summaries %}
+                        <tr>
+                            <td class="px-3 py-2 font-medium">{{ fs.fuel_type }}</td>
+                            <td class="px-3 py-2" dir="ltr">{{ fs.liters_sold|intcomma }}</td>
+                            <td class="px-3 py-2" dir="ltr">{{ fs.unit_price|floatformat:3 }}</td>
+                            <td class="px-3 py-2 font-medium" dir="ltr">{{ fs.expected_sales|intcomma }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="4" class="px-3 py-3 text-center text-gray-500">—</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
+        </div>
+
+        {# ── Sales summary ── #}
+        <div class="mb-4 p-3 bg-blue-50/50 border border-blue-100 rounded-lg">
+            <div class="flex justify-between text-sm font-bold">
+                <span>المبيعات المتوقعة:</span>
+                <span dir="ltr">{{ reconciliation.expected_sales|intcomma }} د.ل</span>
+            </div>
+        </div>
+
+        {# ── Collections + difference ── #}
+        <div class="grid grid-cols-2 gap-6 mb-4">
             <div class="space-y-2 text-sm">
                 <div class="flex justify-between">
                     <span class="text-gray-600">النقد:</span>
@@ -102,20 +306,58 @@
                     <span class="text-gray-600">POS:</span>
                     <span class="font-medium" dir="ltr">{{ reconciliation.total_pos|intcomma }} د.ل</span>
                 </div>
-                <div class="border-t pt-2 flex justify-between font-medium">
-                    <span>الإجمالي:</span>
+                <div class="border-t pt-2 flex justify-between font-bold">
+                    <span>إجمالي التحصيل:</span>
                     <span dir="ltr">{{ reconciliation.total_collection|intcomma }} د.ل</span>
                 </div>
             </div>
+            <div class="space-y-2 text-sm">
+                <div class="flex justify-between">
+                    <span class="text-gray-600">المبيعات المتوقعة:</span>
+                    <span class="font-medium" dir="ltr">{{ reconciliation.expected_sales|intcomma }} د.ل</span>
+                </div>
+                <div class="border-t pt-2 flex justify-between font-bold">
+                    <span>فرق التحصيل:</span>
+                    <span dir="ltr">{{ reconciliation.difference|intcomma }} د.ل</span>
+                </div>
+            </div>
         </div>
-        <div class="mt-4 p-4 rounded-lg {% if reconciliation.difference_type == 'matched' %}bg-success/10{% elif reconciliation.difference_type == 'surplus' %}bg-warning/10{% else %}bg-danger/10{% endif %}">
-            <div class="flex items-center justify-between">
-                <span class="font-medium {% if reconciliation.difference_type == 'matched' %}text-success{% elif reconciliation.difference_type == 'surplus' %}text-warning{% else %}text-danger{% endif %}">
-                    {{ reconciliation.get_difference_type_display }}
-                </span>
+
+        {# ── Cash position ── #}
+        {% if reconciliation.total_expenses %}
+        <div class="mb-4 p-3 bg-amber-50/50 border border-amber-100 rounded-lg">
+            <div class="text-xs font-medium text-gray-500 mb-2">وضعية النقد</div>
+            <div class="space-y-1 text-sm">
+                <div class="flex justify-between">
+                    <span>التحصيل النقدي:</span>
+                    <span dir="ltr">{{ reconciliation.total_cash|intcomma }} د.ل</span>
+                </div>
+                <div class="flex justify-between">
+                    <span>المصروفات:</span>
+                    <span class="text-danger" dir="ltr">-{{ reconciliation.total_expenses|intcomma }} د.ل</span>
+                </div>
+                <div class="border-t border-amber-200 pt-1 flex justify-between font-bold">
+                    <span>المتبقي:</span>
+                    <span dir="ltr">{{ reconciliation.net_cash|intcomma }} د.ل</span>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="mt-4 p-4 rounded-lg {% if reconciliation.difference_type == 'matched' %}bg-success/10{% elif reconciliation.difference_type == 'surplus' %}bg-warning/10{% else %}bg-danger/10{% endif %} flex items-center justify-between flex-wrap gap-2">
+            <span class="font-medium {% if reconciliation.difference_type == 'matched' %}text-success{% elif reconciliation.difference_type == 'surplus' %}text-warning{% else %}text-danger{% endif %}">
+                {{ reconciliation.get_difference_type_display }}
+            </span>
+            <div class="flex items-center gap-3">
                 <span class="text-lg font-bold {% if reconciliation.difference_type == 'matched' %}text-success{% elif reconciliation.difference_type == 'surplus' %}text-warning{% else %}text-danger{% endif %}" dir="ltr">
                     {{ reconciliation.difference|intcomma }} د.ل
                 </span>
+                {% if shift.status == 'closed' and user_is_finance and not reconciliation.confirmed_by %}
+                <form method="post" action="{% url 'reconciliation_confirm' shift_id=shift.pk %}">
+                    {% csrf_token %}
+                    <button type="submit" class="bg-success text-white text-sm px-4 py-2 rounded-lg hover:bg-success/90 transition-colors">اعتماد التسوية</button>
+                </form>
+                {% endif %}
             </div>
         </div>
     </div>

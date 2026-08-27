@@ -2,6 +2,14 @@
 {% load humanize %}
 
 {% block content %}
+<div class="flex items-center justify-between mb-6">
+    <div></div>
+    <a href="{% url 'tank_create' %}" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2">
+        <i data-lucide="plus" class="w-4 h-4"></i>
+        إضافة خزان
+    </a>
+</div>
+
 <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
     <div class="overflow-x-auto">
         <table class="w-full text-sm">
@@ -14,12 +22,15 @@
                     <th class="px-4 py-3 text-right font-medium text-gray-600">السعة</th>
                     <th class="px-4 py-3 text-right font-medium text-gray-600">النسبة</th>
                     <th class="px-4 py-3 text-right font-medium text-gray-600">الحالة</th>
+                    <th class="px-4 py-3 text-right font-medium text-gray-600">إجراءات</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-100">
                 {% for tank in tanks %}
-                <tr class="hover:bg-gray-50 transition-colors">
-                    <td class="px-4 py-3 font-medium">{{ tank.name|default:tank.id }}</td>
+                <tr class="hover:bg-gray-50 transition-colors cursor-pointer" onclick="window.location='{% url 'tank_detail' pk=tank.pk %}'">
+                    <td class="px-4 py-3 font-medium">
+                        <a href="{% url 'tank_detail' pk=tank.pk %}" class="text-primary hover:underline">{{ tank.name|default:tank.id }}</a>
+                    </td>
                     <td class="px-4 py-3 text-gray-600">{{ tank.station.name }}</td>
                     <td class="px-4 py-3 text-gray-600">{{ tank.fuel_type }}</td>
                     <td class="px-4 py-3" dir="ltr">{{ tank.current_level|intcomma }}</td>
@@ -41,10 +52,18 @@
                         <span class="px-2 py-1 rounded-full text-xs bg-success/10 text-success">جيد</span>
                         {% endif %}
                     </td>
+                    <td class="px-4 py-3 flex gap-2">
+                        <a href="{% url 'tank_edit' pk=tank.pk %}" class="text-primary hover:text-primary/80 transition-colors">
+                            <i data-lucide="pencil" class="w-4 h-4"></i>
+                        </a>
+                        <a href="{% url 'tank_delete' pk=tank.pk %}" class="text-danger hover:text-danger/80 transition-colors">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </a>
+                    </td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="7" class="px-4 py-8 text-center text-gray-500">لا توجد خزانات</td>
+                    <td colspan="8" class="px-4 py-8 text-center text-gray-500">لا توجد خزانات</td>
                 </tr>
                 {% endfor %}
             </tbody>

@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.db import models
 from django.contrib.auth.models import User
 
@@ -105,6 +107,69 @@ class Tank(models.Model):
     def __str__(self):
         return self.name or f"Tank {self.id} - {self.fuel_type}"
 
+    @property
+    def level_percent(self):
+        return (self.current_level / self.capacity * 100) if self.capacity > 0 else 0
+
+    def latest_reading(self):
+        """Return the most recent TankReading for this tank."""
+        return self.readings.order_by('-recorded_at', '-pk').first()
+
+    def total_sales_liters(self, since=None):
+        """Total liters sold through meters connected to this tank since a date."""
+        from apps.shifts.models import MeterReading
+        qs = MeterReading.objects.filter(
+            meter__tank=self, liters_sold__isnull=False, liters_sold__gt=0)
+        if since:
+            qs = qs.filter(recorded_at__gte=since)
+        return qs.aggregate(total=models.Sum('liters_sold'))['total'] or Decimal('0')
+
+    def total_received(self, since=None):
+        """Total liters received via deliveries since a date."""
+        from django.db.models import Q
+        from apps.inventory.models import Delivery
+        qs = Delivery.objects.filter(tank=self, received_quantity__isnull=False)
+        if since:
+            qs = qs.filter(Q(arrival_date__gte=since) | Q(arrival_date__isnull=True, order_date__gte=since))
+        return qs.aggregate(total=models.Sum('received_quantity'))['total'] or Decimal('0')
+
+    def theoretical_level(self):
+        """Theoretical level based on last reading + deliveries - sales."""
+        from decimal import Decimal
+        last = self.latest_reading()
+        if not last:
+            return self.current_level
+        base = last.reading_level
+        received = self.total_received(since=last.recorded_at)
+        sold = self.total_sales_liters(since=last.recorded_at)
+        return base + received - sold
+
+
+class TankReading(models.Model):
+    """Historical tank level record. Never mutate — always append."""
+    READING_TYPE_CHOICES = [
+        ('opening', 'قراءة افتتاحية'),
+        ('pre_delivery', 'قبل الشحنة'),
+        ('post_delivery', 'بعد الشحنة'),
+        ('daily', 'قراءة يومية'),
+        ('other', 'قراءة أخرى'),
+    ]
+
+    tank = models.ForeignKey(Tank, on_delete=models.CASCADE, related_name='readings')
+    reading_level = models.DecimalField(max_digits=10, decimal_places=3)
+    reading_type = models.CharField(max_length=20, choices=READING_TYPE_CHOICES)
+    recorded_at = models.DateTimeField()
+    recorded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'sejel_tank_reading'
+        ordering = ['-recorded_at', '-pk']
+
+    def __str__(self):
+        return f"{self.tank}: {self.reading_level} ({self.get_reading_type_display()})"
+
 
 class Meter(models.Model):
     machine = models.ForeignKey(Machine, on_delete=models.CASCADE, related_name='meters')
@@ -161,6 +226,70 @@ class StationSettings(models.Model):
         return f"Settings - {self.station.name}"
 
 
+class TankAlert(models.Model):
+    """Automated alerts based on tank levels."""
+    ALERT_TYPE_CHOICES = [
+        ('low', 'رصيد منخفض'),
+        ('critical', 'رصيد حرج'),
+        ('empty', 'خزان فارغ'),
+        ('full', 'خزان ممتلئ'),
+    ]
+    station = models.ForeignKey(Station, on_delete=models.CASCADE, related_name='tank_alerts')
+    tank = models.ForeignKey('Tank', on_delete=models.CASCADE, related_name='alerts')
+    alert_type = models.CharField(max_length=20, choices=ALERT_TYPE_CHOICES)
+    message = models.TextField()
+    is_resolved = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    resolved_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'sejel_tank_alert'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.get_alert_type_display()}: {self.tank} ({self.station})"
+
+
+class TankTransfer(models.Model):
+    """Fuel transfer between two tanks of the same fuel type at the same station."""
+    STATUS_CHOICES = [
+        ('pending', 'قيد الانتظار'),
+        ('completed', 'مكتملة'),
+        ('cancelled', 'ملغاة'),
+    ]
+
+    station = models.ForeignKey(Station, on_delete=models.CASCADE, related_name='tank_transfers')
+    from_tank = models.ForeignKey(Tank, on_delete=models.CASCADE, related_name='transfers_out')
+    to_tank = models.ForeignKey(Tank, on_delete=models.CASCADE, related_name='transfers_in')
+    fuel_type = models.ForeignKey(FuelType, on_delete=models.PROTECT)
+    quantity = models.DecimalField(max_digits=10, decimal_places=3,
+                                   help_text='الكمية المنقولة باللتر')
+    transfer_date = models.DateTimeField(help_text='تاريخ ووقت النقل')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='completed')
+    notes = models.TextField(blank=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='+')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'sejel_tank_transfer'
+        ordering = ['-transfer_date', '-pk']
+
+    def __str__(self):
+        return f"Transfer {self.quantity}L: {self.from_tank} → {self.to_tank}"
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        if self.from_tank_id and self.to_tank_id:
+            if self.from_tank_id == self.to_tank_id:
+                raise ValidationError('لا يمكن النقل من خزان إلى نفسه')
+            if self.from_tank.fuel_type_id != self.to_tank.fuel_type_id:
+                raise ValidationError('لا يمكن النقل بين خزانات بأنواع وقود مختلفة')
+            if self.from_tank.station_id != self.to_tank.station_id:
+                raise ValidationError('لا يمكن النقل بين خزانات في محطات مختلفة')
+            if self.quantity and self.quantity <= 0:
+                raise ValidationError('الكمية يجب أن تكون أكبر من صفر')
+
+
 class UserProfile(models.Model):
     ROLE_CHOICES = [
         ('admin', 'مدير النظام'),
@@ -180,4 +309,37 @@ class UserProfile(models.Model):
 
     def __str__(self):
         return f"{self.user.username} ({self.get_role_display()})"
+
+
+class AuditLog(models.Model):
+    ACTION_CHOICES = [
+        ('create', 'إنشاء'),
+        ('update', 'تعديل'),
+        ('delete', 'حذف'),
+        ('close', 'إقفال'),
+        ('reopen', 'إعادة فتح'),
+        ('cancel', 'إلغاء'),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='+')
+    action = models.CharField(max_length=20, choices=ACTION_CHOICES)
+    model_name = models.CharField(max_length=100)
+    object_id = models.PositiveIntegerField()
+    old_value = models.JSONField(null=True, blank=True)
+    new_value = models.JSONField(null=True, blank=True)
+    reason = models.TextField(blank=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'sejel_audit_log'
+        ordering = ['-timestamp']
+        indexes = [
+            models.Index(fields=['model_name', 'object_id']),
+            models.Index(fields=['user', '-timestamp']),
+            models.Index(fields=['-timestamp']),
+        ]
+
+    def __str__(self):
+        return f"{self.get_action_display()} {self.model_name}#{self.object_id} by {self.user}"
 

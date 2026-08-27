@@ -1,0 +1,251 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+    {# Header #}
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold">مطابقة الوقود #{{ reconciliation.pk }}</h3>
+            <div class="flex gap-2">
+                {% if reconciliation.status == 'draft' %}
+                <form method="post" action="{% url 'fuel_reconciliation_confirm' pk=reconciliation.pk %}" class="inline">
+                    {% csrf_token %}
+                    <button type="submit" class="bg-success text-white px-4 py-2 rounded-lg hover:bg-success/90 text-sm">
+                        اعتماد المطابقة
+                    </button>
+                </form>
+                <form method="post" action="{% url 'fuel_reconciliation_delete' pk=reconciliation.pk %}" class="inline"
+                      onsubmit="return confirm('هل أنت متأكد من حذف هذه المطابقة؟')">
+                    {% csrf_token %}
+                    <button type="submit" class="bg-danger text-white px-4 py-2 rounded-lg hover:bg-danger/90 text-sm">
+                        حذف
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div>
+                <span class="text-gray-500">التاريخ:</span>
+                <span class="font-medium" dir="ltr">{{ reconciliation.date|date:"Y-m-d" }}</span>
+            </div>
+            <div>
+                <span class="text-gray-500">الخزان:</span>
+                <span class="font-medium">{{ reconciliation.tank.name|default:reconciliation.tank.fuel_type }}</span>
+            </div>
+            <div>
+                <span class="text-gray-500">النوع:</span>
+                <span class="font-medium">{{ reconciliation.tank.fuel_type }}</span>
+            </div>
+            <div>
+                <span class="text-gray-500">الحالة:</span>
+                <span class="px-2 py-0.5 rounded text-xs {% if reconciliation.status == 'confirmed' %}bg-success/10 text-success{% else %}bg-warning/10 text-warning{% endif %}">
+                    {{ reconciliation.get_status_display }}
+                </span>
+            </div>
+        </div>
+        {% if reconciliation.notes %}
+        <div class="mt-3 text-sm text-gray-600 bg-gray-50 rounded-lg p-3">
+            <strong>ملاحظات:</strong> {{ reconciliation.notes }}
+        </div>
+        {% endif %}
+    </div>
+
+    {# ── Main Reconciliation Card ── #}
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <h4 class="font-semibold mb-4 flex items-center gap-2">
+            <span class="w-6 h-6 bg-blue-100 text-blue-700 rounded-full text-xs flex items-center justify-center font-bold">1</span>
+            حساب الرصيد
+        </h4>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {# Opening #}
+            <div class="bg-blue-50/50 border border-blue-100 rounded-lg p-4">
+                <h5 class="font-medium text-blue-800 mb-3">القراءة الافتتاحية</h5>
+                <div class="space-y-2 text-sm">
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">القراءة:</span>
+                        <span class="font-medium" dir="ltr">{{ reconciliation.opening_reading.reading_level|intcomma }} لتر</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">التاريخ:</span>
+                        <span class="font-medium" dir="ltr">{{ reconciliation.opening_reading.recorded_at|date:"Y-m-d H:i" }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">النوع:</span>
+                        <span class="font-medium">{{ reconciliation.opening_reading.get_reading_type_display }}</span>
+                    </div>
+                </div>
+            </div>
+
+            {# Movements #}
+            <div class="bg-green-50/50 border border-green-100 rounded-lg p-4">
+                <h5 class="font-medium text-green-800 mb-3">الحركة خلال الفترة</h5>
+                <div class="space-y-2 text-sm">
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">+ الوارد (شحنات):</span>
+                        <span class="font-medium text-success" dir="ltr">+{{ reconciliation.received_quantity|intcomma }} لتر</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">- المبيعات (عدّادات):</span>
+                        <span class="font-medium text-danger" dir="ltr">-{{ reconciliation.sold_quantity|intcomma }} لتر</span>
+                    </div>
+                    <div class="border-t border-green-200 pt-2 flex justify-between font-bold">
+                        <span>الرصيد النظري:</span>
+                        <span dir="ltr">{{ reconciliation.theoretical_level|intcomma }} لتر</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {# Formula #}
+        <div class="mt-4 bg-gray-50 rounded-lg p-4 text-sm text-center">
+            <span class="text-gray-600">الصيغة:</span>
+            <span class="font-mono" dir="ltr">
+                {{ reconciliation.opening_reading.reading_level|intcomma }}
+                + {{ reconciliation.received_quantity|intcomma }}
+                - {{ reconciliation.sold_quantity|intcomma }}
+                = <strong>{{ reconciliation.theoretical_level|intcomma }}</strong> لتر (نظري)
+            </span>
+        </div>
+    </div>
+
+    {# ── Actual vs Theoretical ── #}
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <h4 class="font-semibold mb-4 flex items-center gap-2">
+            <span class="w-6 h-6 bg-amber-100 text-amber-700 rounded-full text-xs flex items-center justify-center font-bold">2</span>
+            المقارنة النهائية
+        </h4>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {# Theoretical #}
+            <div class="bg-blue-50/50 border border-blue-100 rounded-lg p-4 text-center">
+                <div class="text-gray-500 text-sm mb-1">الرصيد النظري</div>
+                <div class="text-2xl font-bold text-blue-700" dir="ltr">{{ reconciliation.theoretical_level|intcomma }}</div>
+                <div class="text-xs text-gray-400">لتر</div>
+            </div>
+
+            {# Actual #}
+            <div class="bg-green-50/50 border border-green-100 rounded-lg p-4 text-center">
+                <div class="text-gray-500 text-sm mb-1">الرصيد الفعلي</div>
+                <div class="text-2xl font-bold text-green-700" dir="ltr">{{ reconciliation.actual_level|intcomma }}</div>
+                <div class="text-xs text-gray-400">لتر (قراءة الخزان)</div>
+            </div>
+
+            {# Variance #}
+            <div class="border rounded-lg p-4 text-center {% if reconciliation.variance_type == 'matched' %}bg-success/5 border-success/20{% elif reconciliation.variance_type == 'surplus' %}bg-warning/5 border-warning/20{% else %}bg-danger/5 border-danger/20{% endif %}">
+                <div class="text-gray-500 text-sm mb-1">الفرق</div>
+                <div class="text-2xl font-bold {% if reconciliation.variance_type == 'matched' %}text-success{% elif reconciliation.variance_type == 'surplus' %}text-warning{% else %}text-danger{% endif %}" dir="ltr">
+                    {% if reconciliation.variance >= 0 %}+{% endif %}{{ reconciliation.variance|intcomma }}
+                </div>
+                <div class="text-xs text-gray-400">
+                    {% if reconciliation.variance_type == 'matched' %}✓ مطابق
+                    {% elif reconciliation.variance_type == 'surplus' %}⚠ فائض
+                    {% else %}⚠ عجز
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        {% if reconciliation.variance_type != 'matched' %}
+        <div class="mt-4 bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm">
+            <div class="flex items-start gap-2">
+                <i data-lucide="alert-triangle" class="w-5 h-5 text-amber-600 shrink-0 mt-0.5"></i>
+                <div>
+                    <p class="font-medium text-amber-800">
+                        {% if reconciliation.variance_type == 'surplus' %}
+                        يوجد فائض في الخزان
+                        {% else %}
+                        يوجد عجز في الخزان
+                        {% endif %}
+                    </p>
+                    <p class="text-amber-700 mt-1">
+                        {% if reconciliation.variance_type == 'surplus' %}
+                        الرصيد الفعلي أكبر من النظري بـ {{ reconciliation.variance|intcomma }} لتر. تحقق من عدم وجود تسجيل وارد مكرر أو خطأ في قراءة العدّاد.
+                        {% else %}
+                        الرصيد الفعلي أقل من النظري. تحقق من عدم وجود تسجيل مبيعات مكرر أو تسريب أو خطأ في القراءة.
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    {# ── Meter Sales Breakdown ── #}
+    {% if meter_sales %}
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <h4 class="font-semibold mb-4 flex items-center gap-2">
+            <span class="w-6 h-6 bg-purple-100 text-purple-700 rounded-full text-xs flex items-center justify-center font-bold">3</span>
+            تفصيل المبيعات من العدّادات
+        </h4>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm min-w-[600px]">
+                <thead class="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                        <th class="px-3 py-2 text-right font-medium text-gray-600">العدّاد</th>
+                        <th class="px-3 py-2 text-right font-medium text-gray-600">الجزيرة</th>
+                        <th class="px-3 py-2 text-right font-medium text-gray-600">الوقود</th>
+                        <th class="px-3 py-2 text-right font-medium text-gray-600">اللترات المباعة</th>
+                        <th class="px-3 py-2 text-right font-medium text-gray-600">عدد المناوبات</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {% for ms in meter_sales %}
+                    <tr>
+                        <td class="px-3 py-2 font-medium">{{ ms.meter.code }}</td>
+                        <td class="px-3 py-2">{{ ms.island.name|default:"-" }}</td>
+                        <td class="px-3 py-2">{{ ms.meter.fuel_type }}</td>
+                        <td class="px-3 py-2 font-medium" dir="ltr">{{ ms.liters_sold|intcomma }}</td>
+                        <td class="px-3 py-2">{{ ms.shifts_count }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot class="bg-gray-50 border-t border-gray-200 font-bold">
+                    <tr>
+                        <td colspan="3" class="px-3 py-2">الإجمالي</td>
+                        <td class="px-3 py-2" dir="ltr">{{ reconciliation.sold_quantity|intcomma }} لتر</td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    {# ── Audit Info ── #}
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <h4 class="font-semibold mb-3 text-sm text-gray-600">معلومات التدقيق</h4>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div>
+                <span class="text-gray-500">أنشأه:</span>
+                <span class="font-medium">{{ reconciliation.created_by.get_full_name|default:reconciliation.created_by.username|default:"-" }}</span>
+            </div>
+            <div>
+                <span class="text-gray-500">تاريخ الإنشاء:</span>
+                <span class="font-medium" dir="ltr">{{ reconciliation.created_at|date:"Y-m-d H:i" }}</span>
+            </div>
+            {% if reconciliation.confirmed_by %}
+            <div>
+                <span class="text-gray-500">اعتمده:</span>
+                <span class="font-medium">{{ reconciliation.confirmed_by.get_full_name|default:reconciliation.confirmed_by.username }}</span>
+            </div>
+            <div>
+                <span class="text-gray-500">تاريخ الاعتماد:</span>
+                <span class="font-medium" dir="ltr">{{ reconciliation.confirmed_at|date:"Y-m-d H:i" }}</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="flex gap-3">
+        <a href="{% url 'tank_detail' pk=reconciliation.tank.pk %}" class="px-6 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors">
+            العودة للخزان
+        </a>
+        <a href="{% url 'fuel_reconciliation_list' %}" class="px-6 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors">
+            قائمة المطابقات
+        </a>
+    </div>
+</div>
+{% endblock %}

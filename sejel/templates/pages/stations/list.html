@@ -36,12 +36,15 @@
                             {{ station.get_status_display }}
                         </span>
                     </td>
-                    <td class="px-4 py-3">
-                        <a href="{% url 'station_detail' pk=station.pk %}" class="text-primary hover:text-primary/80 transition-colors ml-2">
+                    <td class="px-4 py-3 flex gap-2">
+                        <a href="{% url 'station_detail' pk=station.pk %}" class="text-primary hover:text-primary/80 transition-colors">
                             <i data-lucide="eye" class="w-4 h-4"></i>
                         </a>
                         <a href="{% url 'station_edit' pk=station.pk %}" class="text-primary hover:text-primary/80 transition-colors">
                             <i data-lucide="pencil" class="w-4 h-4"></i>
+                        </a>
+                        <a href="{% url 'station_delete' pk=station.pk %}" class="text-danger hover:text-danger/80 transition-colors">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
                         </a>
                     </td>
                 </tr>

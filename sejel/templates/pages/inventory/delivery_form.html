@@ -1,10 +1,10 @@
 {% extends 'base.html' %}
 
-{% block title %}إضافة توريد{% endblock %}
+{% block title %}{% if delivery %}تعديل{% else %}إضافة{% endif %} شحنة{% endblock %}
 
 {% block content %}
 <div class="max-w-2xl mx-auto">
-    <h2 class="text-xl font-bold text-gray-800 mb-6">إضافة توريد</h2>
+    <h2 class="text-xl font-bold text-gray-800 mb-6">{% if delivery %}تعديل{% else %}إضافة{% endif %} شحنة</h2>
     <form method="post" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         {% csrf_token %}
         {% for field in form %}

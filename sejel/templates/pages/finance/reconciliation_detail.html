@@ -16,23 +16,70 @@
             </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-                <h4 class="font-medium text-gray-700 mb-3">المبيعات المتوقعة</h4>
+        {# ── Per-fuel breakdown table ── #}
+        <div class="mb-6">
+            <h4 class="font-medium text-gray-700 mb-3">تفصيل المبيعات حسب نوع الوقود</h4>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm min-w-[480px]">
+                    <thead class="bg-gray-50 border-b border-gray-200">
+                        <tr>
+                            <th class="px-3 py-2 text-right font-medium text-gray-600">نوع الوقود</th>
+                            <th class="px-3 py-2 text-right font-medium text-gray-600">اللترات المباعة</th>
+                            <th class="px-3 py-2 text-right font-medium text-gray-600">سعر البيع (د.ل/لتر)</th>
+                            <th class="px-3 py-2 text-right font-medium text-gray-600">المبيعات المتوقعة (د.ل)</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        {% for fs in reconciliation.fuel_summaries %}
+                        <tr>
+                            <td class="px-3 py-2 font-medium">{{ fs.fuel_type }}</td>
+                            <td class="px-3 py-2" dir="ltr">{{ fs.liters_sold|intcomma }}</td>
+                            <td class="px-3 py-2" dir="ltr">{{ fs.unit_price|floatformat:3 }}</td>
+                            <td class="px-3 py-2 font-medium" dir="ltr">{{ fs.expected_sales|intcomma }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="4" class="px-4 py-4 text-center text-gray-500">لا توجد بيانات وقود</td></tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot class="bg-gray-50 border-t border-gray-200 font-bold">
+                        <tr>
+                            <td class="px-3 py-2">الإجمالي</td>
+                            <td class="px-3 py-2" dir="ltr">{{ reconciliation.total_liters|intcomma }}</td>
+                            <td class="px-3 py-2"></td>
+                            <td class="px-3 py-2" dir="ltr">{{ reconciliation.expected_sales|intcomma }} د.ل</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+        {# ── SALES section ── #}
+        <div class="mb-6">
+            <h4 class="font-medium text-gray-700 mb-3 flex items-center gap-2">
+                <span class="w-6 h-6 bg-blue-100 text-blue-700 rounded-full text-xs flex items-center justify-center font-bold">1</span>
+                المبيعات
+            </h4>
+            <div class="bg-blue-50/50 border border-blue-100 rounded-lg p-4">
                 <div class="space-y-2 text-sm">
                     <div class="flex justify-between">
-                        <span class="text-gray-600">إجمالي اللترات:</span>
+                        <span class="text-gray-600">إجمالي اللترات المباعة:</span>
                         <span class="font-medium" dir="ltr">{{ reconciliation.total_liters|intcomma }}</span>
                     </div>
-                    <div class="flex justify-between">
-                        <span class="text-gray-600">المبيعات المتوقعة:</span>
-                        <span class="font-medium" dir="ltr">{{ reconciliation.expected_sales|intcomma }} د.ل</span>
+                    <div class="border-t border-blue-100 pt-2 flex justify-between font-bold">
+                        <span>المبيعات المتوقعة:</span>
+                        <span dir="ltr">{{ reconciliation.expected_sales|intcomma }} د.ل</span>
                     </div>
                 </div>
             </div>
+        </div>
 
-            <div>
-                <h4 class="font-medium text-gray-700 mb-3">إجمالي التحصيل</h4>
+        {# ── COLLECTIONS section ── #}
+        <div class="mb-6">
+            <h4 class="font-medium text-gray-700 mb-3 flex items-center gap-2">
+                <span class="w-6 h-6 bg-green-100 text-green-700 rounded-full text-xs flex items-center justify-center font-bold">2</span>
+                التحصيل
+            </h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="space-y-2 text-sm">
                     <div class="flex justify-between">
                         <span class="text-gray-600">النقد:</span>
@@ -46,24 +93,58 @@
                         <span class="text-gray-600">POS:</span>
                         <span class="font-medium" dir="ltr">{{ reconciliation.total_pos|intcomma }} د.ل</span>
                     </div>
-                    <div class="border-t pt-2 flex justify-between font-medium">
-                        <span>الإجمالي:</span>
+                    <div class="border-t pt-2 flex justify-between font-bold">
+                        <span>إجمالي التحصيل:</span>
                         <span dir="ltr">{{ reconciliation.total_collection|intcomma }} د.ل</span>
+                    </div>
+                </div>
+                <div class="space-y-2 text-sm">
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">المبيعات المتوقعة:</span>
+                        <span class="font-medium" dir="ltr">{{ reconciliation.expected_sales|intcomma }} د.ل</span>
+                    </div>
+                    <div class="border-t pt-2 flex justify-between font-bold {% if reconciliation.difference_type == 'matched' %}text-success{% elif reconciliation.difference_type == 'surplus' %}text-warning{% else %}text-danger{% endif %}">
+                        <span>فرق التحصيل:</span>
+                        <span dir="ltr">{{ reconciliation.difference|intcomma }} د.ل</span>
+                    </div>
+                    <div class="text-xs text-gray-500">
+                        {{ reconciliation.get_difference_type_display }}
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="mt-6 p-4 rounded-lg {% if reconciliation.difference_type == 'matched' %}bg-success/10{% elif reconciliation.difference_type == 'surplus' %}bg-warning/10{% else %}bg-danger/10{% endif %}">
-            <div class="flex items-center justify-between">
-                <span class="font-medium {% if reconciliation.difference_type == 'matched' %}text-success{% elif reconciliation.difference_type == 'surplus' %}text-warning{% else %}text-danger{% endif %}">
-                    {{ reconciliation.get_difference_type_display }}
-                </span>
-                <span class="text-lg font-bold {% if reconciliation.difference_type == 'matched' %}text-success{% elif reconciliation.difference_type == 'surplus' %}text-warning{% else %}text-danger{% endif %}" dir="ltr">
-                    {{ reconciliation.difference|intcomma }} د.ل
-                </span>
+        {# ── CASH POSITION section ── #}
+        <div class="mb-6">
+            <h4 class="font-medium text-gray-700 mb-3 flex items-center gap-2">
+                <span class="w-6 h-6 bg-amber-100 text-amber-700 rounded-full text-xs flex items-center justify-center font-bold">3</span>
+               وضعية النقد
+            </h4>
+            <div class="bg-amber-50/50 border border-amber-100 rounded-lg p-4">
+                <div class="space-y-2 text-sm">
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">التحصيل النقدي:</span>
+                        <span class="font-medium" dir="ltr">{{ reconciliation.total_cash|intcomma }} د.ل</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">المصروفات النقدية:</span>
+                        <span class="font-medium text-danger" dir="ltr">-{{ reconciliation.total_expenses|intcomma }} د.ل</span>
+                    </div>
+                    <div class="border-t border-amber-200 pt-2 flex justify-between font-bold">
+                        <span>النقد المتبقي:</span>
+                        <span dir="ltr">{{ reconciliation.net_cash|intcomma }} د.ل</span>
+                    </div>
+                </div>
+                {% if reconciliation.shift_expenses %}
+                <div class="mt-3 border-t border-amber-100 pt-3">
+                    <p class="text-xs text-gray-500 mb-2">تفاصيل المصروفات:</p>
+                    {% for exp in reconciliation.shift_expenses %}
+                    <div class="flex justify-between text-xs text-gray-600 py-0.5">
+                        <span>{{ exp.category.name }}{% if exp.description %}: {{ exp.description|truncatechars:40 }}{% endif %}</span>
+                        <span dir="ltr">{{ exp.amount|intcomma }} د.ل</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
             </div>
         </div>
-    </div>
-</div>
-{% endblock %}

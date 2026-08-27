@@ -18,6 +18,7 @@
                 <tr>
                     <th class="px-4 py-3 text-right font-medium text-gray-600">الاسم</th>
                     <th class="px-4 py-3 text-right font-medium text-gray-600">الاسم (EN)</th>
+                    <th class="px-4 py-3 text-right font-medium text-gray-600">إجراءات</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-100">
@@ -25,10 +26,18 @@
                 <tr class="hover:bg-gray-50 transition-colors">
                     <td class="px-4 py-3 font-medium">{{ ft.name }}</td>
                     <td class="px-4 py-3 text-gray-600">{{ ft.name_en|default:"-" }}</td>
+                    <td class="px-4 py-3 flex gap-2">
+                        <a href="{% url 'fuel_type_edit' pk=ft.pk %}" class="text-primary hover:text-primary/80 transition-colors">
+                            <i data-lucide="pencil" class="w-4 h-4"></i>
+                        </a>
+                        <a href="{% url 'fuel_type_delete' pk=ft.pk %}" class="text-danger hover:text-danger/80 transition-colors">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </a>
+                    </td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="2" class="px-4 py-8 text-center text-gray-500">لا توجد أنواع وقود</td>
+                    <td colspan="3" class="px-4 py-8 text-center text-gray-500">لا توجد أنواع وقود</td>
                 </tr>
                 {% endfor %}
             </tbody>

@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}مطالبات النقص{% endblock %}
+
+{% block content %}
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead class="bg-gray-50 border-b border-gray-200">
+                <tr>
+                    <th class="px-4 py-3 text-right font-medium text-gray-600">الشحنة</th>
+                    <th class="px-4 py-3 text-right font-medium text-gray-600">المحطة</th>
+                    <th class="px-4 py-3 text-right font-medium text-gray-600">الوقود</th>
+                    <th class="px-4 py-3 text-right font-medium text-gray-600">مبلغ النقص</th>
+                    <th class="px-4 py-3 text-right font-medium text-gray-600">الحالة</th>
+                    <th class="px-4 py-3 text-right font-medium text-gray-600">إجراءات</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for claim in claims %}
+                <tr class="hover:bg-gray-50 transition-colors">
+                    <td class="px-4 py-3">
+                        <a href="{% url 'delivery_detail' pk=claim.delivery.pk %}" class="text-primary hover:text-primary/80">#{{ claim.delivery.id }}</a>
+                    </td>
+                    <td class="px-4 py-3 text-gray-600">{{ claim.delivery.station.name }}</td>
+                    <td class="px-4 py-3 text-gray-600">{{ claim.delivery.fuel_type.name }}</td>
+                    <td class="px-4 py-3 font-medium" dir="ltr">{{ claim.shortage_amount|intcomma }} لتر</td>
+                    <td class="px-4 py-3">
+                        <span class="px-2 py-1 rounded-full text-xs {% if claim.status == 'settled' %}bg-success/10 text-success{% elif claim.status == 'claimed' %}bg-warning/10 text-warning{% else %}bg-gray-100 text-gray-600{% endif %}">
+                            {{ claim.get_status_display }}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3 flex gap-2">
+                        <a href="{% url 'shortage_claim_edit' pk=claim.pk %}" class="text-primary hover:text-primary/80 transition-colors">
+                            <i data-lucide="pencil" class="w-4 h-4"></i>
+                        </a>
+                        <a href="{% url 'shortage_claim_delete' pk=claim.pk %}" class="text-danger hover:text-danger/80 transition-colors">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="px-4 py-8 text-center text-gray-500">لا توجد مطالبات نقص</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

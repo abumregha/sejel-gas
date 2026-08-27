@@ -1,34 +1,40 @@
 {% extends 'base.html' %}
-
-{% block title %}الكوبونات{% endblock %}
+{% load humanize %}
 
 {% block content %}
-<div class="flex items-center justify-between mb-6">
-    <div></div>
-</div>
-
 <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
     <div class="overflow-x-auto">
         <table class="w-full text-sm">
             <thead class="bg-gray-50 border-b border-gray-200">
                 <tr>
+                    <th class="px-4 py-3 text-right font-medium text-gray-600">المناوبة</th>
                     <th class="px-4 py-3 text-right font-medium text-gray-600">الفئة</th>
                     <th class="px-4 py-3 text-right font-medium text-gray-600">العدد</th>
-                    <th class="px-4 py-3 text-right font-medium text-gray-600">الإجمالي</th>
-                    <th class="px-4 py-3 text-right font-medium text-gray-600">المناوبة</th>
+                    <th class="px-4 py-3 text-right font-medium text-gray-600">القيمة الإجمالية</th>
+                    <th class="px-4 py-3 text-right font-medium text-gray-600">إجراءات</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-100">
                 {% for v in vouchers %}
                 <tr class="hover:bg-gray-50 transition-colors">
-                    <td class="px-4 py-3 font-medium">{{ v.category.name }}</td>
+                    <td class="px-4 py-3">
+                        <a href="{% url 'shift_detail' pk=v.shift.pk %}" class="text-primary hover:text-primary/80">#{{ v.shift.id }}</a>
+                    </td>
+                    <td class="px-4 py-3">{{ v.category.name }}</td>
                     <td class="px-4 py-3 text-gray-600">{{ v.count }}</td>
-                    <td class="px-4 py-3 text-gray-600">{{ v.total_value }} د.ل</td>
-                    <td class="px-4 py-3 text-gray-600">#{{ v.shift_id }}</td>
+                    <td class="px-4 py-3 font-medium" dir="ltr">{{ v.total_value|intcomma }} د.ل</td>
+                    <td class="px-4 py-3 flex gap-2">
+                        <a href="{% url 'voucher_edit' pk=v.pk %}" class="text-primary hover:text-primary/80 transition-colors">
+                            <i data-lucide="pencil" class="w-4 h-4"></i>
+                        </a>
+                        <a href="{% url 'voucher_delete' pk=v.pk %}" class="text-danger hover:text-danger/80 transition-colors">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </a>
+                    </td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="4" class="px-4 py-8 text-center text-gray-500">لا توجد كوبونات</td>
+                    <td colspan="5" class="px-4 py-8 text-center text-gray-500">لا توجد كوبونات</td>
                 </tr>
                 {% endfor %}
             </tbody>

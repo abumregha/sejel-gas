@@ -2,7 +2,7 @@
 {% load humanize %}
 
 {% block content %}
-<div class="mb-6">
+<div class="mb-6 flex flex-wrap gap-4 items-end justify-between">
     <form method="get" class="flex gap-4 items-end">
         <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">التاريخ</label>
@@ -10,6 +10,11 @@
         </div>
         <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">عرض</button>
     </form>
+    <a href="?{{ request.GET.urlencode }}{% if request.GET %}&{% endif %}print=1" target="_blank"
+       class="border border-primary text-primary px-4 py-2 rounded-lg hover:bg-blue-50 transition-colors flex items-center gap-2">
+        <i data-lucide="printer" class="w-4 h-4"></i>
+        طباعة / PDF
+    </a>
 </div>
 
 <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">

@@ -39,7 +39,12 @@
                 <div class="border border-gray-200 rounded-lg p-4">
                     <div class="flex items-center justify-between mb-3">
                         <span class="font-medium">عداد {{ reading.meter.code }} — {{ reading.meter.fuel_type }}</span>
-                        <span class="text-sm text-gray-500">البداية: {{ reading.start_reading|intcomma }}</span>
+                        <div class="text-sm text-gray-500 text-left">
+                            <span>البداية: {{ reading.start_reading|intcomma }}</span>
+                            {% if reading._prev_closing is not None %}
+                            <span class="mr-3 text-blue-600">(آخر إغلاق: {{ reading._prev_closing|intcomma }})</span>
+                            {% endif %}
+                        </div>
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>

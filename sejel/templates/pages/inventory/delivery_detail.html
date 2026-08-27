@@ -1,30 +1,188 @@
 {% extends 'base.html' %}
+{% load humanize %}
 
-{% block title %}تفاصيل التوريد #{{ delivery.id }}{% endblock %}
+{% block title %}شحنة #{{ delivery.id }}{% endblock %}
 
 {% block content %}
 <div class="max-w-4xl mx-auto">
-    <h2 class="text-xl font-bold text-gray-800 mb-6">تفاصيل التوريد #{{ delivery.id }}</h2>
-
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-            <h3 class="font-bold text-gray-800 mb-3">معلومات التوريد</h3>
-            <dl class="space-y-2 text-sm">
-                <div class="flex justify-between"><dt class="text-gray-500">النوع:</dt><dd>{{ delivery.fuel_type.name }}</dd></div>
-                <div class="flex justify-between"><dt class="text-gray-500">المحطة:</dt><dd>{{ delivery.station.name }}</dd></div>
-                <div class="flex justify-between"><dt class="text-gray-500">الكمية المطلوبة:</dt><dd>{{ delivery.requested_quantity }} لتر</dd></div>
-                <div class="flex justify-between"><dt class="text-gray-500">الكمية المتوقعة:</dt><dd>{{ delivery.expected_quantity }} لتر</dd></div>
-                <div class="flex justify-between"><dt class="text-gray-500">الكمية المستلمة:</dt><dd>{{ delivery.received_quantity|default:"-" }} لتر</dd></div>
-                <div class="flex justify-between"><dt class="text-gray-500">النقص:</dt><dd>{{ delivery.shortage }} لتر</dd></div>
-                <div class="flex justify-between"><dt class="text-gray-500">الحالة:</dt><dd>{{ delivery.get_status_display }}</dd></div>
-            </dl>
+    <div class="flex items-center justify-between mb-6">
+        <h2 class="text-xl font-bold text-gray-800">شحنة #{{ delivery.id }}</h2>
+        <div class="flex gap-2">
+            <a href="{% url 'delivery_edit' pk=delivery.pk %}" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2">
+                <i data-lucide="pencil" class="w-4 h-4"></i>
+                تعديل
+            </a>
+            <a href="{% url 'delivery_delete' pk=delivery.pk %}" class="bg-danger text-white px-4 py-2 rounded-lg hover:bg-danger/90 transition-colors flex items-center gap-2">
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                حذف
+            </a>
         </div>
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-            <h3 class="font-bold text-gray-800 mb-3">التواريخ</h3>
-            <dl class="space-y-2 text-sm">
-                <div class="flex justify-between"><dt class="text-gray-500">تاريخ الطلب:</dt><dd>{{ delivery.order_date|date:"Y-m-d H:i" }}</dd></div>
-                <div class="flex justify-between"><dt class="text-gray-500">تاريخ الوصول:</dt><dd>{{ delivery.arrival_date|date:"Y-m-d H:i"|default:"-" }}</dd></div>
-            </dl>
+    </div>
+
+    {# ── Shipment details ── #}
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+        <h3 class="font-semibold mb-4">بيانات الشحنة</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+            <div>
+                <span class="text-gray-500">المحطة:</span>
+                <span class="font-medium">{{ delivery.station.name }}</span>
+            </div>
+            <div>
+                <span class="text-gray-500">نوع الوقود:</span>
+                <span class="font-medium">{{ delivery.fuel_type.name }}</span>
+            </div>
+            <div>
+                <span class="text-gray-500">المورّد:</span>
+                <span class="font-medium">{{ delivery.supplier.name|default:"-" }}</span>
+            </div>
+            <div>
+                <span class="text-gray-500">الكمية المتوقعة:</span>
+                <span class="font-medium" dir="ltr">{{ delivery.expected_quantity|intcomma }} لتر</span>
+            </div>
+            <div>
+                <span class="text-gray-500">الكمية المطلوبة:</span>
+                <span class="font-medium" dir="ltr">{{ delivery.requested_quantity|intcomma }} لتر</span>
+            </div>
+            <div>
+                <span class="text-gray-500">رقم المستند:</span>
+                <span class="font-medium">{{ delivery.document_number|default:"-" }}</span>
+            </div>
+            <div>
+                <span class="text-gray-500">تاريخ الطلب:</span>
+                <span class="font-medium" dir="ltr">{{ delivery.order_date|date:"Y-m-d H:i" }}</span>
+            </div>
+            <div>
+                <span class="text-gray-500">حالة الشحنة:</span>
+                <span class="px-2 py-0.5 rounded text-xs {% if delivery.status == 'received' %}bg-success/10 text-success{% elif delivery.status == 'ordered' %}bg-warning/10 text-warning{% else %}bg-gray-100 text-gray-600{% endif %}">{{ delivery.get_status_display }}</span>
+            </div>
+        </div>
+    </div>
+
+    {# ── Measurement (pre/post readings + shortage) ── #}
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+        <h3 class="font-semibold mb-4">قياس الاستلام</h3>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div class="bg-blue-50/50 border border-blue-100 rounded-lg p-4 text-center">
+                <div class="text-gray-500 mb-1">قراءة قبل الشحنة</div>
+                <div class="text-lg font-bold" dir="ltr">{{ delivery.pre_reading|intcomma|default:"—" }}</div>
+            </div>
+            <div class="bg-green-50/50 border border-green-100 rounded-lg p-4 text-center">
+                <div class="text-gray-500 mb-1">قراءة بعد الشحنة</div>
+                <div class="text-lg font-bold" dir="ltr">{{ delivery.post_reading|intcomma|default:"—" }}</div>
+            </div>
+            <div class="bg-gray-50/50 border border-gray-200 rounded-lg p-4 text-center">
+                <div class="text-gray-500 mb-1">الكمية المستلمة</div>
+                <div class="text-lg font-bold" dir="ltr">{{ delivery.received_quantity|intcomma|default:"—" }}</div>
+            </div>
+            <div class="border rounded-lg p-4 text-center {% if delivery.shortage > 0 %}bg-red-50 border-red-200{% else %}bg-green-50 border-green-200{% endif %}">
+                <div class="text-gray-500 mb-1">النقص</div>
+                <div class="text-lg font-bold {% if delivery.shortage > 0 %}text-danger{% else %}text-success{% endif %}" dir="ltr">{{ delivery.shortage|intcomma }}</div>
+            </div>
+        </div>
+    </div>
+
+    {# ── Payment section ── #}
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+        <h3 class="font-semibold mb-4">الدفع</h3>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div>
+                <span class="text-gray-500">قيمة الفاتورة:</span>
+                <span class="font-medium" dir="ltr">{{ delivery.invoiced_amount|intcomma|default:"—" }} د.ل</span>
+            </div>
+            <div>
+                <span class="text-gray-500">المبلغ المدفوع:</span>
+                <span class="font-medium" dir="ltr">{{ delivery.paid_amount|intcomma }} د.ل</span>
+            </div>
+            <div>
+                <span class="text-gray-500">تاريخ الدفع:</span>
+                <span class="font-medium" dir="ltr">{{ delivery.payment_date|date:"Y-m-d H:i"|default:"—" }}</span>
+            </div>
+            <div>
+                <span class="text-gray-500">حالة الدفع:</span>
+                <span class="px-2 py-0.5 rounded text-xs {% if delivery.payment_status == 'paid' %}bg-success/10 text-success{% elif delivery.payment_status == 'partial' %}bg-warning/10 text-warning{% else %}bg-gray-100 text-gray-600{% endif %}">{{ delivery.get_payment_status_display }}</span>
+            </div>
+        </div>
+        {% if delivery.payment_reference %}
+        <div class="mt-3 text-sm">
+            <span class="text-gray-500">مرجع الدفع:</span>
+            <span class="font-medium">{{ delivery.payment_reference }}</span>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-6">
+        <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+            <h3 class="font-bold text-gray-800">المستندات</h3>
+            <a href="{% url 'delivery_document_create' delivery_id=delivery.pk %}" class="text-primary hover:text-primary/80 text-sm flex items-center gap-1">
+                <i data-lucide="plus" class="w-4 h-4"></i>
+                إضافة مستند
+            </a>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead class="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                        <th class="px-4 py-3 text-right font-medium text-gray-600">النوع</th>
+                        <th class="px-4 py-3 text-right font-medium text-gray-600">الملف</th>
+                        <th class="px-4 py-3 text-right font-medium text-gray-600">التاريخ</th>
+                        <th class="px-4 py-3 text-right font-medium text-gray-600">إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {% for doc in documents %}
+                    <tr class="hover:bg-gray-50 transition-colors">
+                        <td class="px-4 py-3">{{ doc.get_document_type_display }}</td>
+                        <td class="px-4 py-3">
+                            <a href="{{ doc.file.url }}" target="_blank" class="text-primary hover:text-primary/80 underline">عرض</a>
+                        </td>
+                        <td class="px-4 py-3 text-gray-600" dir="ltr">{{ doc.uploaded_at|date:"Y-m-d H:i" }}</td>
+                        <td class="px-4 py-3">
+                            <a href="{% url 'delivery_document_delete' pk=doc.pk %}" class="text-danger hover:text-danger/80 transition-colors">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="px-4 py-4 text-center text-gray-500">لا توجد مستندات</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+            <h3 class="font-bold text-gray-800">مطالبة النقص</h3>
+            {% if not shortage_claim and delivery.shortage > 0 %}
+            <a href="{% url 'shortage_claim_create' delivery_id=delivery.pk %}" class="text-primary hover:text-primary/80 text-sm flex items-center gap-1">
+                <i data-lucide="plus" class="w-4 h-4"></i>
+                إنشاء مطالبة
+            </a>
+            {% endif %}
+        </div>
+        <div class="p-4">
+            {% if shortage_claim %}
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <p class="text-sm text-gray-500 mb-1">المبلغ</p>
+                    <p class="font-medium" dir="ltr">{{ shortage_claim.shortage_amount|intcomma }} لتر</p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500 mb-1">الحالة</p>
+                    <span class="px-2 py-1 rounded-full text-xs {% if shortage_claim.status == 'settled' %}bg-success/10 text-success{% elif shortage_claim.status == 'claimed' %}bg-warning/10 text-warning{% else %}bg-gray-100 text-gray-600{% endif %}">
+                        {{ shortage_claim.get_status_display }}
+                    </span>
+                </div>
+            </div>
+            <div class="flex gap-2 mt-4">
+                <a href="{% url 'shortage_claim_edit' pk=shortage_claim.pk %}" class="text-primary hover:text-primary/80 text-sm">تعديل</a>
+                <a href="{% url 'shortage_claim_delete' pk=shortage_claim.pk %}" class="text-danger hover:text-danger/80 text-sm">حذف</a>
+            </div>
+            {% else %}
+            <p class="text-gray-500 text-center">{% if delivery.shortage > 0 %}لا توجد مطالبة بالنقص{% else %}لا يوجد نقص{% endif %}</p>
+            {% endif %}
         </div>
     </div>
 </div>

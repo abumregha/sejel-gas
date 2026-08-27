@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+
+{% block title %}العدّادات{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+    <div></div>
+    <a href="{% url 'meter_create' %}" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2">
+        <i data-lucide="plus" class="w-4 h-4"></i>
+        إضافة عدّاد
+    </a>
+</div>
+
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead class="bg-gray-50 border-b border-gray-200">
+                <tr>
+                    <th class="px-4 py-3 text-right font-medium text-gray-600">الكود</th>
+                    <th class="px-4 py-3 text-right font-medium text-gray-600">المضخة</th>
+                    <th class="px-4 py-3 text-right font-medium text-gray-600">الوقود</th>
+                    <th class="px-4 py-3 text-right font-medium text-gray-600">الخزان</th>
+                    <th class="px-4 py-3 text-right font-medium text-gray-600">القراءة الحالية</th>
+                    <th class="px-4 py-3 text-right font-medium text-gray-600">الحالة</th>
+                    <th class="px-4 py-3 text-right font-medium text-gray-600">إجراءات</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for meter in meters %}
+                <tr class="hover:bg-gray-50 transition-colors">
+                    <td class="px-4 py-3 font-medium">{{ meter.code }}</td>
+                    <td class="px-4 py-3 text-gray-600">{{ meter.machine.name }}</td>
+                    <td class="px-4 py-3 text-gray-600">{{ meter.fuel_type.name }}</td>
+                    <td class="px-4 py-3 text-gray-600">{{ meter.tank.name|default:meter.tank.id }}</td>
+                    <td class="px-4 py-3 text-gray-600" dir="ltr">{{ meter.current_reading }}</td>
+                    <td class="px-4 py-3">
+                        <span class="px-2 py-1 rounded-full text-xs {% if meter.status == 'active' %}bg-success/10 text-success{% else %}bg-gray-100 text-gray-600{% endif %}">
+                            {{ meter.get_status_display }}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3 flex gap-2">
+                        <a href="{% url 'meter_edit' pk=meter.pk %}" class="text-primary hover:text-primary/80 transition-colors">
+                            <i data-lucide="pencil" class="w-4 h-4"></i>
+                        </a>
+                        <a href="{% url 'meter_delete' pk=meter.pk %}" class="text-danger hover:text-danger/80 transition-colors">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="px-4 py-8 text-center text-gray-500">لا توجد عدّادات</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

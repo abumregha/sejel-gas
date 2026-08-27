@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+    <div class="mb-6">
+        <h2 class="text-xl font-bold">المخزون والتوريد</h2>
+        <p class="text-sm text-gray-500 mt-1">نظرة شاملة على حالة الخزانات والشحنات والتسويات لكل محطة</p>
+    </div>
+
+    {% for sd in station_data %}
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+        <h3 class="text-lg font-semibold mb-4">{{ sd.station.name }}</h3>
+
+        {# Tank Overview #}
+        <div class="mb-4">
+            <h4 class="font-medium text-gray-700 mb-3">الخزانات</h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {% for td in sd.tanks %}
+                <div class="bg-gray-50 rounded-lg p-3">
+                    <div class="flex justify-between text-sm mb-1">
+                        <span class="font-medium">{{ td.tank.name|default:td.tank.fuel_type }}</span>
+                        <span class="text-gray-500" dir="ltr">{{ td.tank.current_level|intcomma }} / {{ td.tank.capacity|intcomma }}</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2">
+                        <div class="h-2 rounded-full {% if td.level_percent > 60 %}bg-success{% elif td.level_percent > 25 %}bg-warning{% else %}bg-danger{% endif %}"
+                             style="width: {{ td.level_percent|floatformat:0 }}%"></div>
+                    </div>
+                    <div class="flex justify-between text-xs text-gray-500 mt-1">
+                        <span>{{ td.tank.fuel_type }}</span>
+                        <span dir="ltr">{{ td.level_percent|floatformat:1 }}%</span>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-sm text-gray-500">لا توجد خزانات</div>
+                {% endfor %}
+            </div>
+            {% if sd.tanks %}
+            <div class="mt-2 text-xs text-gray-500">
+                الإجمالي: {{ sd.total_level|intcomma }} / {{ sd.total_capacity|intcomma }} لتر
+                ({{ sd.level_percent|floatformat:1 }}%)
+            </div>
+            {% endif %}
+        </div>
+
+        {# Pending Items #}
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+            <div class="bg-blue-50/50 border border-blue-100 rounded-lg p-3 text-center">
+                <div class="text-2xl font-bold text-blue-700">{{ sd.pending_requests }}</div>
+                <div class="text-xs text-gray-500">طلبات توريد معلقة</div>
+            </div>
+            <div class="bg-amber-50/50 border border-amber-100 rounded-lg p-3 text-center">
+                <div class="text-2xl font-bold text-amber-700">{{ sd.pending_deliveries }}</div>
+                <div class="text-xs text-gray-500">شحنات قيد الانتظار</div>
+            </div>
+            <div class="bg-danger/5 border border-danger/10 rounded-lg p-3 text-center">
+                <div class="text-2xl font-bold text-danger">{{ sd.pending_claims }}</div>
+                <div class="text-xs text-gray-500">مطالبات نقص</div>
+            </div>
+            <div class="bg-purple-50/50 border border-purple-100 rounded-lg p-3 text-center">
+                <div class="text-2xl font-bold text-purple-700">{{ sd.pending_settlements }}</div>
+                <div class="text-xs text-gray-500">تسويات كوبونات معلقة</div>
+            </div>
+        </div>
+
+        {% if sd.outstanding_vouchers > 0 %}
+        <div class="bg-warning/5 border border-warning/20 rounded-lg p-3 text-sm mb-4">
+            <strong>متبقي من الرحمة:</strong>
+            <span class="font-bold text-danger" dir="ltr">{{ sd.outstanding_vouchers|intcomma }} د.ل</span>
+            <span class="text-gray-500">(مدفوع: {{ sd.settled_vouchers|intcomma }} د.ل)</span>
+        </div>
+        {% endif %}
+
+        {# Recent Transfers #}
+        {% if sd.recent_transfers %}
+        <div>
+            <h4 class="font-medium text-gray-700 mb-2">آخر التحويلات</h4>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead class="bg-gray-50 border-b border-gray-200">
+                        <tr>
+                            <th class="px-3 py-2 text-right font-medium text-gray-600">من</th>
+                            <th class="px-3 py-2 text-right font-medium text-gray-600">إلى</th>
+                            <th class="px-3 py-2 text-right font-medium text-gray-600">الكمية</th>
+                            <th class="px-3 py-2 text-right font-medium text-gray-600">التاريخ</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        {% for t in sd.recent_transfers %}
+                        <tr>
+                            <td class="px-3 py-2">{{ t.from_tank.name|default:t.from_tank.fuel_type }}</td>
+                            <td class="px-3 py-2">{{ t.to_tank.name|default:t.to_tank.fuel_type }}</td>
+                            <td class="px-3 py-2 font-medium" dir="ltr">{{ t.quantity|intcomma }} لتر</td>
+                            <td class="px-3 py-2 text-gray-500" dir="ltr">{{ t.transfer_date|date:"Y-m-d H:i" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    {% empty %}
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center text-gray-500">
+        لا توجد محطات نشطة
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

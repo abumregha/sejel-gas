@@ -19,22 +19,33 @@
                     <th class="px-4 py-3 text-right font-medium text-gray-600">الاسم</th>
                     <th class="px-4 py-3 text-right font-medium text-gray-600">القيمة</th>
                     <th class="px-4 py-3 text-right font-medium text-gray-600">نشط</th>
+                    <th class="px-4 py-3 text-right font-medium text-gray-600">إجراءات</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-100">
                 {% for vc in voucher_categories %}
                 <tr class="hover:bg-gray-50 transition-colors">
                     <td class="px-4 py-3 font-medium">{{ vc.name }}</td>
-                    <td class="px-4 py-3 text-gray-600">{{ vc.value }} د.ل</td>
+                    <td class="px-4 py-3 text-gray-600" dir="ltr">{{ vc.value }}</td>
                     <td class="px-4 py-3">
-                        <span class="px-2 py-1 rounded-full text-xs {% if vc.is_active %}bg-success/10 text-success{% else %}bg-gray-100 text-gray-600{% endif %}">
-                            {% if vc.is_active %}نشط{% else %}غير نشط{% endif %}
-                        </span>
+                        {% if vc.is_active %}
+                        <span class="px-2 py-1 rounded-full text-xs bg-success/10 text-success">نعم</span>
+                        {% else %}
+                        <span class="px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-600">لا</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-3 flex gap-2">
+                        <a href="{% url 'voucher_category_edit' pk=vc.pk %}" class="text-primary hover:text-primary/80 transition-colors">
+                            <i data-lucide="pencil" class="w-4 h-4"></i>
+                        </a>
+                        <a href="{% url 'voucher_category_delete' pk=vc.pk %}" class="text-danger hover:text-danger/80 transition-colors">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </a>
                     </td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="3" class="px-4 py-8 text-center text-gray-500">لا توجد فئات</td>
+                    <td colspan="4" class="px-4 py-8 text-center text-gray-500">لا توجد فئات كوبونات</td>
                 </tr>
                 {% endfor %}
             </tbody>

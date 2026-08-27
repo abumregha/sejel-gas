@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if claim %}تعديل{% else %}إضافة{% endif %} مطالبة نقص{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <h2 class="text-xl font-bold text-gray-800 mb-6">{% if claim %}تعديل{% else %}إضافة{% endif %} مطالبة نقص - شحنة #{{ delivery.id }}</h2>
+    <form method="post" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        {% csrf_token %}
+        {% for field in form %}
+        <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}
+            <p class="text-danger text-xs mt-1">{{ field.errors.0 }}</p>
+            {% endif %}
+        </div>
+        {% endfor %}
+        <div class="flex gap-3 mt-6">
+            <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">حفظ</button>
+            <a href="{% url 'delivery_detail' pk=delivery.pk %}" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors">إلغاء</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -1,3 +1,8 @@
+/* ---------- Typography: Tajawal ---------- */
+body {
+    font-family: 'Tajawal', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: #f1f5f9; }
 ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
@@ -6,9 +11,23 @@
 [dir="rtl"] .text-left { text-align: right !important; }
 [dir="rtl"] .text-right { text-align: left !important; }
 
-.sidebar-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.5);
-    z-index: 30;
+/* ---------- Sidebar layout: mobile drawer + desktop expanded/collapsed ---------- */
+
+#content { margin-right: 0; min-width: 0; }
+
+/* Mobile: sidebar is a drawer (RTL -> slides from the right) */
+@media (max-width: 1023px) {
+    body.sb-open #sidebar { transform: translateX(0); }
+    body.sb-open #sidebarOverlay { display: block; }
 }
+
+/* Desktop */
+@media (min-width: 1024px) {
+    #content { margin-right: 16rem; transition: margin-right .2s ease; }
+    body.sb-collapsed #content { margin-right: 4.5rem; }
+}
+
+body.sb-collapsed #sidebar { width: 4.5rem; }
+body.sb-collapsed .sb-label { display: none; }
+body.sb-collapsed #sidebar nav a,
+body.sb-collapsed #sidebar nav p { justify-content: center; padding-left: 0.5rem; padding-right: 0.5rem; }

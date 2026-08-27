@@ -1,5 +1,7 @@
 {% extends 'base.html' %}
 
+{% block title %}الموظفون{% endblock %}
+
 {% block content %}
 <div class="flex items-center justify-between mb-6">
     <div></div>
@@ -25,7 +27,9 @@
             <tbody class="divide-y divide-gray-100">
                 {% for employee in employees %}
                 <tr class="hover:bg-gray-50 transition-colors">
-                    <td class="px-4 py-3 font-medium">{{ employee.name }}</td>
+                    <td class="px-4 py-3 font-medium">
+                        <a href="{% url 'employee_detail' pk=employee.pk %}" class="text-primary hover:text-primary/80">{{ employee.name }}</a>
+                    </td>
                     <td class="px-4 py-3 text-gray-600">{{ employee.station.name }}</td>
                     <td class="px-4 py-3 text-gray-600" dir="ltr">{{ employee.phone|default:"-" }}</td>
                     <td class="px-4 py-3 text-gray-600">{{ employee.get_shift_type_display }}</td>
@@ -34,9 +38,12 @@
                             {{ employee.get_status_display }}
                         </span>
                     </td>
-                    <td class="px-4 py-3">
+                    <td class="px-4 py-3 flex gap-2">
                         <a href="{% url 'employee_edit' pk=employee.pk %}" class="text-primary hover:text-primary/80 transition-colors">
                             <i data-lucide="pencil" class="w-4 h-4"></i>
+                        </a>
+                        <a href="{% url 'employee_delete' pk=employee.pk %}" class="text-danger hover:text-danger/80 transition-colors">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
                         </a>
                     </td>
                 </tr>

@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+
+{% block title %}حذف المحطة - {{ object }}{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div class="flex items-center gap-3 mb-4">
+            <div class="w-10 h-10 rounded-full bg-danger/10 flex items-center justify-center">
+                <i data-lucide="alert-triangle" class="w-5 h-5 text-danger"></i>
+            </div>
+            <h2 class="text-xl font-bold text-gray-800">تأكيد حذف المحطة</h2>
+        </div>
+
+        <p class="text-gray-600 mb-4">هل أنت متأكد من حذف المحطة <strong>{{ object }}</strong>؟</p>
+
+        {% if dependents %}
+        <div class="bg-danger/5 border border-danger/20 rounded-lg p-4 mb-4">
+            <p class="font-bold text-danger mb-2">⚠️ تحذير: سيتم حذف البيانات التالية نهائياً:</p>
+            <ul class="text-sm text-gray-700 space-y-1">
+                {% for label, count in dependents.items %}
+                <li>• {{ label }}: <strong>{{ count }}</strong></li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        {% if has_financial_data %}
+        <div class="bg-danger/10 border border-danger/30 rounded-lg p-4 mb-4">
+            <p class="font-bold text-danger">⛔ لا يمكن حذف هذه المحطة</p>
+            <p class="text-sm text-gray-700 mt-1">تحتوي على سجلات مالية (تحصيلات، كوبونات، POS، مصروفات، مطابقات). يرجى تعطيل المحطة بدلاً من حذفها.</p>
+        </div>
+        {% endif %}
+        {% else %}
+        <p class="text-gray-500 text-sm mb-4">لا توجد بيانات مرتبطة بهذه المحطة.</p>
+        {% endif %}
+
+        <div class="flex gap-3 mt-6">
+            {% if not has_financial_data %}
+            <form method="post">
+                {% csrf_token %}
+                <button type="submit"
+                    class="bg-danger text-white px-4 py-2 rounded-lg hover:bg-danger/90 transition-colors">
+                    حذف المحطة
+                </button>
+            </form>
+            {% endif %}
+            <a href="{% url cancel_url %}"
+                class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors">
+                إلغاء
+            </a>
+            {% if has_financial_data %}
+            <a href="{% url 'station_edit' pk=object.pk %}"
+                class="bg-primary/10 text-primary px-4 py-2 rounded-lg hover:bg-primary/20 transition-colors">
+                تعطيل المحطة بدلاً من الحذف
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

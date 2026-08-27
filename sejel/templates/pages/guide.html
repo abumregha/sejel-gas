@@ -1,0 +1,364 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="mb-6">
+        <h2 class="text-xl font-bold">دليل الاستخدام</h2>
+        <p class="text-sm text-gray-500 mt-1">شرح بسيط وخطوة بخطوة لكيفية استخدام كل ميزة في النظام</p>
+    </div>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-8 text-sm">
+        <a href="#daily" class="bg-primary/5 border border-primary/20 rounded-xl p-3 hover:border-primary transition-colors text-center font-medium">العمل اليومي</a>
+        <a href="#setup" class="bg-white border border-gray-200 rounded-xl p-3 hover:border-primary transition-colors text-center">الإعداد الأولي</a>
+        <a href="#shifts" class="bg-white border border-gray-200 rounded-xl p-3 hover:border-primary transition-colors text-center">المناوبات</a>
+        <a href="#readings" class="bg-white border border-gray-200 rounded-xl p-3 hover:border-primary transition-colors text-center">القراءات</a>
+        <a href="#finance" class="bg-white border border-gray-200 rounded-xl p-3 hover:border-primary transition-colors text-center">المالية</a>
+        <a href="#closing" class="bg-white border border-gray-200 rounded-xl p-3 hover:border-primary transition-colors text-center">إقفال المناوبة</a>
+        <a href="#inventory" class="bg-white border border-gray-200 rounded-xl p-3 hover:border-primary transition-colors text-center">المخزون</a>
+        <a href="#reports" class="bg-white border border-gray-200 rounded-xl p-3 hover:border-primary transition-colors text-center">التقارير</a>
+        <a href="#users" class="bg-white border border-gray-200 rounded-xl p-3 hover:border-primary transition-colors text-center">المستخدمون</a>
+        <a href="#settlement" class="bg-white border border-gray-200 rounded-xl p-3 hover:border-primary transition-colors text-center">تسويات الكوبونات</a>
+        <a href="#transfers" class="bg-white border border-gray-200 rounded-xl p-3 hover:border-primary transition-colors text-center">التحويلات</a>
+        <a href="#reconciliation" class="bg-white border border-gray-200 rounded-xl p-3 hover:border-primary transition-colors text-center">مطابقة الوقود</a>
+    </div>
+    <div class="space-y-6">
+
+        <!-- ══ Daily Workflow ══ -->
+        <section id="daily" class="bg-gradient-to-l from-primary/5 to-blue-50 border border-primary/20 rounded-xl p-6 scroll-mt-24">
+            <h3 class="font-bold text-lg mb-2">العمل اليومي — الخطوات الأساسية</h3>
+            <p class="text-sm text-gray-600 mb-4">هذه هي العملية التي تكررها كل يوم. اتبع الخطوات بالترتيب:</p>
+            <div class="space-y-4">
+                <div class="bg-white rounded-lg border border-gray-200 p-4">
+                    <div class="flex items-start gap-3">
+                        <span class="bg-success text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0">1</span>
+                        <div>
+                            <h4 class="font-bold text-sm">توليد مناوبات اليوم</h4>
+                            <ol class="list-decimal pr-5 text-sm text-gray-600 space-y-1 mt-2">
+                                <li>من الشريط الجانبي اضغط <b>المناوبات</b></li>
+                                <li>اضغط الزر الأخضر الكبير <b>توليد مناوبات اليوم</b></li>
+                                <li>سيتم إنشاء مناوبات تلقائياً من التعريفات النشطة لكل جزيرة</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-lg border border-gray-200 p-4">
+                    <div class="flex items-start gap-3">
+                        <span class="bg-success text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0">2</span>
+                        <div>
+                            <h4 class="font-bold text-sm">تسجيل قراءات العدادات الابتدائية</h4>
+                            <ol class="list-decimal pr-5 text-sm text-gray-600 space-y-1 mt-2">
+                                <li>افتح المناوبة بالضغط على اسمها</li>
+                                <li>اضغط <b>إضافة قراءة عداد</b></li>
+                                <li>أدخل القراءة الابتدائية لكل عداد (تظهر القراءة السابقة للتأكد)</li>
+                                <li>كرر لجميع العدادات النشطة في المحطة</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-lg border border-gray-200 p-4">
+                    <div class="flex items-start gap-3">
+                        <span class="bg-success text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0">3</span>
+                        <div>
+                            <h4 class="font-bold text-sm">تسجيل البيانات المالية</h4>
+                            <p class="text-sm text-gray-600 mt-1">من <b>نفس صفحة المناوبة</b> (أسفل القراءات)، أضف التحصيل النقدي والكوبونات وPOS</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-lg border border-gray-200 p-4">
+                    <div class="flex items-start gap-3">
+                        <span class="bg-success text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0">4</span>
+                        <div>
+                            <h4 class="font-bold text-sm">إقفال المناوبة</h4>
+                            <p class="text-sm text-gray-600 mt-1">اضغط <b>إقفال المناوبة</b> وأدخل القراءات النهائية — يحسب النظام اللترات والمتوقع لكل نوع وقود تلقائياً ثم ينشئ مطابقة مالية</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-lg border border-gray-200 p-4">
+                    <div class="flex items-start gap-3">
+                        <span class="bg-success text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0">5</span>
+                        <div>
+                            <h4 class="font-bold text-sm">اعتماد التسوية (المالي)</h4>
+                            <p class="text-sm text-gray-600 mt-1">المالي يفتح صفحة المطابقات ويعتمد التسوية بعد التأكد من صحة البيانات</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ══ Setup ══ -->
+        <section id="setup" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 scroll-mt-24">
+            <h3 class="font-bold text-lg mb-3">الإعداد الأولي (المالك فقط)</h3>
+            <p class="text-sm text-gray-600 mb-3">يتم مرة واحدة عند بدء استخدام النظام. ترتيب الإضافة مهم:</p>
+            <ol class="list-decimal pr-5 space-y-3 text-sm text-gray-700 leading-relaxed">
+                <li><b>شركات التسويق</b> — الإعدادات &larr; شركات التسويق</li>
+                <li><b>المحطات</b> — المحطات &larr; إضافة اسم وعنوان ونوع العلاقة</li>
+                <li><b>أنواع الوقود</b> — الإعدادات &larr; أنواع الوقود (بنزين، ديزل)</li>
+                <li><b>أسعار الوقود</b> — الإعدادات &larr; أسعار الوقود — سعر البيع + هامش الربح + تاريخ السريان</li>
+                <li><b>الجزر</b> — الإعدادات &larr; الجزر — أضف جزر لكل محطة</li>
+                <li><b>المضخات</b> — الإعدادات &larr; المضخات — أضف مضخة لكل جزيرة</li>
+                <li><b>العدّادات</b> — الإعدادات &larr; العدّادات — لكل مضخة عدّاد، اربط كل عدّاد بنوع الوقود والخزان</li>
+                <li><b>الخزانات</b> — الخزانات &larr; سعة ونوع وقود لكل خزان</li>
+                <li><b>الموظفون</b> — الموظفون &larr; اسم ومحطة ونوع المناوبة</li>
+                <li><b>تعريفات المناوبات</b> — الإعدادات &larr; تعريفات المناوبات — أنشئ مناوبات متكررة مع تحديد الجزيرة</li>
+                <li><b>المستخدمون</b> — الإعدادات &larr; المستخدمون والصلاحيات</li>
+            </ol>
+        </section>
+
+        <!-- ══ Shifts ══ -->
+        <section id="shifts" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 scroll-mt-24">
+            <h3 class="font-bold text-lg mb-3">المناوبات — التعريف والتوليد</h3>
+            <div class="space-y-4 text-sm text-gray-700 leading-relaxed">
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <h4 class="font-bold mb-2">تعريف المناوبة (يُنشأ مرة واحدة)</h4>
+                    <ol class="list-decimal pr-5 space-y-1">
+                        <li>من <b>الإعدادات &larr; تعريفات المناوبات</b> اضغط إضافة</li>
+                        <li>أدخل الاسم والمحطة والجزيرة ووقت البداية والنهاية</li>
+                        <li>حدد أيام العمل</li>
+                        <li><b>الجزيرة مهمة</b> — كل تعريف ينتمي لجزيرة محددة</li>
+                    </ol>
+                </div>
+                <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <h4 class="font-bold mb-2">توليد المناوبات اليومية</h4>
+                    <ol class="list-decimal pr-5 space-y-1">
+                        <li>من <b>المناوبات</b> في الشريط الجانبي</li>
+                        <li>اضغط <b>توليد مناوبات اليوم</b></li>
+                        <li>يتم التوليد تلقائياً لكل جزيرة حسب التعريفات النشطة</li>
+                    </ol>
+                </div>
+            </div>
+        </section>
+
+        <!-- ══ Readings ══ -->
+        <section id="readings" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 scroll-mt-24">
+            <h3 class="font-bold text-lg mb-3">تسجيل قراءات العدادات</h3>
+            <div class="space-y-3 text-sm text-gray-700 leading-relaxed">
+                <ol class="list-decimal pr-5 space-y-3">
+                    <li>افتح المناوبة من صفحة المناوبات</li>
+                    <li>اضغط <b>إضافة قراءة عداد</b></li>
+                    <li>في النموذج:
+                        <ul class="list-disc pr-5 mt-1 space-y-1">
+                            <li><b>العداد</b> — تظهر فقط عدادات محطة هذه المناوبة</li>
+                            <li><b>القراءة الابتدائية</b> — تظهر القراءة السابقة للعداد للتأكد من الت连续</li>
+                            <li><b>نوع الاستثناء</b> — إذا كانت القراءة أقل من السابقة، اختر: تصفير/استبدال/استثناء آخر</li>
+                        </ul>
+                    </li>
+                    <li>احفظ ثم كرر لباقي العدادات</li>
+                </ol>
+                <div class="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                    <p class="font-bold text-amber-700">⚠️ استمرارية العدادات</p>
+                    <p>النظام يتحقق تلقائياً من أن القراءة الابتدائية >= آخر قراءة مسجلة. إذا كانت أقل، يجب تحديد سبب الاستثناء.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ══ Finance ══ -->
+        <section id="finance" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 scroll-mt-24">
+            <h3 class="font-bold text-lg mb-3">العمليات المالية</h3>
+            <div class="space-y-3 text-sm text-gray-700 leading-relaxed">
+                <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                    <p class="font-bold text-yellow-700">⚠️ جميع السجلات المالية تُضاف من صفحة المناوبة نفسها فقط</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div class="border border-gray-200 rounded-lg p-3">
+                        <h4 class="font-bold mb-1">التحصيل النقدي</h4>
+                        <p class="text-gray-600 text-xs">أدخل المبلغ والوقت — يمكن إضافة تحصيلات متعددة (دفعات)</p>
+                    </div>
+                    <div class="border border-gray-200 rounded-lg p-3">
+                        <h4 class="font-bold mb-1">الكوبونات</h4>
+                        <p class="text-gray-600 text-xs">اختر فئة الكوبون والعدد — القيمة تُحسب تلقائياً</p>
+                    </div>
+                    <div class="border border-gray-200 rounded-lg p-3">
+                        <h4 class="font-bold mb-1">واصلات POS</h4>
+                        <p class="text-gray-600 text-xs">أدخل إجمالي المبلغ وعدد العمليات</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ══ Closing ══ -->
+        <section id="closing" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 scroll-mt-24">
+            <h3 class="font-bold text-lg mb-3">إقفال المناوبة والتسوية</h3>
+            <div class="space-y-3 text-sm text-gray-700 leading-relaxed">
+                <div class="border border-gray-200 rounded-lg p-4">
+                    <h4 class="font-bold mb-2">خطوة 1: إقفال المناوبة (المشرف)</h4>
+                    <ol class="list-decimal pr-5 space-y-1">
+                        <li>من صفحة المناوبة اضغط <b>إقفال المناوبة</b></li>
+                        <li>أدخل <b>القراءات النهائية</b> لكل عداد</li>
+                        <li>النظام يحسب <b>لترات = النهائية - الابتدائية</b> لكل عداد</li>
+                        <li>يحسب <b>المتوقع = لترات × سعر البيع المجمد</b> لكل نوع وقود</li>
+                        <li>ينشئ <b>مطابقة مالية</b> تفصيلية</li>
+                    </ol>
+                </div>
+                <div class="border border-gray-200 rounded-lg p-4">
+                    <h4 class="font-bold mb-2">خطوة 2: اعتماد التسوية (المالي)</h4>
+                    <ol class="list-decimal pr-5 space-y-1">
+                        <li>المالي يفتح <b>المطابقات</b> من الشريط الجانبي</li>
+                        <li>يرى التفصيل: المبيعات حسب النوع → التحصيل → الفرق → وضعية النقد</li>
+                        <li>يضغط <b>اعتماد التسوية</b></li>
+                    </ol>
+                </div>
+            </div>
+        </section>
+
+        <!-- ══ Inventory ══ -->
+        <section id="inventory" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 scroll-mt-24">
+            <h3 class="font-bold text-lg mb-3">المخزون والشحنات</h3>
+            <div class="space-y-3 text-sm text-gray-700 leading-relaxed">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div class="border border-gray-200 rounded-lg p-3">
+                        <h4 class="font-bold mb-1">الخزانات</h4>
+                        <ul class="list-disc pr-5 space-y-1 text-gray-600">
+                            <li>عرض مستوى كل خزان مع شريط التقدم</li>
+                            <li>تسجيل قراءات يومية للخزانات</li>
+                            <li>حساب الرصيد النظري = آخر قراءة + وارد - مبيعات</li>
+                        </ul>
+                    </div>
+                    <div class="border border-gray-200 rounded-lg p-3">
+                        <h4 class="font-bold mb-1">طلبات التوريد</h4>
+                        <ul class="list-disc pr-5 space-y-1 text-gray-600">
+                            <li>تقديم طلب توريد وقود من المحطة</li>
+                            <li>تحديد الأولوية (عادي/عاجل/حرج)</li>
+                            <li>تتبع حالة الطلب</li>
+                        </ul>
+                    </div>
+                    <div class="border border-gray-200 rounded-lg p-3">
+                        <h4 class="font-bold mb-1">الشحنات</h4>
+                        <ul class="list-disc pr-5 space-y-1 text-gray-600">
+                            <li>تسجيل الشحنات المستلمة</li>
+                            <li>حساب النقص من القراءات قبل وبعد</li>
+                            <li>تتبع الدفع للمورد</li>
+                        </ul>
+                    </div>
+                    <div class="border border-gray-200 rounded-lg p-3">
+                        <h4 class="font-bold mb-1">مطالبات النقص</h4>
+                        <ul class="list-disc pr-5 space-y-1 text-gray-600">
+                            <li>إنشاء مطالبة بالنقص من صفحة الشحنة</li>
+                            <li>تتبع حالة المطالبة</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ══ Transfers ══ -->
+        <section id="transfers" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 scroll-mt-24">
+            <h3 class="font-bold text-lg mb-3">التحويل بين الخزانات</h3>
+            <div class="space-y-3 text-sm text-gray-700 leading-relaxed">
+                <ol class="list-decimal pr-5 space-y-2">
+                    <li>من الشريط الجانبي اضغط <b>تحويل بين الخزانات</b></li>
+                    <li>اضغط <b>تحويل جديد</b></li>
+                    <li>اختر المحطة ثم الخزان المصدر والوجهة (يجب أن يكونا نفس نوع الوقود)</li>
+                    <li>أدخل الكمية — النظام يتحقق من الرصيد المتاح والمساحة المتاحة</li>
+                    <li>اضغط <b>تنفيذ التحويل</b> — يتم تحديث رصيد الخزانات تلقائياً</li>
+                </ol>
+                <div class="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                    <p class="text-amber-700 text-xs">⚠️ لا يمكن نقل وقود بين خزانات بأنواع وقود مختلفة أو في محطات مختلفة</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ══ Reconciliation ══ -->
+        <section id="reconciliation" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 scroll-mt-24">
+            <h3 class="font-bold text-lg mb-3">مطابقة الوقود</h3>
+            <div class="space-y-3 text-sm text-gray-700 leading-relaxed">
+                <p>مقارنة الرصيد النظري بالفعلي لكل خزان:</p>
+                <div class="bg-gray-50 rounded-lg p-4 font-mono text-xs text-center">
+                    الرصيد النظري = آخر قراءة + شحنات + تحويل وارد - تحويل صادر - مبيعات<br>
+                    الفرق = الفعلي - النظري
+                </div>
+                <ol class="list-decimal pr-5 space-y-2">
+                    <li>من صفحة الخزان اضغط <b>مطابقة الوقود</b></li>
+                    <li>اختر قراءة الخزان الختامية (القراءة الفعلية الحالية)</li>
+                    <li>النظام يحسب تلقائياً ويكشف الفروقات</li>
+                    <li>الفجوة = 0 → مطابق ✓ | الفجوة > 0 → فائض | الفجوة < 0 → عجز</li>
+                </ol>
+            </div>
+        </section>
+
+        <!-- ══ Settlements ══ -->
+        <section id="settlement" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 scroll-mt-24">
+            <h3 class="font-bold text-lg mb-3">تسويات الكوبونات</h3>
+            <div class="space-y-3 text-sm text-gray-700 leading-relaxed">
+                <ol class="list-decimal pr-5 space-y-2">
+                    <li>من الشريط الجانبي اضغط <b>تسويات الكوبونات</b></li>
+                    <li>اضغط <b>تسجيل تسليم جديد</b></li>
+                    <li>اختر المحطة وأدخل عدد الكوبونات حسب الفئة (5/6/8 د.ل)</li>
+                    <li>النظام يحسب الإجمالي تلقائياً</li>
+                    <li>بعد التسليم، يمكنك تحديث حالة الدفع: كامل / جزئي / مختلف عليه</li>
+                </ol>
+            </div>
+        </section>
+
+        <!-- ══ Reports ══ -->
+        <section id="reports" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 scroll-mt-24">
+            <h3 class="font-bold text-lg mb-3">التقارير</h3>
+            <div class="space-y-3 text-sm text-gray-700 leading-relaxed">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div class="border border-gray-200 rounded-lg p-3">
+                        <h4 class="font-bold mb-1">التقرير اليومي</h4>
+                        <p class="text-gray-600 text-xs">إجماليات اللترات والنقد والكوبونات وPOS والمصروفات ليوم محدد</p>
+                    </div>
+                    <div class="border border-gray-200 rounded-lg p-3">
+                        <h4 class="font-bold mb-1">تقرير المناوبات</h4>
+                        <p class="text-gray-600 text-xs">عرض تفصيلي لكل المناوبات وقراءاتها ومبيعاتها</p>
+                    </div>
+                    <div class="border border-gray-200 rounded-lg p-3">
+                        <h4 class="font-bold mb-1">التقرير الشهري</h4>
+                        <p class="text-gray-600 text-xs">ملخص شامل للشهر + مقارنة بين المحطات (للمالك)</p>
+                    </div>
+                    <div class="border border-gray-200 rounded-lg p-3">
+                        <h4 class="font-bold mb-1">المخزون والتوريد</h4>
+                        <p class="text-gray-600 text-xs">نظرة شاملة على الخزانات والشحنات والتسويات لكل محطة</p>
+                    </div>
+                    <div class="border border-gray-200 rounded-lg p-3">
+                        <h4 class="font-bold mb-1">فجوات العدادات</h4>
+                        <p class="text-gray-600 text-xs">كشف الحركة غير المُسبة في العدادات بين المناوبات</p>
+                    </div>
+                </div>
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <p class="font-bold text-blue-700">📄 طباعة PDF</p>
+                    <p>اضغط زر <b>طباعة / PDF</b> أعلى أي تقرير — ستفتح نسخة طباعة نظيفة</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ══ Users ══ -->
+        <section id="users" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 scroll-mt-24">
+            <h3 class="font-bold text-lg mb-3">المستخدمون والصلاحيات</h3>
+            <div class="space-y-3 text-sm text-gray-700 leading-relaxed">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+                    <div class="border border-gray-200 rounded-lg p-3">
+                        <h4 class="font-bold mb-1">مدير النظام</h4>
+                        <p class="text-gray-600 text-xs">كل شيء — يدير المستخدمون والمحطات والإعدادات</p>
+                    </div>
+                    <div class="border border-gray-200 rounded-lg p-3">
+                        <h4 class="font-bold mb-1">المشرف</h4>
+                        <p class="text-gray-600 text-xs">العمليات — المناوبات والقراءات والخزانات والتحويلات</p>
+                    </div>
+                    <div class="border border-gray-200 rounded-lg p-3">
+                        <h4 class="font-bold mb-1">المالي</h4>
+                        <p class="text-gray-600 text-xs">المالية — التحصيل والكوبونات والتسويات والمطابقات</p>
+                    </div>
+                    <div class="border border-gray-200 rounded-lg p-3">
+                        <h4 class="font-bold mb-1">المالك</h4>
+                        <p class="text-gray-600 text-xs">كل شيء + إدارة المستخدمين — يرى جميع المحطات</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ══ Tips ══ -->
+        <section class="bg-gradient-to-l from-amber-50 to-yellow-50 border border-amber-200 rounded-xl p-6">
+            <h3 class="font-bold text-lg mb-3">نصائح مهمة</h3>
+            <ul class="list-disc pr-5 space-y-2 text-sm text-gray-700 leading-relaxed">
+                <li>النظام يتحقق تلقائياً من استمرارية العدادات — إذا كانت القراءة أقل من السابقة، يجب تحديد سبب</li>
+                <li>قبل إقفال المناوبة، تأكد من تسجيل قراءات <b>جميع</b> العدادات النشطة — النظام يمنع الإقفال إذا نقص عدّاد</li>
+                <li>أسعار الوقود <b>مجمدة تاريخياً</b> — تغيير السعر لا يؤثر على التسويات السابقة</li>
+                <li>المطابقة تقارن <b>الرصيد النظري بالفعلي</b> للخزانات — تكشف التسريبات والأخطاء</li>
+                <li>التحويل بين الخزانات <b>يُحدّث الأرصدة تلقائياً</b> — لا حاجة لتحديث يدوي</li>
+                <li>السجلات المالية لا تُحذف — فقط إلغاء مع حفظ السجل</li>
+                <li>لا يمكن حذف عنصر له سجلات مرتبطة — ستظهر رسالة توضح السبب</li>
+            </ul>
+        </section>
+
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,82 @@
+{% extends 'base_print.html' %}
+{% load humanize %}
+
+{% block title %}التقرير الشهري{% endblock %}
+{% block report_title %}التقرير الشهري — {{ month_name }} {{ year }}{% endblock %}
+
+{% block content %}
+<div class="kpi-grid">
+    <div class="kpi"><div class="label">إجمالي اللترات المبيعة</div><div class="value num">{{ total_liters|intcomma }}</div></div>
+    <div class="kpi"><div class="label">التحصيل النقدي (د.ل)</div><div class="value num">{{ total_cash|intcomma }}</div></div>
+    <div class="kpi"><div class="label">الكوبونات (د.ل)</div><div class="value num">{{ total_vouchers|intcomma }}</div></div>
+    <div class="kpi"><div class="label">واصلات POS (د.ل)</div><div class="value num">{{ total_pos|intcomma }}</div></div>
+    <div class="kpi"><div class="label">إجمالي التحصيل (د.ل)</div><div class="value num">{{ total_collection|intcomma }}</div></div>
+    <div class="kpi"><div class="label">المصروفات المعتمدة (د.ل)</div><div class="value num">{{ total_expenses|intcomma }}</div></div>
+    <div class="kpi"><div class="label">الصافي (تحصيل − مصروفات)</div><div class="value num">{{ net_total|intcomma }}</div></div>
+</div>
+
+{% if station_breakdown %}
+<p class="section-title">مقارنة المحطات</p>
+<table>
+    <thead>
+        <tr>
+            <th>المحطة</th>
+            <th>عدد المناوبات</th>
+            <th>اللترات</th>
+            <th>النقد</th>
+            <th>الكوبونات</th>
+            <th>POS</th>
+            <th>إجمالي التحصيل</th>
+            <th>المصروفات</th>
+            <th>الربح التقديري*</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for row in station_breakdown %}
+        <tr>
+            <td>{{ row.station.name }}</td>
+            <td class="num">{{ row.shifts_count }}</td>
+            <td class="num">{{ row.liters|intcomma }}</td>
+            <td class="num">{{ row.cash|intcomma }}</td>
+            <td class="num">{{ row.vouchers|intcomma }}</td>
+            <td class="num">{{ row.pos|intcomma }}</td>
+            <td class="num"><b>{{ row.collection|intcomma }}</b></td>
+            <td class="num">{{ row.expenses|intcomma }}</td>
+            <td class="num">{{ row.estimated_profit|intcomma }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+<p style="font-size:10px; color:#94a3b8;">* الربح التقديري = إجمالي التحصيل − المصروفات المعتمدة (بدون احتساب تكلفة الوقود).</p>
+{% endif %}
+
+{% if daily_rows %}
+<p class="section-title">الإجماليات اليومية</p>
+<table>
+    <thead>
+        <tr>
+            <th>اليوم</th>
+            <th>اللترات</th>
+            <th>النقد</th>
+            <th>الكوبونات</th>
+            <th>POS</th>
+            <th>إجمالي التحصيل</th>
+            <th>المصروفات</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for row in daily_rows %}
+        <tr>
+            <td class="num">{{ row.day }}</td>
+            <td class="num">{{ row.liters|intcomma }}</td>
+            <td class="num">{{ row.cash|intcomma }}</td>
+            <td class="num">{{ row.vouchers|intcomma }}</td>
+            <td class="num">{{ row.pos|intcomma }}</td>
+            <td class="num">{{ row.collection|intcomma }}</td>
+            <td class="num">{{ row.expenses|intcomma }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+{% endblock %}
