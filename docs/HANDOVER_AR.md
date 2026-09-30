@@ -62,6 +62,21 @@
 
 ---
 
+## 7) مرجع الإصدار (Git)
+
+| المستودع | الفرع | الـ Commit | المحتوى |
+|---|---|---|---|
+| `/root/projects/Sejel` | `master` | `230d63a` | الواجهة (SPA) + الاختبارات + التوثيق — حذف طبقة Django القديمة |
+| `/home/frappe/bench/apps/sejel_app` | `develop` | `1be6572` | تطبيق Frappe: الحقول والمنطق + `pilot_bootstrap.py` / `pilot_cleanup.py` |
+
+- **إعادة بناء المحطة التجريبية من الصفر** (ببيانات العميل الحقيقية ودورة 11:00):
+  `bench --site sejel.local execute sejel_app.pilot_bootstrap.run`
+- **تفريغ النظام**: `bench --site sejel.local execute sejel_app.pilot_cleanup.clean --kwargs "{\"dry_run\": False}"`
+- **فحص الجاهزية** (قراءة فقط): `node pilot-assert.js` من مجلد `sejel/e2e-tests/`
+- بيانات الاعتماد (كلمة مرور قاعدة البيانات) لا تُخزَّن في المستودع — تُدار في `site_config.json` على الخادم فقط.
+
+---
+
 ## 6) آخر التحديثات — 30 سبتمبر 2026
 
 ### دورة القراءة اليومية (توضيح العميل المعتمد)
