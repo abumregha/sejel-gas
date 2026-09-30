@@ -5,7 +5,7 @@
       <table class="data-table">
         <thead><tr><th>الشحنة</th><th>المحطة</th><th>الكمية</th><th>الحالة</th><th>الوصف</th></tr></thead>
         <tbody>
-          <tr v-for="s in items" :key="s.id">
+          <tr v-for="s in items" :key="s.name">
             <td>#{{ s.delivery_id_display }}</td>
             <td>{{ s.station_name }}</td>
             <td class="font-mono text-red-600 font-bold">{{ Number(s.claimed_quantity).toLocaleString() }} لتر</td>

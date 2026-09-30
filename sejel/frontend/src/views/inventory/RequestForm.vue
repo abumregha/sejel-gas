@@ -5,13 +5,13 @@
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-1">المحطة</label>
         <select v-model="form.station" required class="w-full border border-gray-300 rounded-lg px-4 py-2.5">
-          <option v-for="s in stations" :key="s.id" :value="s.id">{{ s.name }}</option>
+          <option v-for="s in stations" :key="s.name" :value="s.name">{{ s.station_name }}</option>
         </select>
       </div>
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-1">الخزان</label>
         <select v-model="form.tank" required class="w-full border border-gray-300 rounded-lg px-4 py-2.5">
-          <option v-for="t in filteredTanks" :key="t.id" :value="t.id">{{ t.name }} ({{ t.fuel_type_name }} — {{ t.level_percent }}%)</option>
+          <option v-for="t in filteredTanks" :key="t.name" :value="t.name">{{ t.tank_name }} ({{ t.fuel_type_name }} — {{ t.level_percent }}%)</option>
         </select>
       </div>
       <div>
@@ -22,8 +22,8 @@
         <label class="block text-sm font-medium text-gray-700 mb-1">الأولوية</label>
         <select v-model="form.priority" class="w-full border border-gray-300 rounded-lg px-4 py-2.5">
           <option value="normal">عادي</option>
-          <option value="high">مهم</option>
           <option value="urgent">عاجل</option>
+          <option value="critical">حرج</option>
         </select>
       </div>
       <div>
@@ -51,5 +51,18 @@ onMounted(async () => {
   stations.value = sRes.data.results || sRes.data
   tanks.value = tRes.data.results || tRes.data
 })
-const save = async () => { await api.post('/delivery-requests/', form.value); router.push('/inventory/requests') }
+const save = async () => {
+  // backend has no tank field: fuel_type is derived from the selected tank
+  const tank = tanks.value.find(t => t.name === form.value.tank)
+  const payload = {
+    station: form.value.station,
+    fuel_type: tank ? tank.fuel_type : '',
+    requested_quantity: form.value.requested_quantity,
+    priority: form.value.priority,
+    reason: form.value.reason,
+    current_level: tank ? Number(tank.current_level || 0) : undefined,
+  }
+  await api.post('/delivery-requests/', payload)
+  router.push('/inventory/requests')
+}
 </script>

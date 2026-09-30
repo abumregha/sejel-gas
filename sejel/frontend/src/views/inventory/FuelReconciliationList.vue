@@ -5,7 +5,7 @@
       <table class="data-table">
         <thead><tr><th>التاريخ</th><th>المحطة</th><th>الخزان</th><th>النظري</th><th>الفعلي</th><th>الفرق</th></tr></thead>
         <tbody>
-          <tr v-for="r in items" :key="r.id">
+          <tr v-for="r in items" :key="r.name">
             <td>{{ r.created_at }}</td>
             <td>{{ r.station_name }}</td>
             <td>{{ r.tank_name }}</td>

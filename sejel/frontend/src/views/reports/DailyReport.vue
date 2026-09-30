@@ -36,8 +36,10 @@
 </template>
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import api from '../../api'
-const reportDate = ref(new Date().toISOString().split('T')[0])
+const route = useRoute()
+const reportDate = ref(route.query.date || new Date().toISOString().split('T')[0])
 const report = ref(null)
 const formatNum = (v) => v ? Number(v).toLocaleString('ar-LY') : '0'
 const loadReport = async () => {

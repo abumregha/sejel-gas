@@ -34,9 +34,9 @@
             <td>{{ r.station_name }}</td>
             <td>{{ r.tank_name }}</td>
             <td class="font-mono">{{ Number(r.requested_quantity).toLocaleString() }}</td>
-            <td>{{ r.priority }}</td>
+            <td>{{ label(PRIORITY, r.priority) }}</td>
             <td>
-              <span :class="r.status === 'received' ? 'badge-green' : 'badge-yellow'" class="badge">{{ r.status }}</span>
+              <span :class="r.status === 'received' ? 'badge-green' : 'badge-yellow'" class="badge">{{ label(REQUEST_STATUS, r.status) }}</span>
             </td>
           </tr>
         </tbody>
@@ -48,6 +48,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import api from '../../api'
+import { label, PRIORITY, REQUEST_STATUS } from '../../utils/labels'
 const tanks = ref([])
 const requests = ref([])
 onMounted(async () => {

@@ -12,9 +12,13 @@ const routes = [
     children: [
       { path: '', name: 'dashboard', component: () => import('../views/dashboard/DashboardView.vue') },
 
+      // قراءات المضخات — primary pump/gun reading workflow (client prompt §9)
+      { path: 'readings', name: 'readings', component: () => import('../views/readings/ReadingsView.vue') },
+
       // Core - Stations
       { path: 'stations', name: 'stations', component: () => import('../views/stations/StationList.vue') },
       { path: 'stations/create', name: 'station-create', component: () => import('../views/stations/StationForm.vue') },
+      { path: 'stations/setup-wizard', name: 'station-setup-wizard', component: () => import('../views/stations/StationSetupWizard.vue') },
       { path: 'stations/:id', name: 'station-detail', component: () => import('../views/stations/StationDetail.vue') },
       { path: 'stations/:id/edit', name: 'station-edit', component: () => import('../views/stations/StationForm.vue') },
 
@@ -49,6 +53,7 @@ const routes = [
       { path: 'shifts/definitions/create', name: 'definition-create', component: () => import('../views/shifts/DefinitionForm.vue') },
       { path: 'shifts/definitions/:id/edit', name: 'definition-edit', component: () => import('../views/shifts/DefinitionForm.vue') },
       { path: 'shifts', name: 'shifts', component: () => import('../views/shifts/ShiftList.vue') },
+      { path: 'shifts/day', name: 'shift-day', component: () => import('../views/shifts/ShiftDayView.vue') },
       { path: 'shifts/create', name: 'shift-create', component: () => import('../views/shifts/ShiftForm.vue') },
       { path: 'shifts/:id', name: 'shift-detail', component: () => import('../views/shifts/ShiftDetail.vue') },
       { path: 'shifts/:id/readings', name: 'shift-readings', component: () => import('../views/shifts/ReadingForm.vue') },
@@ -56,6 +61,10 @@ const routes = [
       { path: 'shifts/gaps', name: 'meter-gaps', component: () => import('../views/shifts/MeterGapReport.vue') },
 
       // Finance
+      { path: 'finance', name: 'finance', component: () => import('../views/finance/FinanceIndex.vue') },
+      { path: 'finance/income', name: 'income-entry', component: () => import('../views/finance/IncomeEntry.vue') },
+      { path: 'finance/daily-sales', name: 'daily-sales', component: () => import('../views/finance/DailySales.vue') },
+      { path: 'finance/fuel-prices', name: 'fuel-prices', component: () => import('../views/finance/FuelPriceList.vue') },
       { path: 'finance/cash', name: 'cash', component: () => import('../views/finance/CashList.vue') },
       { path: 'finance/vouchers', name: 'vouchers', component: () => import('../views/finance/VoucherList.vue') },
       { path: 'finance/pos', name: 'pos', component: () => import('../views/finance/POSList.vue') },
@@ -100,13 +109,19 @@ const router = createRouter({
   routes,
 })
 
-router.beforeEach((to, from, next) => {
-  const token = localStorage.getItem('access_token')
-  if (!to.meta.public && !token) {
-    next('/app/login/')
-  } else {
-    next()
+import { useAuthStore } from '../stores/auth'
+
+router.beforeEach(async (to, from, next) => {
+  if (to.meta.public) return next()
+  const auth = useAuthStore()
+  // Wait for the boot-time session check so a hard load never evaluates the
+  // guard before /auth/me/ has resolved.
+  await auth.restore()
+  if (!auth.isLoggedIn) {
+    // genuinely not signed in → login page
+    return next('/login/')
   }
+  next()
 })
 
 export default router

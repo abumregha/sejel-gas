@@ -6,15 +6,15 @@
     </div>
     <div class="bg-white rounded-xl shadow-sm border overflow-x-auto">
       <table class="data-table">
-        <thead><tr><th>التاريخ</th><th>الفئة</th><th>المبلغ</th><th>الوصف</th><th>إجراءات</th></tr></thead>
+        <thead><tr><th>الفئة</th><th>المبلغ</th><th>الوصف</th><th>طريقة الدفع</th><th>إجراءات</th></tr></thead>
         <tbody>
-          <tr v-for="e in items" :key="e.id">
-            <td>{{ e.date }}</td>
-            <td>{{ e.category_name }}</td>
+          <tr v-for="e in items" :key="e.name">
+            <td>{{ categoryMap[e.category] || e.category }}</td>
             <td class="font-mono font-bold text-red-600">{{ Number(e.amount).toLocaleString() }} د.ل</td>
             <td>{{ e.description || '—' }}</td>
+            <td>{{ paymentLabel(e.payment_method) }}</td>
             <td class="flex gap-2">
-              <router-link :to="`/finance/expenses/${e.id}/edit`" class="text-primary text-sm">تعديل</router-link>
+              <router-link :to="`/finance/expenses/${e.name}/edit`" class="text-primary text-sm">تعديل</router-link>
               <button @click="remove(e)" class="text-red-500 text-sm">حذف</button>
             </td>
           </tr>
@@ -28,6 +28,18 @@
 import { ref, onMounted } from 'vue'
 import api from '../../api'
 const items = ref([])
-onMounted(async () => { const { data } = await api.get('/expenses/'); items.value = data.results || data })
-const remove = async (e) => { if (!confirm('حذف؟')) return; await api.delete(`/expenses/${e.id}/`); items.value = items.value.filter(x => x.id !== e.id) }
+const categoryMap = ref({})
+const paymentLabel = (m) => ({ cash: 'نقدي', voucher: 'كوبونات', other: 'آخر' }[m] || m || '—')
+
+onMounted(async () => {
+  const [eRes, cRes] = await Promise.all([api.get('/expenses/'), api.get('/expense-categories/')])
+  items.value = eRes.data.results || eRes.data
+  categoryMap.value = Object.fromEntries((cRes.data.results || cRes.data).map(c => [c.name, c.category_name]))
+})
+
+const remove = async (e) => {
+  if (!confirm('حذف؟')) return
+  await api.delete(`/expenses/${e.name}/`)
+  items.value = items.value.filter(x => x.name !== e.name)
+}
 </script>

@@ -1,5 +1,10 @@
 import { defineStore } from 'pinia'
-import api from '../api'
+import api, { setCsrfToken } from '../api'
+
+// Module-level cache so the boot-time session check runs once per page load
+// and any router navigation can await it. Fixes the race where the router's
+// initial navigation evaluated the auth guard before /auth/me/ had resolved.
+let restorePromise = null
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
@@ -14,13 +19,20 @@ export const useAuthStore = defineStore('auth', {
     isOwner: (s) => s.user?.role === 'admin',
   },
   actions: {
+    // Awaitable session restore — safe to call from anywhere; runs once.
+    restore() {
+      if (!restorePromise) {
+        restorePromise = this.fetchUser().catch(() => {})
+      }
+      return restorePromise
+    },
     async login(username, password) {
       this.loading = true
       try {
         const { data } = await api.post('/auth/login/', { username, password })
-        localStorage.setItem('access_token', data.access)
-        localStorage.setItem('refresh_token', data.refresh)
-        this.user = data.user
+        const msg = data.message || data
+        this.user = msg.user || msg
+        setCsrfToken(msg.csrf_token)
         return true
       } catch (e) {
         throw e
@@ -31,15 +43,22 @@ export const useAuthStore = defineStore('auth', {
     async fetchUser() {
       try {
         const { data } = await api.get('/auth/me/')
-        this.user = data
+        const msg = data.message || data
+        this.user = msg.user || msg
+        if (msg.csrf_token) setCsrfToken(msg.csrf_token)
       } catch {
-        this.logout()
+        // No valid session — just clear state. Do NOT redirect here: on the
+        // login page itself that caused an infinite reload loop. Protected
+        // pages are sent to /login/ by the router guard instead.
+        this.user = null
       }
     },
     logout() {
       this.user = null
-      localStorage.removeItem('access_token')
-      localStorage.removeItem('refresh_token')
+      setCsrfToken('')
+      if (!window.location.pathname.startsWith('/login')) {
+        window.location.href = '/login/'
+      }
     },
   },
 })

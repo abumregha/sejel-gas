@@ -8,14 +8,14 @@
       <table class="data-table">
         <thead><tr><th>التاريخ</th><th>المحطة</th><th>الخزان</th><th>الكمية</th><th>الأولوية</th><th>الحالة</th></tr></thead>
         <tbody>
-          <tr v-for="r in items" :key="r.id" class="cursor-pointer" @click="$router.push(`/inventory/requests/${r.id}`)">
+          <tr v-for="r in items" :key="r.name" class="cursor-pointer" @click="$router.push(`/inventory/requests/${r.name}`)">
             <td>{{ r.created_at }}</td>
             <td>{{ r.station_name }}</td>
             <td>{{ r.tank_name }}</td>
             <td class="font-mono">{{ Number(r.requested_quantity).toLocaleString() }} لتر</td>
             <td>
-              <span :class="r.priority === 'urgent' ? 'badge-red' : r.priority === 'high' ? 'badge-yellow' : 'badge-gray'" class="badge">
-                {{ { normal: 'عادي', high: 'مهم', urgent: 'عاجل' }[r.priority] || r.priority }}
+              <span :class="r.priority === 'critical' ? 'badge-red' : r.priority === 'urgent' ? 'badge-yellow' : 'badge-gray'" class="badge">
+                {{ { normal: 'عادي', urgent: 'عاجل', critical: 'حرج' }[r.priority] || r.priority }}
               </span>
             </td>
             <td>

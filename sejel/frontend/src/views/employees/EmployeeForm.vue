@@ -4,7 +4,7 @@
     <form @submit.prevent="save" class="bg-white rounded-xl shadow-sm border p-6 space-y-4">
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-1">الاسم</label>
-        <input v-model="form.name" required class="w-full border border-gray-300 rounded-lg px-4 py-2.5" />
+        <input v-model="form.employee_name" required class="w-full border border-gray-300 rounded-lg px-4 py-2.5" />
       </div>
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-1">المنصب</label>
@@ -17,7 +17,7 @@
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-1">المحطة</label>
         <select v-model="form.station" required class="w-full border border-gray-300 rounded-lg px-4 py-2.5">
-          <option v-for="s in stations" :key="s.id" :value="s.id">{{ s.name }}</option>
+          <option v-for="s in stations" :key="s.name" :value="s.name">{{ s.station_name }}</option>
         </select>
       </div>
       <div class="flex gap-3 pt-4">
@@ -33,13 +33,13 @@ import { useRouter, useRoute } from 'vue-router'
 import api from '../../api'
 const router = useRouter(), route = useRoute()
 const isEdit = computed(() => !!route.params.id)
-const form = ref({ name: '', position: '', phone: '', station: '' })
+const form = ref({ employee_name: '', phone: '', station: '' })
 const stations = ref([])
 onMounted(async () => {
   const { data } = await api.get('/stations/'); stations.value = data.results || data
   if (isEdit.value) {
     const { data: d } = await api.get(`/employees/${route.params.id}/`)
-    form.value = { name: d.name, position: d.position, phone: d.phone, station: d.station }
+    form.value = { employee_name: d.employee_name, phone: d.phone, station: d.station }
   }
 })
 const save = async () => {

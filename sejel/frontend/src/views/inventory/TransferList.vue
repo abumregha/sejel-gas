@@ -6,14 +6,18 @@
     </div>
     <div class="bg-white rounded-xl shadow-sm border overflow-x-auto">
       <table class="data-table">
-        <thead><tr><th>التاريخ</th><th>من خزان</th><th>إلى خزان</th><th>الكمية</th><th>المسجل</th></tr></thead>
+        <thead><tr><th>التاريخ</th><th>من خزان</th><th>إلى خزان</th><th>الكمية</th><th>الحالة</th></tr></thead>
         <tbody>
-          <tr v-for="t in items" :key="t.id">
-            <td>{{ t.created_at }}</td>
-            <td>{{ t.from_tank_name }}</td>
-            <td>{{ t.to_tank_name }}</td>
+          <tr v-for="t in items" :key="t.name">
+            <td>{{ (t.transfer_date || '').slice(0, 16).replace('T', ' ') }}</td>
+            <td>{{ tankMap[t.from_tank] || t.from_tank }}</td>
+            <td>{{ tankMap[t.to_tank] || t.to_tank }}</td>
             <td class="font-mono font-bold">{{ Number(t.quantity).toLocaleString() }} لتر</td>
-            <td>{{ t.created_by_name || '—' }}</td>
+            <td>
+              <span :class="t.status === 'completed' ? 'badge-green' : t.status === 'cancelled' ? 'badge-red' : 'badge-gray'" class="badge">
+                {{ { completed: 'مكتمل', draft: 'مسودة', cancelled: 'ملغى' }[t.status] || t.status }}
+              </span>
+            </td>
           </tr>
         </tbody>
       </table>
@@ -25,5 +29,10 @@
 import { ref, onMounted } from 'vue'
 import api from '../../api'
 const items = ref([])
-onMounted(async () => { const { data } = await api.get('/tank-transfers/'); items.value = data.results || data })
+const tankMap = ref({})
+onMounted(async () => {
+  const [tRes, tankRes] = await Promise.all([api.get('/tank-transfers/'), api.get('/tanks/')])
+  items.value = tRes.data.results || tRes.data
+  tankMap.value = Object.fromEntries((tankRes.data.results || tankRes.data).map(t => [t.name, t.tank_name]))
+})
 </script>

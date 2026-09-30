@@ -6,15 +6,14 @@
     </div>
     <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
       <table class="data-table">
-        <thead><tr><th>الاسم</th><th>المنصب</th><th>المحطة</th><th>الهاتف</th><th>إجراءات</th></tr></thead>
+        <thead><tr><th>الاسم</th><th>الهاتف</th><th>المحطة</th><th>إجراءات</th></tr></thead>
         <tbody>
-          <tr v-for="e in items" :key="e.id">
-            <td class="font-medium">{{ e.name }}</td>
-            <td>{{ e.position }}</td>
-            <td>{{ e.station_name }}</td>
+          <tr v-for="e in items" :key="e.name">
+            <td class="font-medium">{{ e.employee_name }}</td>
             <td>{{ e.phone || '—' }}</td>
+            <td>{{ stationMap[e.station] || e.station }}</td>
             <td class="flex gap-2">
-              <router-link :to="`/employees/${e.id}/edit`" class="text-primary text-sm">تعديل</router-link>
+              <router-link :to="`/employees/${e.name}/edit`" class="text-primary text-sm">تعديل</router-link>
               <button @click="remove(e)" class="text-red-500 text-sm">حذف</button>
             </td>
           </tr>
@@ -27,6 +26,11 @@
 import { ref, onMounted } from 'vue'
 import api from '../../api'
 const items = ref([])
-onMounted(async () => { const { data } = await api.get('/employees/'); items.value = data.results || data })
-const remove = async (e) => { if (!confirm('حذف؟')) return; await api.delete(`/employees/${e.id}/`); items.value = items.value.filter(x => x.id !== e.id) }
+const stationMap = ref({})
+onMounted(async () => {
+  const [eRes, sRes] = await Promise.all([api.get('/employees/'), api.get('/stations/')])
+  items.value = eRes.data.results || eRes.data
+  stationMap.value = Object.fromEntries((sRes.data.results || sRes.data).map(s => [s.name, s.station_name]))
+})
+const remove = async (e) => { if (!confirm('حذف؟')) return; await api.delete(`/employees/${e.name}/`); items.value = items.value.filter(x => x.name !== e.name) }
 </script>

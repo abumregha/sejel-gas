@@ -1,40 +1,45 @@
 import axios from 'axios'
 
+// CSRF token for unsafe methods (POST/PUT/PATCH/DELETE). Set by the auth
+// store from /auth/login and /auth/me responses; Frappe validates the
+// X-Frappe-CSRF-Token header against the session (frappe/auth.py).
+let csrfToken = ''
+
+export function setCsrfToken(token) {
+  csrfToken = token || ''
+}
+
 const api = axios.create({
   baseURL: '/api',
   headers: { 'Content-Type': 'application/json' },
+  withCredentials: true,
 })
 
-// Inject JWT token
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('access_token')
-  if (token) config.headers.Authorization = `Bearer ${token}`
+  const method = (config.method || '').toLowerCase()
+  if (csrfToken && ['post', 'put', 'patch', 'delete'].includes(method)) {
+    config.headers['X-Frappe-CSRF-Token'] = csrfToken
+  }
   return config
 })
 
-// Auto-refresh on 401
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    if (response.data && response.data.message) {
+      response.data = response.data.message
+    }
+    return response
+  },
   async (error) => {
-    const originalRequest = error.config
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true
-      const refresh = localStorage.getItem('refresh_token')
-      if (refresh) {
-        try {
-          const { data } = await axios.post('/api/auth/refresh/', { refresh })
-          localStorage.setItem('access_token', data.access)
-          if (data.refresh) localStorage.setItem('refresh_token', data.refresh)
-          originalRequest.headers.Authorization = `Bearer ${data.access}`
-          return api(originalRequest)
-        } catch {
-          localStorage.removeItem('access_token')
-          localStorage.removeItem('refresh_token')
-          window.location.href = '/login/'
-        }
-      } else {
-        window.location.href = '/login/'
-      }
+    const status = error.response?.status
+    const url = error.config?.url || ''
+    // Don't redirect for the session-check/login calls themselves, and don't
+    // redirect when already on the login page — that caused an infinite
+    // reload loop on every fresh page load when no session exists yet.
+    const isAuthCall = url.includes('/auth/me') || url.includes('/auth/login')
+    const onLoginPage = window.location.pathname.startsWith('/login')
+    if ((status === 401 || status === 403) && !isAuthCall && !onLoginPage) {
+      window.location.href = '/login/'
     }
     return Promise.reject(error)
   }

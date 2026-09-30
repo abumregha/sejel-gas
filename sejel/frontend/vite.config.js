@@ -7,8 +7,14 @@ export default defineConfig({
     port: 5173,
     host: '0.0.0.0',
     proxy: {
+      // Wizard endpoint: nginx rewrites this in production (see /etc/nginx/sites-enabled/sejel)
+      '/api/setup-station': {
+        target: 'http://127.0.0.1:8002',
+        changeOrigin: true,
+        rewrite: () => '/api/method/sejel_app.api.views.setup_station',
+      },
       '/api': {
-        target: 'http://127.0.0.1:8004',
+        target: 'http://127.0.0.1:8002',
         changeOrigin: true,
       },
     },

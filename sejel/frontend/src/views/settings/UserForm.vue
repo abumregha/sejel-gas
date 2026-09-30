@@ -37,7 +37,7 @@
         <label class="block text-sm font-medium text-gray-700 mb-1">المحطة</label>
         <select v-model="form.station" class="w-full border border-gray-300 rounded-lg px-4 py-2.5">
           <option value="">اختر المحطة</option>
-          <option v-for="s in stations" :key="s.id" :value="s.id">{{ s.name }}</option>
+          <option v-for="s in stations" :key="s.name" :value="s.name">{{ s.station_name }}</option>
         </select>
       </div>
       <div class="flex gap-3 pt-4">

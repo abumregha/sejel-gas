@@ -6,18 +6,21 @@
     </div>
     <div class="bg-white rounded-xl shadow-sm border overflow-x-auto">
       <table class="data-table">
-        <thead><tr><th>المحطة</th><th>القيمة</th><th>المدفوع</th><th>المتبقي</th><th>الحالة</th><th>إجراءات</th></tr></thead>
+        <thead><tr><th>المحطة</th><th>التاريخ</th><th>العدد</th><th>القيمة</th><th>المدفوع</th><th>الحالة</th><th>إجراءات</th></tr></thead>
         <tbody>
-          <tr v-for="s in items" :key="s.id" class="cursor-pointer" @click="$router.push(`/finance/settlements/${s.id}`)">
-            <td>{{ s.station_name }}</td>
-            <td class="font-mono">{{ Number(s.total_value).toLocaleString() }} د.ل</td>
-            <td class="font-mono text-green-600">{{ Number(s.paid_amount).toLocaleString() }} د.ل</td>
-            <td class="font-mono text-red-600">{{ Number(s.outstanding).toLocaleString() }} د.ل</td>
+          <tr v-for="s in items" :key="s.name">
+            <td>{{ stationMap[s.station] || s.station }}</td>
+            <td>{{ s.submission_date }}</td>
+            <td class="font-mono">{{ s.total_count }}</td>
+            <td class="font-mono font-bold">{{ Number(s.total_value).toLocaleString() }} د.ل</td>
+            <td class="font-mono text-green-600">{{ Number(s.paid_amount || 0).toLocaleString() }} د.ل</td>
             <td>
-              <span :class="statusBadge(s.status)" class="badge">{{ statusLabel(s.status) }}</span>
+              <span :class="s.status === 'paid' ? 'badge-green' : s.status === 'approved' ? 'badge-blue' : 'badge-yellow'" class="badge">
+                {{ statusLabel(s.status) }}
+              </span>
             </td>
             <td>
-              <button @click.stop="remove(s)" v-if="s.status === 'submitted'" class="text-red-500 text-sm">حذف</button>
+              <router-link :to="`/finance/settlements/${s.name}/edit`" class="text-primary text-sm">تعديل</router-link>
             </td>
           </tr>
         </tbody>
@@ -30,8 +33,12 @@
 import { ref, onMounted } from 'vue'
 import api from '../../api'
 const items = ref([])
-onMounted(async () => { const { data } = await api.get('/voucher-settlements/'); items.value = data.results || data })
-const remove = async (s) => { if (!confirm('حذف؟')) return; await api.delete(`/voucher-settlements/${s.id}/`); items.value = items.value.filter(x => x.id !== s.id) }
-const statusLabel = (s) => ({ submitted: 'مقدمة', paid: 'مدفوعة', partial: 'جزئية', disputed: 'متعارضة', cancelled: 'ملغاة' }[s] || s)
-const statusBadge = (s) => ({ submitted: 'badge-yellow', paid: 'badge-green', partial: 'badge-blue', disputed: 'badge-red', cancelled: 'badge-gray' }[s] || 'badge-gray')
+const stationMap = ref({})
+const statusLabel = (s) => ({ draft: 'مسودة', submitted: 'مقدمة', approved: 'موافق عليها', paid: 'مدفوعة', rejected: 'مرفوضة' }[s] || s || '—')
+
+onMounted(async () => {
+  const [vRes, sRes] = await Promise.all([api.get('/voucher-settlements/'), api.get('/stations/')])
+  items.value = vRes.data.results || vRes.data
+  stationMap.value = Object.fromEntries((sRes.data.results || sRes.data).map(s => [s.name, s.station_name]))
+})
 </script>

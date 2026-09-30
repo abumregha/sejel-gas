@@ -1,10 +1,11 @@
 <template>
   <div class="max-w-2xl mx-auto">
+    <Toast ref="toast" />
     <h2 class="text-xl font-bold mb-6">{{ isEdit ? 'تعديل المحطة' : 'إضافة محطة' }}</h2>
     <form @submit.prevent="save" class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-4">
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-1">اسم المحطة</label>
-        <input v-model="form.name" required class="w-full border border-gray-300 rounded-lg px-4 py-2.5" />
+        <input v-model="form.station_name" required class="w-full border border-gray-300 rounded-lg px-4 py-2.5" />
       </div>
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-1">العنوان</label>
@@ -14,8 +15,8 @@
         <label class="block text-sm font-medium text-gray-700 mb-1">نوع العلاقة</label>
         <select v-model="form.relationship_type" class="w-full border border-gray-300 rounded-lg px-4 py-2.5">
           <option value="owned">ملكية</option>
+          <option value="rented">إيجار</option>
           <option value="agency">وكالة</option>
-          <option value="franchise">تنازل</option>
         </select>
       </div>
       <div class="flex gap-3 pt-4">
@@ -33,17 +34,19 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import api from '../../api'
+import Toast from '../../components/Toast.vue'
 
 const router = useRouter()
 const route = useRoute()
 const isEdit = computed(() => !!route.params.id)
 const saving = ref(false)
-const form = ref({ name: '', address: '', relationship_type: 'owned' })
+const toast = ref(null)
+const form = ref({ station_name: '', address: '', relationship_type: 'owned' })
 
 onMounted(async () => {
   if (isEdit.value) {
     const { data } = await api.get(`/stations/${route.params.id}/`)
-    form.value = { name: data.name, address: data.address, relationship_type: data.relationship_type }
+    form.value = { station_name: data.station_name, address: data.address, relationship_type: data.relationship_type }
   }
 })
 
@@ -55,9 +58,10 @@ const save = async () => {
     } else {
       await api.post('/stations/', form.value)
     }
-    router.push('/stations')
+    toast.value.show('تم الحفظ بنجاح')
+    setTimeout(() => router.push('/stations'), 1000)
   } catch (e) {
-    alert('خطأ في الحفظ: ' + JSON.stringify(e.response?.data || e.message))
+    toast.value.show('خطأ في الحفظ', 'error')
   } finally { saving.value = false }
 }
 </script>

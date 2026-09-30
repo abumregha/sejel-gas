@@ -5,9 +5,9 @@
       <table class="data-table">
         <thead><tr><th>العداد</th><th>المحطة</th><th>القراءة السابقة</th><th>القراءة الحالية</th><th>الفجوة (لتر)</th></tr></thead>
         <tbody>
-          <tr v-for="g in gaps" :key="g.meter_id">
-            <td class="font-mono">{{ g.meter_code }}</td>
-            <td>{{ g.station_name }}</td>
+          <tr v-for="g in gaps" :key="g.meter_name + '-' + g.idx">
+            <td class="font-mono">{{ meterMap[g.meter_name] || g.meter_name }}</td>
+            <td>{{ stationMap[meterStationMap[g.meter_name]] || '—' }}</td>
             <td class="font-mono">{{ Number(g.previous_closing).toLocaleString() }}</td>
             <td class="font-mono">{{ Number(g.new_opening).toLocaleString() }}</td>
             <td class="font-mono font-bold" :class="g.gap > 0 ? 'text-red-600' : 'text-green-600'">
@@ -24,14 +24,18 @@
 import { ref, onMounted } from 'vue'
 import api from '../../api'
 const gaps = ref([])
+const meterMap = ref({})
+const stationMap = ref({})
+const meterStationMap = ref({})
+
 onMounted(async () => {
-  // Use the meter readings to calculate gaps
   try {
-    const { data } = await api.get('/meters/')
-    const meters = data.results || data
-    // For each meter, find consecutive readings and calculate gaps
+    const [mRes, sRes] = await Promise.all([api.get('/meters/'), api.get('/stations/')])
+    const meters = mRes.data.results || mRes.data
+    stationMap.value = Object.fromEntries((sRes.data.results || sRes.data).map(s => [s.name, s.station_name]))
+
     for (const m of meters) {
-      const { data: rData } = await api.get(`/meter-readings/?meter=${m.id}`)
+      const { data: rData } = await api.get(`/meter-readings/?meter=${m.name}`)
       const readings = (rData.results || rData).sort((a, b) => a.start_reading - b.start_reading)
       for (let i = 1; i < readings.length; i++) {
         const prevClosing = readings[i - 1].end_reading
@@ -40,9 +44,7 @@ onMounted(async () => {
           const gap = Number(currOpening) - Number(prevClosing)
           if (gap !== 0) {
             gaps.value.push({
-              meter_id: m.id,
-              meter_code: m.code,
-              station_name: m.machine_name,
+              meter_name: m.name,
               previous_closing: prevClosing,
               new_opening: currOpening,
               gap: gap,
@@ -51,6 +53,8 @@ onMounted(async () => {
         }
       }
     }
+    meterMap.value = Object.fromEntries(meters.map(m => [m.name, m.meter_code]))
+    meterStationMap.value = Object.fromEntries(meters.map(m => [m.name, m.station]))
   } catch (e) { console.error(e) }
 })
 </script>

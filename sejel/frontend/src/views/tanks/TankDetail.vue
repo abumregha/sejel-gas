@@ -1,7 +1,7 @@
 <template>
   <div>
     <router-link to="/tanks" class="text-sm text-primary hover:underline mb-2 block">← الخزانات</router-link>
-    <h2 class="text-xl font-bold mb-6">{{ tank?.name }}</h2>
+    <h2 class="text-xl font-bold mb-6">{{ tank?.tank_name }}</h2>
     <div v-if="tank" class="space-y-6">
       <div class="bg-white rounded-xl shadow-sm border p-4">
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
@@ -22,7 +22,7 @@
         <table class="data-table">
           <thead><tr><th>التاريخ</th><th>القراءة</th><th>النوع</th><th>المسجل</th></tr></thead>
           <tbody>
-            <tr v-for="r in readings" :key="r.id">
+            <tr v-for="r in readings" :key="r.name">
               <td>{{ r.created_at }}</td>
               <td class="font-mono">{{ Number(r.reading).toLocaleString() }}</td>
               <td>{{ r.reading_type }}</td>

@@ -2,11 +2,8 @@ venv/
 __pycache__/
 *.pyc
 *.pyo
-db.sqlite3
-media/
-staticfiles/
-.env
 *.log
+media/
 
 # Frontend
 sejel/frontend/node_modules/
@@ -21,3 +18,9 @@ sejel/frontend/dist/
 # OS
 .DS_Store
 Thumbs.db
+
+# Generated / build artifacts (never commit)
+sejel/staticfiles/
+sejel/e2e-tests/node_modules/
+sejel/e2e-tests/shots/
+sejel/frontend/dist/

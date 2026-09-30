@@ -6,9 +6,9 @@
     </div>
     <form v-if="showAdd" @submit.prevent="saveReading" class="bg-white rounded-xl shadow-sm border p-4 mb-4 grid grid-cols-1 sm:grid-cols-4 gap-4">
       <select v-model="newReading.tank" required class="border border-gray-300 rounded-lg px-3 py-2">
-        <option v-for="t in tanks" :key="t.id" :value="t.id">{{ t.name }}</option>
+        <option v-for="t in tanks" :key="t.name" :value="t.name">{{ t.tank_name }}</option>
       </select>
-      <input v-model="newReading.reading" type="number" step="0.001" placeholder="القراءة" required class="border border-gray-300 rounded-lg px-3 py-2" />
+      <input v-model="newReading.reading_level" type="number" step="0.001" placeholder="القراءة" required class="border border-gray-300 rounded-lg px-3 py-2" />
       <select v-model="newReading.reading_type" class="border border-gray-300 rounded-lg px-3 py-2">
         <option value="daily">يومية</option>
         <option value="opening">افتتاحية</option>
@@ -22,9 +22,9 @@
         <thead><tr><th>التاريخ</th><th>الخزان</th><th>القراءة</th><th>النوع</th><th>المسجل</th></tr></thead>
         <tbody>
           <tr v-for="r in items" :key="r.id">
-            <td>{{ r.created_at }}</td>
-            <td>{{ r.tank_name }}</td>
-            <td class="font-mono">{{ Number(r.reading).toLocaleString() }}</td>
+            <td>{{ r.recorded_at }}</td>
+            <td>{{ tankMap[r.tank] || r.tank }}</td>
+            <td class="font-mono">{{ Number(r.reading_level).toLocaleString() }}</td>
             <td>{{ r.reading_type }}</td>
             <td>{{ r.recorded_by_name || '—' }}</td>
           </tr>
@@ -40,17 +40,25 @@ import api from '../../api'
 const items = ref([])
 const tanks = ref([])
 const showAdd = ref(false)
-const newReading = ref({ tank: '', reading: '', reading_type: 'daily' })
+const newReading = ref({ tank: '', reading_level: '', reading_type: 'daily' })
+const tankMap = ref({})
 onMounted(async () => {
   const [rRes, tRes] = await Promise.all([api.get('/tank-readings/'), api.get('/tanks/')])
   items.value = rRes.data.results || rRes.data
   tanks.value = tRes.data.results || tRes.data
+  tankMap.value = Object.fromEntries(tanks.value.map(t => [t.name, t.tank_name || t.name]))
 })
 const saveReading = async () => {
-  await api.post('/tank-readings/', newReading.value)
+  // backend fields: reading_level (Float, required) + recorded_at (Datetime, required)
+  await api.post('/tank-readings/', {
+    tank: newReading.value.tank,
+    reading_level: Number(newReading.value.reading_level),
+    reading_type: newReading.value.reading_type,
+    recorded_at: new Date().toISOString(),
+  })
   showAdd.value = false
   const { data } = await api.get('/tank-readings/')
   items.value = data.results || data
-  newReading.value = { tank: '', reading: '', reading_type: 'daily' }
+  newReading.value = { tank: '', reading_level: '', reading_type: 'daily' }
 }
 </script>
