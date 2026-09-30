@@ -1415,6 +1415,15 @@ fallback `/assets` origin). No backend restart needed for SPA-only changes.
 
 ### 12.3 Stations
 
+> **Changed 2026-09-30**: the seed stations below were removed with the UAT
+> data. The site now holds a single **pilot station** (محطة تجريبية — سجل:
+> 2 pumps × 2 guns, بنزين/ديزل tanks) created by `pilot_bootstrap.py` with
+> `day_close_time = 11:00` (the client's confirmed cycle) and the client's
+> real Excel counters as opening meter readings.
+
+```
+Station: محطة الزنتان (بنزين)
+
 ```
 Station: محطة الزنتان (بنزين)
 ├── جزيرة 1
@@ -1523,7 +1532,7 @@ Excel sheet with daily expense entries. Maps to **Expense** DocType.
 5. **No Frappe worker** — Background job processing not configured (web runs under systemd since 2026-09-10).
 6. **HTTPS not configured** — SPA and API served over HTTP on port 8004; needs a domain + TLS certificate before internet-facing use.
 7. **~~No CSRF protection~~ resolved** — CSRF enforced since 2026-09-10 (`ignore_csrf` removed; SPA sends `X-Frappe-CSRF-Token`).
-8. **~~No test suite~~ resolved** — Playwright e2e suite under `sejel/e2e-tests/` (9 phase files, 137 checks, CSRF-aware helpers; full suite green as of 2026-09-12).
+8. **~~No test suite~~ resolved** — Playwright e2e suite under `sejel/e2e-tests/` (12 phase files + read-only `pilot-assert.js` guard, 209 checks + 9, CSRF-aware helpers, self-seeding per suite; full suite green as of 2026-09-30). Do not run the mutating phase suites against a site holding client data — they create timestamped test stations; use `pilot_cleanup.py` / `pilot_bootstrap.py` to restore.
 9. **No Alembic/Frappe migrations** — Schema changes managed via Frappe's built-in migrate command (data patches live in `patches.txt`).
 
 ---
@@ -1558,6 +1567,34 @@ Excel sheet with daily expense entries. Maps to **Expense** DocType.
 `bench --site sejel.local execute sejel_app.pilot_cleanup.clean` (script: `scripts/pilot_cleanup.py`, mirror in app root). Order: financial children → operations → master data → stations; deletes all `*@sejel.ly` test users **except admin@/owner@** and clears `User.sejel_station` bindings. Reference data (fuel types بنزين/ديزل, voucher/expense categories, marketing companies) kept.
 
 **Executed 2026-09-12 after a fresh backup (`/var/backups/sejel/`)**: 5 stations, 4 shifts, 2 reconciliations, 20 meters, 5 test users removed. Verified empty state: `stations=0`, aggregate + single dashboards, wizard, يوم المحطة and daily/monthly reports all render clean (0s / empty UI states, no crashes). System is ready for the client pilot: the client logs in as owner/admin and creates their first station via the wizard.
+
+### 15.7 Daily reading-cycle close & pilot bootstrap (2026-09-30)
+
+- **Concepts separated**: Employee Shift ≠ Reading Period ≠ Daily Close.
+  `Shift.is_day_close` marks the station's daily reading/closing cycle
+  container; `Station.day_close_time` (default **23:00, enforced in
+  `Station.validate()`** — Frappe Time fields stamp wall-clock instead of
+  honoring JSON defaults; also set explicitly by the setup wizard) bounds the
+  period per station. Employee shifts never require readings; the previous
+  reading always comes from the same gun's last valid entry. Financial logic
+  (Reconciliation creation, frozen prices) untouched.
+- **Dashboard**: قراءات اليوم completion chip; Excel-style readings table
+  with totals; open-shift alert counts employee shifts only (the day-close
+  container is excluded server-side); Excel export labels rows
+  إقفال اليوم / مناوبة موظف.
+- **UI**: قراءات المضخات is the primary workflow (auto-previous per gun,
+  live liters, exception reasons, إقفال اليوم); reading-period chip shows the
+  station's configured cycle; sidebar is non-collapsible (labels always
+  visible); phase9 journey is browser-only incl. a 390×844 mobile pass.
+- **Tests**: 12 suites / 209 checks green (phase8 proves 3 employee shifts
+  inside one 24h cycle with zero per-shift readings; phase9 = full user
+  journey). `pilot-assert.js` read-only guard (9 checks) asserts the live
+  pilot: single station, 11:00 cycle, Excel counters as auto-previous.
+- **Pilot state**: single station محطة تجريبية — سجل pinned 11:00→11:00
+  (bootstrap: `bench --site sejel.local execute sejel_app.pilot_bootstrap.run`).
+- **VCS**: `/root/projects/Sejel` master `230d63a` (+ docs `07d60c7`, handoff
+  `25734b9`); bench app `1be6572`. DB credentials redacted from this document
+  — infrastructure secrets live only in `site_config.json` on the server.
 
 ## Appendix A: File Structure
 
