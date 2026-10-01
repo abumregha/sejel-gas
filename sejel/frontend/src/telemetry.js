@@ -7,7 +7,7 @@
 // All reports are best-effort: fire-and-forget, never throw, never block UI,
 // and a failing telemetry request is silently dropped (no recursion).
 
-import api from './api'
+import api, { setCsrfToken } from './api'
 
 const SLOW_MS = 3000
 let installAttempted = false
@@ -16,9 +16,36 @@ function isTelemetryCall(url) {
   return typeof url === 'string' && url.includes('/ux/')
 }
 
+// The session cookie outlives the CSRF token — when that happens every POST
+// dies with 400 CSRFTokenError before reaching our handler (observed in the
+// 2026-10-01 logs: client-error reports silently dropped all day). Refresh
+// the token from /auth/me/ once and retry; telemetry must never give up on
+// its first failure.
+let refreshingToken = null
+function refreshCsrfToken() {
+  if (!refreshingToken) {
+    refreshingToken = api.get('/auth/me/')
+      .then(({ data }) => {
+        const token = data?.csrf_token || ''
+        if (token) setCsrfToken(token)
+        return token
+      })
+      .catch(() => '')
+      .finally(() => { refreshingToken = null })
+  }
+  return refreshingToken
+}
+
 function send(payload) {
   try {
-    api.post('/ux/client-error/', payload, { timeout: 5000 }).catch(() => {})
+    api.post('/ux/client-error/', payload, { timeout: 5000 }).catch(async (e) => {
+      const isCsrf = e?.response?.status === 400
+        && String(e?.response?.data?.exc_type || '') === 'CSRFTokenError'
+      if (!isCsrf) return null
+      const token = await refreshCsrfToken()
+      if (!token) return null
+      return api.post('/ux/client-error/', payload, { timeout: 5000 })
+    }).catch(() => { /* best-effort */ })
   } catch {
     /* never throw from telemetry */
   }
@@ -97,7 +124,7 @@ export function installTelemetry(router) {
         const cfg = error.config || {}
         const status = error.response?.status
         // Never report telemetry failures (recursion guard) or auth errors
-        // (401/403 are handled in api.js with a redirect to /login/).
+        // (401/403 are surfaced as Arabic messages by errors.js / api.js).
         if (!isTelemetryCall(cfg.url) && status && status !== 401 && status !== 403) {
           const started = cfg.metadata && cfg.metadata.startedAt
           const dur = started ? Date.now() - started : null

@@ -8,7 +8,7 @@
           <tr v-for="s in items" :key="s.name">
             <td>#{{ s.delivery_id_display }}</td>
             <td>{{ s.station_name }}</td>
-            <td class="font-mono text-red-600 font-bold">{{ Number(s.claimed_quantity).toLocaleString() }} لتر</td>
+            <td class="font-mono text-red-600 font-bold">{{ Number(s.claimed_quantity).toLocaleString('en-US') }} لتر</td>
             <td>
               <span :class="s.status === 'approved' ? 'badge-green' : s.status === 'rejected' ? 'badge-red' : 'badge-yellow'" class="badge">
                 {{ { pending: 'قيد المراجعة', approved: 'موافق عليها', rejected: 'مرفوضة' }[s.status] || s.status }}

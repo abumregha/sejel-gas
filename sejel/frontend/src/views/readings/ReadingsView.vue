@@ -148,7 +148,7 @@ async function load() {
     data.value = d
     rows.value = buildRows(d, rows.value)
   } catch (e) {
-    error.value = e.response?.data?.exception || 'تعذر تحميل القراءات'
+    error.value = friendlyError(e)
   } finally {
     loading.value = false
   }
@@ -185,17 +185,13 @@ const dayCloseTime = computed(() => {
 })
 
 async function ensureShift() {
-  if (activeShift.value) return activeShift.value.id
-  const t = dayCloseTime.value
-  const { data: sh } = await api.post('/shifts/', {
+  // Server-side idempotent ensure: the dashboard payload this view rendered
+  // from can be stale — client-side check-then-create duplicated the day-close
+  // Shift on every failed save (8 duplicates observed 2026-10-01).
+  const { data: sh } = await api.post('/ensure-day-close/', {
     station: stationSel.value,
-    shift_name: 'إقفال يوم ' + date.value,
     date: date.value,
-    start_time: t,
-    end_time: t,
-    is_day_close: 1,
   })
-  await api.put(`/shifts/${sh.name}/`, { status: 'open' })
   return sh.name
 }
 
@@ -222,13 +218,21 @@ async function save() {
         body.exception_type = r.exception_type
         body.notes = r.notes || '—'
       }
-      await api.post('/meter-readings/', body)
+      try {
+        await api.post('/meter-readings/', body)
+      } catch (e) {
+        // name the failing gun so the operator knows exactly which entry
+        // was rejected (client report 2026-10-01: opaque "error occurred")
+        e.readingContext = `${r.meter.meter_code}${r.mach?.name ? ' — ' + r.mach.name : ''}`
+        throw e
+      }
       r.savedNow = true
     }
     notice.value = `تم حفظ ${pending.length} قراءة بنجاح`
     await load()
   } catch (e) {
-    error.value = friendlyError(e)
+    const msg = friendlyError(e)
+    error.value = e.readingContext ? `${e.readingContext}: ${msg}` : msg
   } finally {
     saving.value = false
   }
@@ -357,18 +361,24 @@ async function closeDay() {
             </div>
             <!-- current reading: the only input the operator fills (§10) -->
             <div>
-              <label class="block text-xs text-gray-500 mb-1">القراءة الحالية</label>
-              <input
-                v-model.number="g.row.current"
-                data-testid="gun-current-input"
-                type="number"
-                step="0.001"
-                inputmode="decimal"
-                :disabled="!!g.row.meter.reading"
-                :class="needsException(g.row) ? 'border-red-400 ring-1 ring-red-200' : 'border-gray-300'"
-                class="w-full border rounded-lg px-4 py-3 text-lg font-bold tabular-nums focus:outline-none focus:ring-2 focus:ring-blue-300"
-                placeholder="أدخل القراءة الحالية"
-              />
+              <label class="block text-xs text-gray-500 mb-1">القراءة الحالية (لتر)</label>
+              <div class="relative">
+                <input
+                  v-model.number="g.row.current"
+                  data-testid="gun-current-input"
+                  type="number"
+                  step="0.001"
+                  inputmode="decimal"
+                  :disabled="!!g.row.meter.reading"
+                  :class="needsException(g.row) ? 'border-red-400 ring-1 ring-red-200' : 'border-gray-300'"
+                  class="w-full border rounded-lg pl-14 pr-4 py-3 text-lg font-bold tabular-nums focus:outline-none focus:ring-2 focus:ring-blue-300"
+                  placeholder="أدخل القراءة الحالية"
+                />
+                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400 pointer-events-none select-none">لتر</span>
+              </div>
+              <div v-if="liveLiters(g.row) !== null" class="text-xs mt-1" :class="liveLiters(g.row) < 0 ? 'text-red-600' : 'text-gray-500'">
+                = {{ fmtNum(liveLiters(g.row)) }} لتر مباعة
+              </div>
             </div>
             <!-- liters preview + expected sales (backend price) -->
             <div class="rounded-lg p-3" :class="liveLiters(g.row) !== null && liveLiters(g.row) < 0 ? 'bg-red-50' : 'bg-blue-50'">

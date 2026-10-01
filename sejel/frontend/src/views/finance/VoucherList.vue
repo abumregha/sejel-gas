@@ -11,7 +11,7 @@
             <td>{{ shiftMap[v.shift] || v.shift }}</td>
             <td>{{ categoryMap[v.category] || v.category }}</td>
             <td class="font-mono">{{ v.count }}</td>
-            <td class="font-mono font-bold text-blue-600">{{ Number(v.total_value).toLocaleString() }} د.ل</td>
+            <td class="font-mono font-bold text-blue-600">{{ Number(v.total_value).toLocaleString('en-US') }} د.ل</td>
             <td>
               <span :class="v.is_cancelled ? 'text-red-500' : 'text-gray-400'">
                 {{ v.is_cancelled ? 'نعم' : 'لا' }}

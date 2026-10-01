@@ -7,8 +7,8 @@
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
           <div><span class="text-gray-500">المحطة:</span> {{ tank.station_name }}</div>
           <div><span class="text-gray-500">النوع:</span> {{ tank.fuel_type_name }}</div>
-          <div><span class="text-gray-500">السعة:</span> {{ Number(tank.capacity).toLocaleString() }} لتر</div>
-          <div><span class="text-gray-500">الحالي:</span> {{ Number(tank.current_level || 0).toLocaleString() }} لتر</div>
+          <div><span class="text-gray-500">السعة:</span> {{ Number(tank.capacity).toLocaleString('en-US') }} لتر</div>
+          <div><span class="text-gray-500">الحالي:</span> {{ Number(tank.current_level || 0).toLocaleString('en-US') }} لتر</div>
         </div>
         <div class="mt-4">
           <div class="tank-bar h-6">
@@ -24,7 +24,7 @@
           <tbody>
             <tr v-for="r in readings" :key="r.name">
               <td>{{ r.created_at }}</td>
-              <td class="font-mono">{{ Number(r.reading).toLocaleString() }}</td>
+              <td class="font-mono">{{ Number(r.reading).toLocaleString('en-US') }}</td>
               <td>{{ r.reading_type }}</td>
               <td>{{ r.recorded_by_name }}</td>
             </tr>

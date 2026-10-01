@@ -39,25 +39,25 @@
           <div>
             <label class="block text-sm text-gray-600 mb-1">5 د.ل</label>
             <input v-model.number="form.coupon_5" type="number" min="0" class="w-full border rounded-lg px-3 py-2" placeholder="0" />
-            <div class="text-xs text-gray-400 mt-1">{{ (form.coupon_5 * 5).toLocaleString() }} د.ل</div>
+            <div class="text-xs text-gray-400 mt-1">{{ (form.coupon_5 * 5).toLocaleString('en-US') }} د.ل</div>
           </div>
           <div>
             <label class="block text-sm text-gray-600 mb-1">6 د.ل</label>
             <input v-model.number="form.coupon_6" type="number" min="0" class="w-full border rounded-lg px-3 py-2" placeholder="0" />
-            <div class="text-xs text-gray-400 mt-1">{{ (form.coupon_6 * 6).toLocaleString() }} د.ل</div>
+            <div class="text-xs text-gray-400 mt-1">{{ (form.coupon_6 * 6).toLocaleString('en-US') }} د.ل</div>
           </div>
           <div>
             <label class="block text-sm text-gray-600 mb-1">7 د.ل</label>
             <input v-model.number="form.coupon_7" type="number" min="0" class="w-full border rounded-lg px-3 py-2" placeholder="0" />
-            <div class="text-xs text-gray-400 mt-1">{{ (form.coupon_7 * 7).toLocaleString() }} د.ل</div>
+            <div class="text-xs text-gray-400 mt-1">{{ (form.coupon_7 * 7).toLocaleString('en-US') }} د.ل</div>
           </div>
           <div>
             <label class="block text-sm text-gray-600 mb-1">8 د.ل</label>
             <input v-model.number="form.coupon_8" type="number" min="0" class="w-full border rounded-lg px-3 py-2" placeholder="0" />
-            <div class="text-xs text-gray-400 mt-1">{{ (form.coupon_8 * 8).toLocaleString() }} د.ل</div>
+            <div class="text-xs text-gray-400 mt-1">{{ (form.coupon_8 * 8).toLocaleString('en-US') }} د.ل</div>
           </div>
         </div>
-        <div class="mt-3 text-sm font-bold text-primary">إجمالي الكوبونات: {{ couponTotal.toLocaleString() }} د.ل</div>
+        <div class="mt-3 text-sm font-bold text-primary">إجمالي الكوبونات: {{ couponTotal.toLocaleString('en-US') }} د.ل</div>
       </div>
 
       <div class="bg-white rounded-xl shadow-sm border p-6">
@@ -71,10 +71,10 @@
       <div class="bg-primary/5 border border-primary/20 rounded-xl p-6">
         <div class="flex justify-between items-center">
           <span class="text-lg font-bold">إجمالي الإيرادات</span>
-          <span class="text-2xl font-bold text-primary">{{ grandTotal.toLocaleString() }} د.ل</span>
+          <span class="text-2xl font-bold text-primary">{{ grandTotal.toLocaleString('en-US') }} د.ل</span>
         </div>
         <div class="text-sm text-gray-500 mt-1">
-          نقد: {{ form.cash_amount.toLocaleString() }} | كوبونات: {{ couponTotal.toLocaleString() }} | إلكتروني: {{ form.epayment_amount.toLocaleString() }}
+          نقد: {{ form.cash_amount.toLocaleString('en-US') }} | كوبونات: {{ couponTotal.toLocaleString('en-US') }} | إلكتروني: {{ form.epayment_amount.toLocaleString('en-US') }}
         </div>
       </div>
 

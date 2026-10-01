@@ -7,7 +7,7 @@
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
           <div><span class="text-gray-500">المحطة:</span> {{ stationMap[r.station] || r.station }}</div>
           <div><span class="text-gray-500">نوع الوقود:</span> {{ fuelMap[r.fuel_type] || r.fuel_type || '—' }}</div>
-          <div><span class="text-gray-500">الكمية:</span> <strong>{{ Number(r.requested_quantity).toLocaleString() }} لتر</strong></div>
+          <div><span class="text-gray-500">الكمية:</span> <strong>{{ Number(r.requested_quantity).toLocaleString('en-US') }} لتر</strong></div>
           <div><span class="text-gray-500">الأولوية:</span> {{ priorityLabel(r.priority) }}</div>
           <div><span class="text-gray-500">الحالة:</span>
             <span :class="statusBadge(r.status)" class="badge">{{ statusLabel(r.status) }}</span>

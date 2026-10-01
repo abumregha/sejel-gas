@@ -9,10 +9,10 @@
             <td>{{ r.created_at }}</td>
             <td>{{ r.station_name }}</td>
             <td>{{ r.tank_name }}</td>
-            <td class="font-mono">{{ Number(r.theoretical_level).toLocaleString() }}</td>
-            <td class="font-mono">{{ r.actual_level ? Number(r.actual_level).toLocaleString() : '—' }}</td>
+            <td class="font-mono">{{ Number(r.theoretical_level).toLocaleString('en-US') }}</td>
+            <td class="font-mono">{{ r.actual_level ? Number(r.actual_level).toLocaleString('en-US') : '—' }}</td>
             <td class="font-mono font-bold" :class="Number(r.variance || 0) === 0 ? 'text-green-600' : 'text-red-600'">
-              {{ r.variance != null ? Number(r.variance).toLocaleString() : '—' }}
+              {{ r.variance != null ? Number(r.variance).toLocaleString('en-US') : '—' }}
             </td>
           </tr>
         </tbody>

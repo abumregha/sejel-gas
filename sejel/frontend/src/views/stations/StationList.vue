@@ -52,6 +52,7 @@ import { ref, onMounted } from 'vue'
 import api from '../../api'
 import ConfirmDialog from '../../components/ConfirmDialog.vue'
 import Toast from '../../components/Toast.vue'
+import { friendlyError } from '../../errors'
 import { label, RELATIONSHIP } from '../../utils/labels'
 
 const stations = ref([])
@@ -79,8 +80,9 @@ const deleteStation = async (s) => {
     stations.value = stations.value.filter(x => x.name !== s.name)
     toast.value.show('تم حذف المحطة')
   } catch (e) {
-    const msg = e.response?.data?.message || e.response?.data?.exc || 'لا يمكن حذف المحطة'
-    toast.value.show(typeof msg === 'string' ? msg.replace(/<[^>]+>/g, '').split('\n')[0].substring(0, 200) : 'لا يمكن حذف المحطة', 'error')
+    // friendlyError translates LinkExistsError/PermissionError/AuthenticationError
+    // into Arabic — the old inline extraction dumped raw HTML links in the toast
+    toast.value.show(friendlyError(e), 'error')
   }
 }
 

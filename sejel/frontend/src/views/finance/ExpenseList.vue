@@ -10,7 +10,7 @@
         <tbody>
           <tr v-for="e in items" :key="e.name">
             <td>{{ categoryMap[e.category] || e.category }}</td>
-            <td class="font-mono font-bold text-red-600">{{ Number(e.amount).toLocaleString() }} د.ل</td>
+            <td class="font-mono font-bold text-red-600">{{ Number(e.amount).toLocaleString('en-US') }} د.ل</td>
             <td>{{ e.description || '—' }}</td>
             <td>{{ paymentLabel(e.payment_method) }}</td>
             <td class="flex gap-2">

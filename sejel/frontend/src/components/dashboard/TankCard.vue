@@ -18,7 +18,7 @@ const statusStyle = {
 }
 
 function fmt(n) {
-  return (n ?? 0).toLocaleString('ar-LY', { maximumFractionDigits: 0 })
+  return (n ?? 0).toLocaleString('en-US', { maximumFractionDigits: 0 })
 }
 </script>
 
@@ -55,7 +55,7 @@ function fmt(n) {
     </div>
     <div class="flex items-center justify-between mt-1.5 text-[11px] text-gray-400">
       <span class="tabular-nums">{{ (tank.percent ?? 0).toFixed(1) }}%</span>
-      <span v-if="tank.unit_price != null" class="tabular-nums">سعر البيع: {{ tank.unit_price.toLocaleString('ar-LY') }} د.ل</span>
+      <span v-if="tank.unit_price != null" class="tabular-nums">سعر البيع: {{ tank.unit_price.toLocaleString('en-US') }} د.ل</span>
     </div>
   </button>
 </template>

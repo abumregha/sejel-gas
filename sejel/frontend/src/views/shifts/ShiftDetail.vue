@@ -36,9 +36,9 @@
             <tr v-for="r in readings" :key="r.name">
               <td class="font-mono">{{ meterMap[r.meter] || r.meter }}</td>
               <td>{{ fuelMap[meterFuelMap[r.meter]] || '—' }}</td>
-              <td class="font-mono">{{ Number(r.start_reading).toLocaleString() }}</td>
-              <td class="font-mono">{{ r.end_reading ? Number(r.end_reading).toLocaleString() : '—' }}</td>
-              <td class="font-mono font-bold">{{ r.liters_sold ? Number(r.liters_sold).toLocaleString() : '—' }}</td>
+              <td class="font-mono">{{ Number(r.start_reading).toLocaleString('en-US') }}</td>
+              <td class="font-mono">{{ r.end_reading ? Number(r.end_reading).toLocaleString('en-US') : '—' }}</td>
+              <td class="font-mono font-bold">{{ r.liters_sold ? Number(r.liters_sold).toLocaleString('en-US') : '—' }}</td>
             </tr>
           </tbody>
         </table>
@@ -93,7 +93,7 @@ const employeeMap = ref({})
 const meterMap = ref({})
 const fuelMap = ref({})
 const meterFuelMap = ref({})
-const formatNum = (v) => v ? Number(v).toLocaleString('ar-LY') : '0'
+const formatNum = (v) => v ? Number(v).toLocaleString('en-US') : '0'
 // Q6: statuses presented as 4 primary states via shared labels
 const statusLabel = (s) => SHIFT_STATUS_PRIMARY[s] || s
 const statusClass = (s) => SHIFT_BADGE[s] || 'badge-gray'

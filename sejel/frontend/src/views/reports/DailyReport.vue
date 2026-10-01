@@ -41,7 +41,7 @@ import api from '../../api'
 const route = useRoute()
 const reportDate = ref(route.query.date || new Date().toISOString().split('T')[0])
 const report = ref(null)
-const formatNum = (v) => v ? Number(v).toLocaleString('ar-LY') : '0'
+const formatNum = (v) => v ? Number(v).toLocaleString('en-US') : '0'
 const loadReport = async () => {
   try {
     const { data } = await api.get(`/reports/daily/?date=${reportDate.value}`)

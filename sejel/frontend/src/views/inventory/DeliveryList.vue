@@ -13,10 +13,10 @@
             <td>{{ stationMap[d.station] || d.station || '—' }}</td>
             <td>{{ tankMap[d.tank] || d.tank || '—' }}</td>
             <td>{{ fuelMap[d.fuel_type] || d.fuel_type || '—' }}</td>
-            <td class="font-mono">{{ Number(d.expected_quantity).toLocaleString() }}</td>
-            <td class="font-mono">{{ d.received_quantity ? Number(d.received_quantity).toLocaleString() : '—' }}</td>
+            <td class="font-mono">{{ Number(d.expected_quantity).toLocaleString('en-US') }}</td>
+            <td class="font-mono">{{ d.received_quantity ? Number(d.received_quantity).toLocaleString('en-US') : '—' }}</td>
             <td class="font-mono" :class="d.shortage > 0 ? 'text-red-600 font-bold' : ''">
-              {{ d.shortage ? Number(d.shortage).toLocaleString() : '—' }}
+              {{ d.shortage ? Number(d.shortage).toLocaleString('en-US') : '—' }}
             </td>
           </tr>
         </tbody>

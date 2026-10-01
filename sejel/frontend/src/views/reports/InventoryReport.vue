@@ -18,8 +18,8 @@
             <div class="tank-bar-fill" :style="{ width: tank.level_percent + '%', background: Number(tank.level_percent) <= 15 ? '#ef4444' : Number(tank.level_percent) <= 30 ? '#f59e0b' : '#22c55e' }"></div>
           </div>
           <div class="flex justify-between text-xs text-gray-400 mt-1">
-            <span>{{ Number(tank.current_level || 0).toLocaleString() }} لتر</span>
-            <span>{{ Number(tank.capacity).toLocaleString() }} لتر</span>
+            <span>{{ Number(tank.current_level || 0).toLocaleString('en-US') }} لتر</span>
+            <span>{{ Number(tank.capacity).toLocaleString('en-US') }} لتر</span>
           </div>
         </div>
       </div>
@@ -33,7 +33,7 @@
           <tr v-for="r in requests" :key="r.id">
             <td>{{ r.station_name }}</td>
             <td>{{ r.tank_name }}</td>
-            <td class="font-mono">{{ Number(r.requested_quantity).toLocaleString() }}</td>
+            <td class="font-mono">{{ Number(r.requested_quantity).toLocaleString('en-US') }}</td>
             <td>{{ label(PRIORITY, r.priority) }}</td>
             <td>
               <span :class="r.status === 'received' ? 'badge-green' : 'badge-yellow'" class="badge">{{ label(REQUEST_STATUS, r.status) }}</span>

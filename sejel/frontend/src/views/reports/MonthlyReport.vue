@@ -25,7 +25,7 @@
       <div class="report-header border-b border-gray-300 pb-4 text-center">
         <h1 class="text-lg font-bold">التقرير الشهري — {{ monthName }} {{ reportYear }}</h1>
         <p class="text-sm text-gray-500 mt-1">
-          نظام سجل لإدارة محطات الوقود · صدر بتاريخ {{ new Date().toLocaleDateString('ar-LY') }}
+          نظام سجل لإدارة محطات الوقود · صدر بتاريخ {{ new Date().toLocaleDateString('ar-LY-u-nu-latn') }}
         </p>
       </div>
 
@@ -117,7 +117,7 @@ const months = [
 ]
 const monthName = computed(() => months.find(m => m.v === Number(reportMonth.value))?.n || reportMonth.value)
 
-const formatNum = (v) => (v || v === 0) ? Number(v).toLocaleString('ar-LY', { maximumFractionDigits: 2 }) : '0'
+const formatNum = (v) => (v || v === 0) ? Number(v).toLocaleString('en-US', { maximumFractionDigits: 2 }) : '0'
 const fuelName = (name) => fuelMap.value[name] || name
 
 const loadReport = async () => {

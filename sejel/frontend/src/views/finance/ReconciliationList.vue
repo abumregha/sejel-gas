@@ -8,10 +8,10 @@
           <tr v-for="r in items" :key="r.name" class="cursor-pointer" @click="$router.push(`/finance/reconciliations/${r.name}`)">
             <td class="font-medium">{{ shiftMap[r.shift] || r.shift }}</td>
             <td>{{ stationMap[r.station] || r.station || '—' }}</td>
-            <td class="font-mono">{{ Number(r.expected_sales || 0).toLocaleString() }}</td>
-            <td class="font-mono">{{ Number(r.total_collection || 0).toLocaleString() }}</td>
+            <td class="font-mono">{{ Number(r.expected_sales || 0).toLocaleString('en-US') }}</td>
+            <td class="font-mono">{{ Number(r.total_collection || 0).toLocaleString('en-US') }}</td>
             <td class="font-mono font-bold" :class="Number(r.difference) >= 0 ? 'text-green-600' : 'text-red-600'">
-              {{ Number(r.difference || 0).toLocaleString() }}
+              {{ Number(r.difference || 0).toLocaleString('en-US') }}
             </td>
             <td>
               <span :class="r.status === 'confirmed' ? 'badge-green' : 'badge-yellow'" class="badge">

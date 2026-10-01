@@ -64,7 +64,7 @@ const excelTotals = computed(() => ({
 const readingDate = computed(() => {
   const d = data.value?.meta?.date
   if (!d) return ''
-  return new Date(d).toLocaleDateString('ar-LY', { day: 'numeric', month: 'short', year: 'numeric' })
+  return new Date(d).toLocaleDateString('ar-LY-u-nu-latn', { day: 'numeric', month: 'short', year: 'numeric' })
 })
 
 // ---- data loading ----------------------------------------------------------
@@ -110,7 +110,7 @@ watch(selected, load)
 function fmtDiff(v) {
   if (v === null || v === undefined) return '—'
   const n = Number(v)
-  return (n > 0 ? '+' : '') + n.toLocaleString('ar-LY', { maximumFractionDigits: 2 })
+  return (n > 0 ? '+' : '') + n.toLocaleString('en-US', { maximumFractionDigits: 2 })
 }
 
 const diffTone = computed(() => {

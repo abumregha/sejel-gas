@@ -59,7 +59,7 @@
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mt-6">
       <h3 class="font-bold mb-3 flex items-center gap-2">
         شبكة قراءات العدادات
-        <span class="text-xs font-normal text-gray-400">مجموع اللترات: {{ totalLiters.toLocaleString('ar-LY') }}</span>
+        <span class="text-xs font-normal text-gray-400">مجموع اللترات: {{ totalLiters.toLocaleString('en-US') }}</span>
       </h3>
       <div v-if="meterRows.length" class="overflow-x-auto">
         <table class="w-full text-sm min-w-[560px]">
@@ -85,7 +85,7 @@
                 </template>
                 <span v-else class="text-amber-600 text-xs">بدون قراءة</span>
               </td>
-              <td class="tabular-nums font-bold text-blue-700">{{ r.reading ? Number(r.reading.liters_sold || 0).toLocaleString('ar-LY') : '—' }}</td>
+              <td class="tabular-nums font-bold text-blue-700">{{ r.reading ? Number(r.reading.liters_sold || 0).toLocaleString('en-US') : '—' }}</td>
             </tr>
           </tbody>
         </table>
@@ -134,7 +134,7 @@ const groups = computed(() => {
 const meterRows = computed(() => payload.value?.meters || [])
 const totalLiters = computed(() => meterRows.value.reduce((s, m) => s + Number(m.reading?.liters_sold || 0), 0))
 
-const fmtReading = (v) => (v == null ? '—' : Number(v).toLocaleString('ar-LY', { maximumFractionDigits: 0 }))
+const fmtReading = (v) => (v == null ? '—' : Number(v).toLocaleString('en-US', { maximumFractionDigits: 0 }))
 const employeeName = (id) => employeeMap.value[id] || id
 const islandMap = computed(() => {
   const map = {}

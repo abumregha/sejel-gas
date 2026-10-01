@@ -9,7 +9,7 @@
         <tbody>
           <tr v-for="p in items" :key="p.name">
             <td>{{ shiftMap[p.shift] || p.shift }}</td>
-            <td class="font-mono font-bold text-purple-600">{{ Number(p.total_amount).toLocaleString() }} د.ل</td>
+            <td class="font-mono font-bold text-purple-600">{{ Number(p.total_amount).toLocaleString('en-US') }} د.ل</td>
             <td class="font-mono">{{ p.transaction_count }}</td>
             <td>
               <span :class="p.is_cancelled ? 'text-red-500' : 'text-gray-400'">

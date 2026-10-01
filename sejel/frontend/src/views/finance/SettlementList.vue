@@ -12,8 +12,8 @@
             <td>{{ stationMap[s.station] || s.station }}</td>
             <td>{{ s.submission_date }}</td>
             <td class="font-mono">{{ s.total_count }}</td>
-            <td class="font-mono font-bold">{{ Number(s.total_value).toLocaleString() }} د.ل</td>
-            <td class="font-mono text-green-600">{{ Number(s.paid_amount || 0).toLocaleString() }} د.ل</td>
+            <td class="font-mono font-bold">{{ Number(s.total_value).toLocaleString('en-US') }} د.ل</td>
+            <td class="font-mono text-green-600">{{ Number(s.paid_amount || 0).toLocaleString('en-US') }} د.ل</td>
             <td>
               <span :class="s.status === 'paid' ? 'badge-green' : s.status === 'approved' ? 'badge-blue' : 'badge-yellow'" class="badge">
                 {{ statusLabel(s.status) }}

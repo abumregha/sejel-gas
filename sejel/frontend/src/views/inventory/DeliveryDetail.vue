@@ -8,9 +8,9 @@
         <div><span class="text-gray-500">الخزان:</span> {{ d.tank_name }}</div>
         <div><span class="text-gray-500">النوع:</span> {{ d.fuel_type_name }}</div>
         <div><span class="text-gray-500">التاريخ:</span> {{ d.delivery_date }}</div>
-        <div><span class="text-gray-500">المتوقع:</span> <strong>{{ Number(d.expected_quantity).toLocaleString() }} لتر</strong></div>
-        <div><span class="text-gray-500">المستلم:</span> <strong class="text-green-600">{{ d.received_quantity ? Number(d.received_quantity).toLocaleString() : '—' }} لتر</strong></div>
-        <div><span class="text-gray-500">النقص:</span> <strong class="text-red-600">{{ d.shortage_quantity ? Number(d.shortage_quantity).toLocaleString() : '—' }} لتر</strong></div>
+        <div><span class="text-gray-500">المتوقع:</span> <strong>{{ Number(d.expected_quantity).toLocaleString('en-US') }} لتر</strong></div>
+        <div><span class="text-gray-500">المستلم:</span> <strong class="text-green-600">{{ d.received_quantity ? Number(d.received_quantity).toLocaleString('en-US') : '—' }} لتر</strong></div>
+        <div><span class="text-gray-500">النقص:</span> <strong class="text-red-600">{{ d.shortage_quantity ? Number(d.shortage_quantity).toLocaleString('en-US') : '—' }} لتر</strong></div>
         <div><span class="text-gray-500">الحالة:</span> {{ label(DELIVERY_STATUS, d.status) }}</div>
       </div>
     </div>

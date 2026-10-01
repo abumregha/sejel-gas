@@ -12,7 +12,7 @@
             <td>{{ r.created_at }}</td>
             <td>{{ r.station_name }}</td>
             <td>{{ r.tank_name }}</td>
-            <td class="font-mono">{{ Number(r.requested_quantity).toLocaleString() }} لتر</td>
+            <td class="font-mono">{{ Number(r.requested_quantity).toLocaleString('en-US') }} لتر</td>
             <td>
               <span :class="r.priority === 'critical' ? 'badge-red' : r.priority === 'urgent' ? 'badge-yellow' : 'badge-gray'" class="badge">
                 {{ { normal: 'عادي', urgent: 'عاجل', critical: 'حرج' }[r.priority] || r.priority }}

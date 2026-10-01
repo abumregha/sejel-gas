@@ -83,7 +83,7 @@
               <td>{{ fuelMap[m.fuel_type] || m.fuel_type }}</td>
               <td>{{ machineMap[m.machine] || m.machine }}</td>
               <td>{{ tankMap[m.tank] || '—' }}</td>
-              <td>{{ Number(m.current_reading || 0).toLocaleString() }}</td>
+              <td>{{ Number(m.current_reading || 0).toLocaleString('en-US') }}</td>
               <td><span class="badge badge-gray">{{ label(METER_STATUS, m.status) }}</span></td>
             </tr>
           </tbody>
@@ -102,7 +102,7 @@
             class="border rounded-lg p-3 flex items-center justify-between">
             <div>
               <div class="font-medium">{{ tank.tank_name || tank.name }}</div>
-              <div class="text-xs text-gray-500">{{ fuelMap[tank.fuel_type] || tank.fuel_type }} — {{ Number(tank.capacity).toLocaleString() }} لتر</div>
+              <div class="text-xs text-gray-500">{{ fuelMap[tank.fuel_type] || tank.fuel_type }} — {{ Number(tank.capacity).toLocaleString('en-US') }} لتر</div>
             </div>
             <div class="w-24">
               <div class="tank-bar">

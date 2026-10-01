@@ -6,8 +6,8 @@
       <div class="bg-white rounded-xl shadow-sm border p-4">
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
           <div><span class="text-gray-500">المحطة:</span> {{ stationMap[s.station] || s.station }}</div>
-          <div><span class="text-gray-500">القيمة:</span> <strong>{{ Number(s.total_value).toLocaleString() }} د.ل</strong></div>
-          <div><span class="text-gray-500">المدفوع:</span> <strong class="text-green-600">{{ Number(s.paid_amount || 0).toLocaleString() }} د.ل</strong></div>
+          <div><span class="text-gray-500">القيمة:</span> <strong>{{ Number(s.total_value).toLocaleString('en-US') }} د.ل</strong></div>
+          <div><span class="text-gray-500">المدفوع:</span> <strong class="text-green-600">{{ Number(s.paid_amount || 0).toLocaleString('en-US') }} د.ل</strong></div>
           <div><span class="text-gray-500">الحالة:</span>
             <span :class="statusClass(s.status)" class="badge">{{ statusLabel(s.status) }}</span>
           </div>

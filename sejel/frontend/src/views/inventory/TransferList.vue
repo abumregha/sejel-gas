@@ -12,7 +12,7 @@
             <td>{{ (t.transfer_date || '').slice(0, 16).replace('T', ' ') }}</td>
             <td>{{ tankMap[t.from_tank] || t.from_tank }}</td>
             <td>{{ tankMap[t.to_tank] || t.to_tank }}</td>
-            <td class="font-mono font-bold">{{ Number(t.quantity).toLocaleString() }} لتر</td>
+            <td class="font-mono font-bold">{{ Number(t.quantity).toLocaleString('en-US') }} لتر</td>
             <td>
               <span :class="t.status === 'completed' ? 'badge-green' : t.status === 'cancelled' ? 'badge-red' : 'badge-gray'" class="badge">
                 {{ { completed: 'مكتمل', draft: 'مسودة', cancelled: 'ملغى' }[t.status] || t.status }}

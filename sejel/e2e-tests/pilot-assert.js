@@ -16,8 +16,13 @@ const EXCEL = { '3280418': 'M01A', '3077096': 'M01B', '27546777': 'M02A' }
   step('login', await login(page))
 
   const stations = (await apiGet(page, 'stations/')).results || []
-  step('exactly one station exists (the pilot)', stations.length === 1, JSON.stringify(stations.map((s) => s.station_name)))
-  const ST = stations[0] && stations[0].name
+  // The client legitimately creates their own UAT stations — locate the PILOT
+  // by name and assert only on it (grabbing stations[0] tested برهم when the
+  // client's station sorted first and failed everything).
+  const pilot = stations.find((s) => s.station_name === 'محطة تجريبية — سجل')
+    || stations.find((s) => s.name === 'qputh5too5')
+  step('pilot station present', !!pilot, JSON.stringify(stations.map((s) => s.station_name)))
+  const ST = pilot && pilot.name
   const doc = await apiGet(page, `stations/${ST}/`)
   step('API: pilot day_close_time pinned to 11:00', String(doc.day_close_time || '').startsWith('11:00'), 'got ' + doc.day_close_time)
 

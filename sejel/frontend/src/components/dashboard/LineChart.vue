@@ -52,9 +52,9 @@ const xLabelIdx = computed(() => {
 })
 
 const shortDate = (iso) => {
-  try { return new Date(iso).toLocaleDateString('ar-LY', { day: 'numeric', month: 'short' }) } catch { return iso }
+  try { return new Date(iso).toLocaleDateString('ar-LY-u-nu-latn', { day: 'numeric', month: 'short' }) } catch { return iso }
 }
-const fmt = (v) => (Number(v) || 0).toLocaleString('ar-LY', { maximumFractionDigits: 0 })
+const fmt = (v) => (Number(v) || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })
 </script>
 
 <template>

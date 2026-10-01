@@ -23,7 +23,7 @@ const tones = {
 function fmt(v) {
   if (v === null || v === undefined || v === '') return '—'
   if (typeof v === 'string') return v
-  return v.toLocaleString('ar-LY', { maximumFractionDigits: 2 })
+  return v.toLocaleString('en-US', { maximumFractionDigits: 2 })
 }
 </script>
 

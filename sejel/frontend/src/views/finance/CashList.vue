@@ -9,7 +9,7 @@
         <tbody>
           <tr v-for="c in items" :key="c.name">
             <td>{{ shiftMap[c.shift] || c.shift }}</td>
-            <td class="font-mono font-bold text-green-600">{{ Number(c.amount).toLocaleString() }} د.ل</td>
+            <td class="font-mono font-bold text-green-600">{{ Number(c.amount).toLocaleString('en-US') }} د.ل</td>
             <td class="font-mono">{{ c.time }}</td>
             <td>{{ c.received_by || '—' }}</td>
             <td>

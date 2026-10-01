@@ -60,8 +60,8 @@
         </div>
       </div>
       <div v-if="receivedQty !== null" class="bg-primary/5 border border-primary/20 rounded-xl p-4 text-sm">
-        <div class="flex justify-between"><span>الكمية المستلمة:</span><strong>{{ receivedQty.toLocaleString() }} لتر</strong></div>
-        <div class="flex justify-between" :class="shortage > 0 ? 'text-red-600' : ''"><span>النقص:</span><strong>{{ shortage.toLocaleString() }} لتر</strong></div>
+        <div class="flex justify-between"><span>الكمية المستلمة:</span><strong>{{ receivedQty.toLocaleString('en-US') }} لتر</strong></div>
+        <div class="flex justify-between" :class="shortage > 0 ? 'text-red-600' : ''"><span>النقص:</span><strong>{{ shortage.toLocaleString('en-US') }} لتر</strong></div>
         <div v-if="shortage > 0" class="text-xs text-red-500 mt-1">يمكن إنشاء مطالبة نقص بعد الحفظ</div>
       </div>
       <div class="flex gap-3 pt-4">

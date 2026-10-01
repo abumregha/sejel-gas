@@ -40,7 +40,7 @@
           </div>
         </div>
         <p v-if="lastEndOf(r.meter) != null && r.start_reading !== '' && Number(r.start_reading) !== Number(lastEndOf(r.meter))" class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mt-2">
-          ⚠️ قراءة الافتتاح لا تطابق آخر اختتام ({{ Number(lastEndOf(r.meter)).toLocaleString() }}) — اختر نوع الاستثناء واكتب السبب
+          ⚠️ قراءة الافتتاح لا تطابق آخر اختتام ({{ Number(lastEndOf(r.meter)).toLocaleString('en-US') }}) — اختر نوع الاستثناء واكتب السبب
         </p>
       </div>
       <div class="flex gap-2">

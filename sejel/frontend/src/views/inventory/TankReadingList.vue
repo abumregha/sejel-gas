@@ -24,7 +24,7 @@
           <tr v-for="r in items" :key="r.id">
             <td>{{ r.recorded_at }}</td>
             <td>{{ tankMap[r.tank] || r.tank }}</td>
-            <td class="font-mono">{{ Number(r.reading_level).toLocaleString() }}</td>
+            <td class="font-mono">{{ Number(r.reading_level).toLocaleString('en-US') }}</td>
             <td>{{ r.reading_type }}</td>
             <td>{{ r.recorded_by_name || '—' }}</td>
           </tr>

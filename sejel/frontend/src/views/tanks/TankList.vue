@@ -22,8 +22,8 @@
             <div class="tank-bar-fill" :style="{ width: t.level_percent + '%', background: barColor(t.level_percent) }"></div>
           </div>
           <div class="flex justify-between text-xs text-gray-400 mt-1">
-            <span>السعة: {{ Number(t.capacity).toLocaleString() }} لتر</span>
-            <span>الحالي: {{ Number(t.current_level || 0).toLocaleString() }} لتر</span>
+            <span>السعة: {{ Number(t.capacity).toLocaleString('en-US') }} لتر</span>
+            <span>الحالي: {{ Number(t.current_level || 0).toLocaleString('en-US') }} لتر</span>
           </div>
         </div>
         <div class="flex gap-2 mt-3">

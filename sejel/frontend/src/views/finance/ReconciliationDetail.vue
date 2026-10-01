@@ -15,9 +15,9 @@
           <tbody>
             <tr v-for="fs in fuelSummaries" :key="fs.name">
               <td>{{ fuelMap[fs.fuel_type] || fs.fuel_type }}</td>
-              <td class="font-mono">{{ Number(fs.liters_sold || 0).toLocaleString() }}</td>
+              <td class="font-mono">{{ Number(fs.liters_sold || 0).toLocaleString('en-US') }}</td>
               <td class="font-mono">{{ fs.unit_price }}</td>
-              <td class="font-mono font-bold">{{ Number(fs.expected_sales || 0).toLocaleString() }} د.ل</td>
+              <td class="font-mono font-bold">{{ Number(fs.expected_sales || 0).toLocaleString('en-US') }} د.ل</td>
             </tr>
           </tbody>
         </table>
@@ -27,17 +27,17 @@
         <div class="bg-white rounded-xl shadow-sm border p-4">
           <h3 class="font-bold mb-3">المبيعات المتوقعة</h3>
           <div class="space-y-2 text-sm">
-            <div class="flex justify-between"><span>إجمالي اللترات:</span><strong>{{ Number(rec.total_liters || 0).toLocaleString() }}</strong></div>
-            <div class="flex justify-between border-t pt-2"><span>المبيعات المتوقعة:</span><strong>{{ Number(rec.expected_sales || 0).toLocaleString() }} د.ل</strong></div>
+            <div class="flex justify-between"><span>إجمالي اللترات:</span><strong>{{ Number(rec.total_liters || 0).toLocaleString('en-US') }}</strong></div>
+            <div class="flex justify-between border-t pt-2"><span>المبيعات المتوقعة:</span><strong>{{ Number(rec.expected_sales || 0).toLocaleString('en-US') }} د.ل</strong></div>
           </div>
         </div>
         <div class="bg-white rounded-xl shadow-sm border p-4">
           <h3 class="font-bold mb-3">التحصيل</h3>
           <div class="space-y-2 text-sm">
-            <div class="flex justify-between"><span>نقد:</span><strong>{{ Number(rec.total_cash || 0).toLocaleString() }} د.ل</strong></div>
-            <div class="flex justify-between"><span>كوبونات:</span><strong>{{ Number(rec.total_vouchers || 0).toLocaleString() }} د.ل</strong></div>
-            <div class="flex justify-between"><span>POS:</span><strong>{{ Number(rec.total_pos || 0).toLocaleString() }} د.ل</strong></div>
-            <div class="flex justify-between border-t pt-2"><span>إجمالي التحصيل:</span><strong>{{ Number(rec.total_collection || 0).toLocaleString() }} د.ل</strong></div>
+            <div class="flex justify-between"><span>نقد:</span><strong>{{ Number(rec.total_cash || 0).toLocaleString('en-US') }} د.ل</strong></div>
+            <div class="flex justify-between"><span>كوبونات:</span><strong>{{ Number(rec.total_vouchers || 0).toLocaleString('en-US') }} د.ل</strong></div>
+            <div class="flex justify-between"><span>POS:</span><strong>{{ Number(rec.total_pos || 0).toLocaleString('en-US') }} د.ل</strong></div>
+            <div class="flex justify-between border-t pt-2"><span>إجمالي التحصيل:</span><strong>{{ Number(rec.total_collection || 0).toLocaleString('en-US') }} د.ل</strong></div>
           </div>
         </div>
       </div>
@@ -46,17 +46,17 @@
           <div>
             <div class="text-sm text-gray-500">فرق المبيعات</div>
             <div class="text-lg font-bold" :class="Number(rec.difference) >= 0 ? 'text-green-600' : 'text-red-600'">
-              {{ Number(rec.difference || 0).toLocaleString() }} د.ل
+              {{ Number(rec.difference || 0).toLocaleString('en-US') }} د.ل
             </div>
             <div class="text-xs text-gray-400">{{ diffTypeLabel(rec.difference_type) }}</div>
           </div>
           <div>
             <div class="text-sm text-gray-500">المصروفات</div>
-            <div class="text-lg font-bold text-orange-600">{{ Number(rec.total_expenses || 0).toLocaleString() }} د.ل</div>
+            <div class="text-lg font-bold text-orange-600">{{ Number(rec.total_expenses || 0).toLocaleString('en-US') }} د.ل</div>
           </div>
           <div>
             <div class="text-sm text-gray-500">صافي النقدية</div>
-            <div class="text-lg font-bold text-primary">{{ Number(rec.net_cash || 0).toLocaleString() }} د.ل</div>
+            <div class="text-lg font-bold text-primary">{{ Number(rec.net_cash || 0).toLocaleString('en-US') }} د.ل</div>
           </div>
           <div>
             <div class="text-sm text-gray-500">الحالة</div>

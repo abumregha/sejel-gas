@@ -27,7 +27,7 @@
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-1">الكمية (لتر)</label>
         <input v-model.number="form.quantity" type="number" step="0.001" min="1" required class="w-full border border-gray-300 rounded-lg px-4 py-2.5" />
-        <div v-if="fromTank" class="text-xs text-gray-500 mt-1">المتاح في الخزان: {{ Number(fromTank.current_level).toLocaleString() }} لتر</div>
+        <div v-if="fromTank" class="text-xs text-gray-500 mt-1">المتاح في الخزان: {{ Number(fromTank.current_level).toLocaleString('en-US') }} لتر</div>
       </div>
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-1">السبب</label>

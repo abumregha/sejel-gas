@@ -8,10 +8,10 @@
           <tr v-for="g in gaps" :key="g.meter_name + '-' + g.idx">
             <td class="font-mono">{{ meterMap[g.meter_name] || g.meter_name }}</td>
             <td>{{ stationMap[meterStationMap[g.meter_name]] || '—' }}</td>
-            <td class="font-mono">{{ Number(g.previous_closing).toLocaleString() }}</td>
-            <td class="font-mono">{{ Number(g.new_opening).toLocaleString() }}</td>
+            <td class="font-mono">{{ Number(g.previous_closing).toLocaleString('en-US') }}</td>
+            <td class="font-mono">{{ Number(g.new_opening).toLocaleString('en-US') }}</td>
             <td class="font-mono font-bold" :class="g.gap > 0 ? 'text-red-600' : 'text-green-600'">
-              {{ g.gap > 0 ? '+' : '' }}{{ Number(g.gap).toLocaleString() }}
+              {{ g.gap > 0 ? '+' : '' }}{{ Number(g.gap).toLocaleString('en-US') }}
             </td>
           </tr>
         </tbody>

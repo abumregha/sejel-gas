@@ -28,7 +28,7 @@
           <input v-model.number="form.denom_8" type="number" min="0" class="w-full border rounded-lg px-3 py-2" placeholder="0" />
         </div>
       </div>
-      <div class="text-sm font-bold text-primary">الإجمالي: {{ settlementTotal.toLocaleString() }} د.ل</div>
+      <div class="text-sm font-bold text-primary">الإجمالي: {{ settlementTotal.toLocaleString('en-US') }} د.ل</div>
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-1">المبلغ المدفوع (د.ل)</label>
         <input v-model="form.paid_amount" type="number" step="0.01" min="0" class="w-full border border-gray-300 rounded-lg px-4 py-2.5" />

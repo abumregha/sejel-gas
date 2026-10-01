@@ -34,7 +34,7 @@ const dashOffset = computed(() => CIRC * (1 - pct.value / 100))
         style="transition: stroke-dashoffset 600ms ease"
       />
       <text x="70" y="66" text-anchor="middle" class="fill-gray-800" style="font-size: 21px; font-weight: 700">
-        {{ pct.toLocaleString('ar-LY', { maximumFractionDigits: 1 }) }}{{ unit }}
+        {{ pct.toLocaleString('en-US', { maximumFractionDigits: 1 }) }}{{ unit }}
       </text>
     </svg>
     <div v-if="caption" class="text-[11px] text-gray-400 mt-1 text-center">{{ caption }}</div>

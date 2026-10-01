@@ -33,13 +33,17 @@ api.interceptors.response.use(
   async (error) => {
     const status = error.response?.status
     const url = error.config?.url || ''
-    // Don't redirect for the session-check/login calls themselves, and don't
-    // redirect when already on the login page — that caused an infinite
-    // reload loop on every fresh page load when no session exists yet.
+    // NOTE: we deliberately do NOT redirect to /login/ on 401/403 anymore.
+    // That turned every expired-session or permission failure into a full-screen
+    // login page that looked like the app "crashed" (client report 2026-10-01:
+    // deleting a station dumped the user on the login screen). Instead the SPA
+    // stays put, views show an Arabic message via friendlyError() (which maps
+    // AuthenticationError/PermissionError), and the auth store decides what
+    // to do when /auth/me fails.
     const isAuthCall = url.includes('/auth/me') || url.includes('/auth/login')
-    const onLoginPage = window.location.pathname.startsWith('/login')
-    if ((status === 401 || status === 403) && !isAuthCall && !onLoginPage) {
-      window.location.href = '/login/'
+    if ((status === 401 || status === 403) && !isAuthCall) {
+      error.sessionExpired = status === 401
+        || String(error.response?.data?.exc_type || '') === 'AuthenticationError'
     }
     return Promise.reject(error)
   }
