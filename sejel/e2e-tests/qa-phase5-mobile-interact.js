@@ -34,6 +34,17 @@ const rect = (page, sel) => page.evaluate((s) => {
   // ── Dashboard on a phone ────────────────────────────────────────────────
   await page.goto(BASE + '/', { waitUntil: 'domcontentloaded' })
   await page.waitForTimeout(2000)
+  // A manager who works across several stations is asked to pick one before the
+  // operational panel appears — correct behaviour, but this script drives the
+  // station-bound view, so pick the pilot the way an employee would.
+  const stationPicker = page.locator('[data-testid="station-selector"]')
+  if (await stationPicker.count()) {
+    const idx = (await stationPicker.locator('option').allTextContents())
+      .findIndex((t) => t.includes('محطة تجريبية'))
+    if (idx >= 0) await stationPicker.selectOption({ index: idx })
+    await page.waitForTimeout(2000)
+    console.log('station picked at index', idx)
+  }
   const cta = await rect(page, '[data-testid="today-primary-action"]')
   console.log('dashboard primary action:', JSON.stringify(cta))
   console.log('dashboard bottom-nav buttons:', await page.evaluate(() =>
@@ -44,6 +55,27 @@ const rect = (page, sel) => page.evaluate((s) => {
   await page.click('[data-testid="today-primary-action"]')
   await page.waitForTimeout(2500)
   console.log('after tapping primary action URL:', page.url())
+  await shot(page, 'qa-p5-mobile-cta-tap')
+
+  // The CTA follows the state of the day: on an open day it opens the readings
+  // screen, on a day that phase 4 already closed it points at the reconciliation.
+  // This script exercises the readings form, so go there explicitly — and record
+  // which way the CTA pointed, since that choice is itself worth knowing.
+  if (!page.url().includes('/readings')) {
+    console.log('CTA pointed somewhere other than readings (day already closed) — navigating directly')
+    await page.goto(BASE + '/app/readings', { waitUntil: 'domcontentloaded' })
+    await page.waitForTimeout(2000)
+    // Use a station whose guns are still UNREAD. On the pilot every gun is
+    // already read, so the card shows the saved value instead of an input and the
+    // typing part of this check silently does nothing.
+    const rs = page.locator('[data-testid="readings-station"]')
+    if (await rs.count()) {
+      const opts = await rs.locator('option').allTextContents()
+      const ridx = opts.findIndex((t) => t.includes('QA Edge Station'))
+      if (ridx >= 0) await rs.selectOption({ index: ridx })
+      await page.waitForTimeout(2000)
+    }
+  }
   await shot(page, 'qa-p5-mobile-readings')
 
   // ── Readings screen: type into a gun ───────────────────────────────────

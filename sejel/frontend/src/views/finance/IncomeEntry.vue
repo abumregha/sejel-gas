@@ -94,7 +94,7 @@
       </div>
 
       <div class="flex gap-3 pt-2">
-        <button type="submit" :disabled="saving || !form.shift" class="bg-primary text-white px-6 py-2.5 rounded-lg disabled:opacity-50">
+        <button type="submit" data-testid="save-income" :disabled="saving || !form.shift" class="bg-primary text-white px-6 py-2.5 rounded-lg disabled:opacity-50">
           {{ saving ? 'جاري الحفظ...' : 'حفظ الإيرادات' }}
         </button>
         <router-link to="/finance" class="px-6 py-2.5 border border-gray-300 rounded-lg">إلغاء</router-link>

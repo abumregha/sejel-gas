@@ -170,12 +170,19 @@ async function qaSeedCounters(page, stationName, specs) {
     if (!st) return { ok: false, error: `station «${stationName}» not found` }
     const me = await (await fetch('/api/auth/me/', { credentials: 'include' })).json()
     const csrf = (me.message || me).csrf_token
+    // Scope to THIS station. Meter carries no station field — it hangs off
+    // Machine — so the station's own machine list is the ownership map. Meter
+    // codes are per-station (M01A exists at several stations), so matching on
+    // code alone would reset a DIFFERENT station's counters, which then silently
+    // rewrites that station's next reading.
+    const machineRes = await (await fetch(`/api/machines/?station=${st.name}&limit_page_length=0`, { credentials: 'include' })).json()
+    const myMachines = new Set(((machineRes.message || machineRes).results || []).map((m) => m.name))
     const meters = (await (await fetch('/api/meters/?limit_page_length=0', { credentials: 'include' })).json())
-    const all = (meters.message || meters).results || []
+    const own = ((meters.message || meters).results || []).filter((x) => myMachines.has(x.machine))
     const done = []
     for (const [code, counter] of Object.entries(specs)) {
-      const m = all.find((x) => x.meter_code === code)
-      if (!m) { done.push(`${code}: not found`); continue }
+      const m = own.find((x) => x.meter_code === code)
+      if (!m) { done.push(`${code}: not found at ${stationName}`); continue }
       const res = await fetch(`/api/meters/${m.name}/`, {
         method: 'PUT', credentials: 'include',
         headers: { 'Content-Type': 'application/json', 'X-Frappe-CSRF-Token': csrf },
@@ -185,6 +192,20 @@ async function qaSeedCounters(page, stationName, specs) {
     }
     return { ok: true, done, station: st.name }
   }, { stationName, specs })
+}
+
+
+// The meter codes belonging to one station. Codes are NOT predictable from the
+// station name: they are allocated globally unique, so a station created after
+// another one gets M01AX rather than M01A. Suites that seed counters must ask.
+async function qaStationMeterCodes(page, stationName) {
+  const rows = await apiGet(page, 'stations/?limit_page_length=0')
+  const st = ((rows && rows.results) || []).find((s) => (s.station_name || '').trim() === stationName)
+  if (!st) return []
+  const machines = await apiGet(page, `machines/?station=${st.name}&limit_page_length=0`)
+  const mine = new Set(((machines && machines.results) || []).map((m) => m.name))
+  const meters = await apiGet(page, 'meters/?limit_page_length=0')
+  return ((meters && meters.results) || []).filter((m) => mine.has(m.machine)).map((m) => m.meter_code).sort()
 }
 
 
@@ -360,4 +381,4 @@ async function qaFillField(page, label, value) {
   return ctrl
 }
 
-module.exports = { BASE2, CKPT_DIR, RUN_FILE, initRunLog, appendRun, defects, defect, capture, uiLogin, clickNav, bodyText, shot, step, summary, launch, login, nav, goto, apiGet, apiPost, apiPut, fillByLabel, qaFill, qaFillField, qaDelete, qaResetStationDay, qaStationId, qaSeedCounters, qaEnsureShift, qaEnsureDayClose, qaReopenStationDay, PILOT_COUNTERS }
+module.exports = { BASE2, CKPT_DIR, RUN_FILE, initRunLog, appendRun, defects, defect, capture, uiLogin, clickNav, bodyText, shot, step, summary, launch, login, nav, goto, apiGet, apiPost, apiPut, fillByLabel, qaFill, qaFillField, qaDelete, qaResetStationDay, qaStationId, qaSeedCounters, qaStationMeterCodes, qaEnsureShift, qaEnsureDayClose, qaReopenStationDay, PILOT_COUNTERS }

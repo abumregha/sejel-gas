@@ -12,11 +12,22 @@
 //   5. verify the reconciliation against the expected arithmetic
 //
 // Every step is checked against the backend so a green UI cannot hide a lost write.
-const { appendRun, capture, uiLogin, bodyText, defect, shot, step, summary, launch, apiGet, apiPost, qaFillField } = require('./qa')
+const { appendRun, capture, uiLogin, bodyText, defect, shot, step, summary, launch, apiGet, apiPost, qaFillField, qaResetStationDay, qaSeedCounters, qaStationMeterCodes } = require('./qa')
 
 const BASE = 'http://localhost:8004'
 const EDGE = 'QA Edge Station'
-const CYCLE_DATE = '2026-10-04'   // a fresh day so nothing is already closed
+// The readings screen works on the CURRENT cycle, not on "today": after the
+// station's 11:00 close the running cycle belongs to the next day. Derive it the
+// same way the app does instead of hardcoding a date that goes stale.
+function currentCycleDate(dayClose = '11:00') {
+  const [h, m] = String(dayClose).split(':').map((n) => parseInt(n, 10) || 0)
+  const now = new Date()
+  const close = new Date(now); close.setHours(h, m, 0, 0)
+  const d = new Date(now)
+  if (now >= close) d.setDate(d.getDate() + 1)
+  return d.toISOString().slice(0, 10)
+}
+let CYCLE_DATE = currentCycleDate('11:00')
 const PRICE = 0.15                 // frozen unit price used by the backend
 
 ;(async () => {
@@ -51,6 +62,29 @@ const PRICE = 0.15                 // frozen unit price used by the backend
       '\n- day_close_time: ' + after.day_close_time)
   }
 
+  // ---------- replay guard ----------
+  // This journey closes the day, so a previous run left the cycle's readings and
+  // reconciliation behind. Clear that one station-day (admin session, scoped to
+  // this station through its own meter tree) and re-seed every gun to the same
+  // base counter, so the expected arithmetic below is deterministic.
+  const p8Ctx = await browser.newContext()
+  const p8Admin = await p8Ctx.newPage()
+  await uiLogin(p8Admin, 'admin@sejel.ly', 'admin123')
+  const p8cleared = await qaResetStationDay(p8Admin, EDGE, CYCLE_DATE)
+  step('cleared the edge station cycle so the journey can repeat', p8cleared.ok,
+    p8cleared.ok
+      ? `${p8cleared.removed} reading(s), ${p8cleared.clearedShifts} day-close shift(s), ${p8cleared.leftAlone} left alone`
+      : String(p8cleared.error || (p8cleared.problems || []).join(' · ')))
+  const BASE_COUNTER = 100000
+  const codes = await qaStationMeterCodes(p8Admin, EDGE)
+  step('this station\'s own meter codes resolved', codes.length > 0, codes.join(', '))
+  const specs = {}
+  for (const c of codes) specs[c] = BASE_COUNTER
+  const p8seed = await qaSeedCounters(p8Admin, EDGE, specs)
+  step('every gun re-seeded to the same base counter',
+    p8seed.ok && codes.length > 0 && !(p8seed.done || []).some((d) => /not found/.test(d)),
+    (p8seed.done || []).join(', '))
+
   // ---------- step 1: readings screen shows the 11:00 cycle ----------
   await page.goto(BASE + '/readings', { waitUntil: 'domcontentloaded' })
   await page.waitForTimeout(1800)
@@ -80,15 +114,24 @@ const PRICE = 0.15                 // frozen unit price used by the backend
   const inputs = page.locator('[data-testid="gun-current-input"]')
   const guns = await inputs.count()
   step('guns listed for the station', guns > 0, guns + ' guns')
+  // Read each gun's previous counter from its own element, in the same order as
+  // the inputs. Scraping the whole card and taking the FIRST number matched
+  // "مضخة 4" (pump 4), so every gun was filled with 1,004 against a counter above
+  // 100,000 — a reading the backend rightly refused, which then looked like a
+  // save failure.
+  const prevTexts = await page.evaluate(() => [...document.querySelectorAll('[data-testid="gun-previous"]')]
+    .map((el) => el.innerText.replace(/\s+/g, ' ')))
+  if (prevTexts.length !== guns) {
+    throw new Error('expected one previous-reading box per gun, got ' + prevTexts.length + ' for ' + guns + ' guns')
+  }
   const prevValues = []
   for (let i = 0; i < guns; i++) {
-    const row = inputs.nth(i)
-    const prevText = (await row.locator('xpath=ancestor::*[.//input][1]').innerText()).replace(/\s+/g, ' ')
-    const m = prevText.match(/([\d,]+(?:\.\d+)?)/)
-    const prev = m ? parseFloat(m[1].replace(/,/g, '')) : 100000
+    const m = prevTexts[i].match(/([\d,]+(?:\.\d+)?)/)
+    if (!m) throw new Error('could not read the previous counter for gun ' + i + ': ' + JSON.stringify(prevTexts[i]))
+    const prev = parseFloat(m[1].replace(/,/g, ''))
     prevValues.push(prev)
     // 1,000 L on every gun — a round, auditable movement
-    await row.fill(String(prev + 1000))
+    await inputs.nth(i).fill(String(prev + 1000))
     await page.waitForTimeout(150)
   }
   const preview = (await bodyText(page)).replace(/\s+/g, ' ')
@@ -102,7 +145,9 @@ const PRICE = 0.15                 // frozen unit price used by the backend
   await page.locator('[data-testid="save-readings"]').click()
   await page.waitForTimeout(3500)
   body = (await bodyText(page)).replace(/\s+/g, ' ')
-  const saved = /تم حفظ \d+ قراءة بنجاح/.exec(body)
+  // Arabic plurals: 1 قراءة / N قراءات. Requiring the singular missed a
+  // successful multi-reading save and reported QA-31 against a save that worked.
+  const saved = /تم حفظ \d+ قراءات? بنجاح/.exec(body)
   step('all readings saved', !!saved, saved ? saved[0] : body.slice(-220))
   if (!saved) {
     defect({ id: 'QA-31', severity: 'P1', area: 'Readings — full-cycle save',
@@ -136,27 +181,47 @@ const PRICE = 0.15                 // frozen unit price used by the backend
     await page.waitForTimeout(800)
   }
   const CASH = (guns * 1000 * PRICE).toFixed(2)   // full collection, no shortage
-  const nums = page.locator('input[type="number"], input[inputmode="decimal"]')
-  const nCount = await nums.count()
-  appendRun('## Phase 8 — income entry fields', '\n- numeric inputs: ' + nCount +
-    '\n- expected full collection for ' + (guns * 1000) + ' L: ' + CASH + ' د.ل')
-  if (nCount) await nums.nth(0).fill(CASH)
-  await page.waitForTimeout(400)
-  const saveIncome = page.locator('button', { hasText: /حفظ الإيرادات|حفظ/ }).first()
+  const COUPONS = 40
+  // Fill by LABEL inside its own card. Taking the first numeric input on the page
+  // filled nothing usable, and the success check matched the save BUTTON'S OWN
+  // LABEL, so this step passed while recording nothing at all.
+  const card = (h3) => page.locator(`xpath=//h3[normalize-space(.)='${h3}']/parent::div`).first()
+  const byLabel = (label, scope) =>
+    (scope || page).locator(`xpath=//label[normalize-space(.)='${label}']/following-sibling::*[1]`).first()
+  await byLabel('المبلغ (د.ل)', card('المبيعات النقدية')).fill(CASH)
+  await byLabel('5 د.ل').fill(String(COUPONS / 5))
+  await byLabel('8 د.ل').fill('0')
+  await page.locator('[data-testid="epayment-count"]').fill('1')
+  await page.waitForTimeout(600)
+  const incomeBody = (await bodyText(page)).replace(/\s+/g, ' ')
+  const liveTotal = (incomeBody.match(/إجمالي الإيرادات\s*([\d,.]+)/) || [])[1] || ''
+  step('live revenue total matches cash + coupons before saving',
+    liveTotal.replace(/,/g, '').startsWith(String(Number(CASH) + COUPONS)),
+    `shown=${liveTotal} expected=${Number(CASH) + COUPONS}`)
+
+  const saveIncome = page.locator('[data-testid="save-income"]').first()
   await saveIncome.click()
   await page.waitForTimeout(3000)
   body = (await bodyText(page)).replace(/\s+/g, ' ')
-  const incomeOk = /تم|بنجاح|حُفظ|حفظ/.test(body)
-  step('income entry reports success', incomeOk, body.slice(-200))
+  step('income entry reports success', /تم الحفظ بنجاح/.test(body),
+    (body.match(/تم [^\n]{0,60}/) || [body.slice(-200)])[0])
   const incomeFails = page.netFails.slice(before400)
   appendRun('## Phase 8 — income entry result',
     '\n- page tail: ' + JSON.stringify(body.slice(-260)) +
     '\n- network ≥400: ' + (incomeFails.join(', ') || '(none)'))
   await shot(page, 'qa-phase8-4-income')
 
-  const cashAfter = await apiGet(page, 'cash-collections/')
-  appendRun('## Phase 8 — cash collections after income entry',
-    '\n```\n' + JSON.stringify(cashAfter).slice(0, 600) + '\n```')
+  // A green screen is not proof the money was recorded — check the backend.
+  const cashRows = await apiGet(page, 'cash-collections/?station=' + edge.name + '&limit_page_length=0')
+  const cashSum = ((cashRows && cashRows.results) || []).reduce((a, r) => a + Number(r.amount || 0), 0)
+  step('the declared cash actually reached the backend', Math.abs(cashSum - Number(CASH)) < 0.02,
+    `cash total=${cashSum} expected=${CASH}`)
+  const vouRows = await apiGet(page, 'vouchers/?station=' + edge.name + '&limit_page_length=0')
+  const vouSum = ((vouRows && vouRows.results) || []).reduce((a, r) => a + Number(r.total_value || 0), 0)
+  step('the coupons actually reached the backend', Math.abs(vouSum - COUPONS) < 0.02,
+    `voucher total=${vouSum} expected=${COUPONS}`)
+  appendRun('## Phase 8 — income postings stored',
+    '\n- cash: ' + cashSum + ' (expected ' + CASH + '), vouchers: ' + vouSum + ' (expected ' + COUPONS + ')')
 
   // ---------- step 4: close the day ----------
   await page.goto(BASE + '/readings', { waitUntil: 'domcontentloaded' })
