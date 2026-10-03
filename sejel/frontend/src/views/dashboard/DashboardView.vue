@@ -16,6 +16,7 @@ import ReconciliationSummary from '../../components/dashboard/ReconciliationSumm
 import AlertsPanel from '../../components/dashboard/AlertsPanel.vue'
 import QuickActions from '../../components/dashboard/QuickActions.vue'
 import TrendSection from '../../components/dashboard/TrendSection.vue'
+import TodayPanel from '../../components/dashboard/TodayPanel.vue'
 import { fmtNum, fmtMoney, fmtTime } from '../../components/dashboard/format'
 import { SHIFT_STATUS_PRIMARY, label } from '../../utils/labels'
 
@@ -102,6 +103,11 @@ async function loadStationList() {
 onMounted(async () => {
   if (!auth.user) await auth.restore()
   if (!auth.stationId && !stations.value.length) await loadStationList()
+  // A station with one site should land straight on "what do I do today"
+  // instead of the all-stations analytics view.
+  if (!auth.stationId && !selected.value && stations.value.length === 1) {
+    selected.value = stations.value[0].id
+  }
   await load()
 })
 
@@ -121,6 +127,23 @@ const diffTone = computed(() => {
 
 <template>
   <div>
+    <!-- ============ TODAY: what this employee must do now ============ -->
+    <TodayPanel v-if="!isAggregate && data?.station" :data="data" />
+
+    <!-- When several stations exist, the day starts by choosing one. -->
+    <div v-if="isAggregate && canSwitch && stations.length > 1"
+      class="mb-6 bg-primary/5 border border-primary/20 rounded-2xl p-4 sm:p-5 flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <p class="font-bold text-gray-800">ابدأ يومك</p>
+        <p class="text-sm text-gray-600">اختر المحطة التي تعمل بها لعرض قراءات اليوم وإقفالها.</p>
+      </div>
+      <select v-model="selected" data-testid="start-station-picker"
+        class="border border-gray-300 rounded-lg px-3 py-3 bg-white text-sm min-h-[44px]">
+        <option value="" disabled>اختر المحطة...</option>
+        <option v-for="s in stations" :key="s.id" :value="s.id">{{ s.name }}</option>
+      </select>
+    </div>
+
     <!-- ============ A. HEADER / STATION CONTEXT (§3) ============ -->
     <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
       <div>
