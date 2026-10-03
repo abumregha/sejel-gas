@@ -1,6 +1,5 @@
 <template>
   <div class="max-w-2xl mx-auto">
-    <Toast ref="toast" />
     <h2 class="text-xl font-bold mb-6">{{ isEdit ? 'تعديل المحطة' : 'إضافة محطة' }}</h2>
     <form @submit.prevent="save" class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-4">
       <div>
@@ -10,6 +9,11 @@
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-1">العنوان</label>
         <input v-model="form.address" class="w-full border border-gray-300 rounded-lg px-4 py-2.5" />
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">وقت إقفال اليوم</label>
+        <input v-model="form.day_close_time" type="time" class="w-full border border-gray-300 rounded-lg px-4 py-2.5" />
+        <p class="text-xs text-gray-500 mt-1">موعد بدء دورة قراءات اليوم لهذه المحطة (مثال: 11:00 ← 11:00).</p>
       </div>
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-1">نوع العلاقة</label>
@@ -34,19 +38,27 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import api from '../../api'
-import Toast from '../../components/Toast.vue'
+import { useToast } from '../../composables/useToast'
 
 const router = useRouter()
 const route = useRoute()
 const isEdit = computed(() => !!route.params.id)
 const saving = ref(false)
-const toast = ref(null)
-const form = ref({ station_name: '', address: '', relationship_type: 'owned' })
+// Global toast: a per-component toast is unmounted by the redirect below and
+// the operator never sees the confirmation.
+const { show } = useToast()
+const form = ref({ station_name: '', address: '', relationship_type: 'owned', day_close_time: '' })
 
 onMounted(async () => {
   if (isEdit.value) {
     const { data } = await api.get(`/stations/${route.params.id}/`)
-    form.value = { station_name: data.station_name, address: data.address, relationship_type: data.relationship_type }
+    form.value = {
+      station_name: data.station_name,
+      address: data.address,
+      relationship_type: data.relationship_type,
+      // Frappe returns a Time as HH:MM:SS; the <input type="time"> wants HH:MM
+      day_close_time: (data.day_close_time || '').slice(0, 5),
+    }
   }
 })
 
@@ -56,12 +68,14 @@ const save = async () => {
     if (isEdit.value) {
       await api.put(`/stations/${route.params.id}/`, form.value)
     } else {
-      await api.post('/stations/', form.value)
+      const payload = { ...form.value }
+      if (!payload.day_close_time) delete payload.day_close_time
+      await api.post('/stations/', payload)
     }
-    toast.value.show('تم الحفظ بنجاح')
-    setTimeout(() => router.push('/stations'), 1000)
+    show('تم حفظ بيانات المحطة بنجاح')
+    setTimeout(() => router.push('/stations'), 1200)
   } catch (e) {
-    toast.value.show('خطأ في الحفظ', 'error')
+    show('تعذر حفظ بيانات المحطة. راجع الحقول وحاول مرة أخرى.', 'error', 5000)
   } finally { saving.value = false }
 }
 </script>

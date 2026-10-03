@@ -19,6 +19,7 @@
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
           <div><span class="text-gray-500">العنوان:</span> {{ station.address || '—' }}</div>
           <div><span class="text-gray-500">نوع العلاقة:</span> {{ label(RELATIONSHIP, station.relationship_type) }}</div>
+          <div><span class="text-gray-500">دورة القراءة:</span> {{ (station.day_close_time || '').slice(0, 5) || 'غير مضبوطة' }}</div>
           <div><span class="text-gray-500">الحالة:</span> {{ label(STATION_STATUS, station.status) }}</div>
         </div>
       </div>

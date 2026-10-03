@@ -189,12 +189,15 @@ const activeShift = computed(() => {
     || list.find((s) => s.is_day_close && s.status === 'submitted') || null
 })
 
-// Station-configured daily close time (fallback 23:00 — never hard-coded
-// business logic; each station can run its own cycle, e.g. 11:00→11:00).
-const dayCloseTime = computed(() => {
+// The station's own configured reading cycle. The persisted Station value is
+// the single source of truth — the previous hard-coded 23:00 fallback made a
+// station running an 11:00 cycle silently display (and look like) 23:00.
+const stationCycle = computed(() => {
   const t = data.value?.station?.day_close_time
-  return (t ? String(t).slice(0, 5) : '') || '23:00'
+  return t ? String(t).slice(0, 5) : ''
 })
+const dayCloseTime = computed(() => stationCycle.value || '23:00')
+const cycleNotConfigured = computed(() => !stationCycle.value)
 
 async function ensureShift() {
   // Server-side idempotent ensure: the dashboard payload this view rendered
@@ -330,6 +333,10 @@ async function closeDay() {
       <div data-testid="readings-progress" class="bg-white rounded-xl border border-gray-100 shadow-sm px-4 py-3 flex flex-wrap items-center gap-3">
         <span class="text-xs bg-gray-50 text-gray-600 border border-gray-200 rounded-full px-2.5 py-1" data-testid="reading-period">
           دورة القراءة: {{ date }} {{ dayCloseTime }} ← {{ dayCloseTime }}
+        </span>
+        <span v-if="cycleNotConfigured" data-testid="cycle-warning"
+          class="text-xs bg-amber-50 text-amber-800 border border-amber-200 rounded-full px-2.5 py-1">
+          لم يتم ضبط وقت إقفال اليوم لهذه المحطة — يتم استخدام 23:00 مؤقتاً. اضبطه من صفحة تعديل المحطة.
         </span>
         <span v-if="allDone" class="flex items-center gap-2 text-green-700 font-bold">
           <Icon name="check" :size="18" /> جميع القراءات مكتملة

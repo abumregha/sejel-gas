@@ -25,6 +25,13 @@
         <input v-model="form.station.station_name" required class="w-full border border-gray-300 rounded-lg px-4 py-2.5" />
       </div>
       <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">وقت إقفال اليوم *</label>
+        <input v-model="form.station.day_close_time" type="time" required class="w-full border border-gray-300 rounded-lg px-4 py-2.5" />
+        <p class="text-xs text-gray-500 mt-1">
+          يحدد وقت بدء دورة قراءات اليوم: إذا اخترت 11:00 تكون الدورة من 11:00 صباحاً حتى 11:00 صباحاً في اليوم التالي.
+        </p>
+      </div>
+      <div>
         <label class="block text-sm font-medium text-gray-700 mb-1">العنوان</label>
         <input v-model="form.station.address" class="w-full border border-gray-300 rounded-lg px-4 py-2.5" />
       </div>
@@ -186,7 +193,7 @@ const fuelTypes = ref([])
 const defaultTank = () => ({ fuel_type: '', capacity: '', tank_name: '', current_level: '' })
 const defaultIsland = () => ({ machines: 2, meters: 2 })
 const form = ref({
-  station: { station_name: '', address: '', relationship_type: 'owned', marketing_company: '' },
+  station: { station_name: '', address: '', relationship_type: 'owned', marketing_company: '', day_close_time: '11:00' },
   islands: [defaultIsland(), defaultIsland()],
   meters_per_machine: 2,
   tanks: [defaultTank()],
@@ -285,7 +292,7 @@ const openStation = () => router.push(`/stations/${stationName.value}`)
 
 const reset = () => {
   form.value = {
-    station: { station_name: '', address: '', relationship_type: 'owned', marketing_company: '' },
+    station: { station_name: '', address: '', relationship_type: 'owned', marketing_company: '', day_close_time: '11:00' },
     islands: [defaultIsland(), defaultIsland()],
     meters_per_machine: 2,
     tanks: [defaultTank()],

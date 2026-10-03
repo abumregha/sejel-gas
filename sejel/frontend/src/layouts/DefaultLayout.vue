@@ -84,6 +84,24 @@
       </router-link>
     </nav>
 
+    <!-- Confirmation of the last save. Rendered at layout level so it survives
+         the redirect that follows a successful save. -->
+    <Transition name="toast">
+      <div v-if="toast.visible" data-testid="global-toast"
+        class="fixed top-4 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-xl shadow-lg text-sm font-medium flex items-center gap-2 border"
+        :class="toast.type === 'error'
+          ? 'bg-red-50 text-red-700 border-red-200'
+          : 'bg-emerald-50 text-emerald-700 border-emerald-200'">
+        <svg v-if="toast.type === 'error'" class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+        <svg v-else class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+        </svg>
+        <span>{{ toast.message }}</span>
+      </div>
+    </Transition>
+
     <!-- Client-experience feedback widget (bottom corner) -->
     <UxFeedbackWidget />
   </div>
@@ -94,6 +112,9 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import UxFeedbackWidget from '../components/UxFeedbackWidget.vue'
+import { useToast } from '../composables/useToast'
+
+const { toast } = useToast()
 
 const auth = useAuthStore()
 const router = useRouter()
