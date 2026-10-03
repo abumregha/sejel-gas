@@ -30,11 +30,15 @@ const { launch, login, apiGet, nav, fillByLabel, shot, step, summary } = require
   step('UI: new shift created', !!SH, SH || 'fail')
   if (!SH) { await browser.close(); process.exit(2) }
 
-  // labeled workaround (out of scope bug: no open/activate control in UI)
+  // The UI control DOES exist (ShiftDetail.vue «▶ بدء المناوبة» → status open);
+  // this script skips the navigation and puts the row straight to open.
   await page.evaluate(async (sh) => {
     await fetch('/api/shifts/' + sh + '/', { method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'open' }) })
   }, SH)
-  step('WORKAROUND: activate shift via API (separate known bug: no UI control)', true)
+  const activated = ((await apiGet(page, 'shifts/')).results || []).find((s) => s.name === SH)
+  step('WORKAROUND: shift activated via API (UI control: ShiftDetail «▶ بدء المناوبة»)',
+    !!activated && activated.status === 'open',
+    activated ? `status=${activated.status}` : 'shift not in the list')
 
   // ---------- FIX 1: reading form meter dropdown ----------
   await nav(page, `shifts/${SH}/readings`)

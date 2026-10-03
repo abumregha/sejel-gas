@@ -16,7 +16,7 @@
 //   9. المناوبات list shows the إقفال اليوم badge row مغلقة
 //  10. Reconciliations list shows today's reconciliation (مسودة)
 //  11. Mobile 390×844: hamburger → قراءات المضخات → same page + bottom nav
-const { launch, login, nav, shot, step, summary } = require('./helpers')
+const { launch, login, nav, apiGet, shot, step, summary } = require('./helpers')
 
 const norm = (s) => s.replace(/[\u066B\u066C]/g, '.')
 
@@ -58,7 +58,11 @@ const norm = (s) => s.replace(/[\u066B\u066C]/g, '.')
   step('J2: review shows 2 meters before create', review.includes(stationName) && review.includes('2'), '')
   await page.locator('button', { hasText: 'إنشاء المحطة' }).click()
   await page.waitForSelector('text=تم إنشاء المحطة بنجاح', { timeout: 30000 })
-  step('J2: station created through the wizard UI', true)
+  // corroboration, not a constant: the wizard's own toast is asserted above by
+  // waitForSelector, this checks the row really reached the API
+  const afterCreate = (await apiGet(page, 'stations/')).results || []
+  const made = afterCreate.find((s) => s.station_name === stationName)
+  step('J2: station created through the wizard UI', !!made, made ? made.name : `«${stationName}» absent from the API list`)
   await shot(page, '90-wizard-created')
 
   // ---------- 3. open the station page (UI button) ----------
@@ -122,7 +126,11 @@ const norm = (s) => s.replace(/[\u066B\u066C]/g, '.')
   // ---------- 8. close the day through the button ----------
   await page.locator('[data-testid="close-day"]').click() // both confirms auto-accepted
   await page.waitForSelector('text=تم إقفال اليوم', { timeout: 30000 })
-  step('J8: إقفال اليوم succeeds from the readings page', true)
+  const dayShifts = (await apiGet(page, 'shifts/?limit_page_length=0')).results || []
+  const dayClose = dayShifts.find((s) => Number(s.is_day_close) === 1 && String(s.date) === tomorrow)
+  step('J8: إقفال اليوم succeeds from the readings page',
+    !!dayClose && dayClose.status === 'closed',
+    dayClose ? `${dayClose.name} (${dayClose.date}) status=${dayClose.status}` : `no day-close container for ${tomorrow}`)
   await page.waitForTimeout(1200)
   await shot(page, '93-day-closed')
 

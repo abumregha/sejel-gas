@@ -119,7 +119,7 @@ async function closeDay(page, date) {
     day2.some((r) => Math.abs(r.expected_sales - sales) < 0.01),
     `expected ${sales.toFixed(2)}, got ${JSON.stringify(day2.map((r) => r.expected_sales))}`)
   step('day 2: no 100x inflation anywhere',
-    all.every((r) => r.total_liters < expected * 2),
+    all.length > 0 && all.every((r) => r.total_liters < expected * 2),
     `max ${Math.max(...all.map((r) => r.total_liters))}`)
 
   appendRun('## Phase 8 re-verification result',

@@ -22,7 +22,11 @@ const { launch, login, apiGet, nav, fillByLabel, selectByOptionText, shot, step,
     step('UI: create station', !!myStation, myStation ? myStation.name + ' / ' + myStation.station_name : 'not found after save')
     ST = (myStation || {}).name
   } else {
-    step('UI: create station', true, 'reused from earlier run: ' + ST)
+    // Nothing was created here — read the doc back instead of asserting true,
+    // so a deleted/renamed fixture fails this step rather than passing it.
+    const reused = await apiGet(page, `stations/${ST}/`)
+    step('UI: create station (reused fixture still present)', !!reused && !!reused.station_name,
+      `reused ${ST} · ${reused && reused.station_name} · status=${reused && reused.status}`)
   }
   await shot(page, '02-station-created')
   if (!ST) { console.log('ABORT: no station'); await browser.close(); process.exit(1) }
