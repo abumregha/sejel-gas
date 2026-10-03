@@ -11,8 +11,10 @@
 // were themselves created by QA fixtures after 13:16 — but the near-miss is
 // exactly the failure mode the QA prompt warns about.
 //
-// This version resolves ownership server-side per reading and aborts the whole
-// run if a single reading turns out to belong to another station.
+// This version resolves ownership server-side per reading and deletes ONLY the
+// readings whose meter hangs off this station's island→pump→gun tree. Readings
+// of other stations are counted and left alone (they used to cause a hard abort,
+// which made the reset unusable on any database holding more than one station).
 const { launch, uiLogin, step, summary, apiGet } = require('./qa')
 
 const BASE = 'http://localhost:8004'
@@ -43,17 +45,19 @@ const GUN_COUNTERS = { A: 500000, B: 300000, C: 0 }
   step('resolved this station’s own meters', myMeters.size > 0, `${myMeters.size} meters`)
 
   const all = (await apiGet(page, 'meter-readings/?limit_page_length=0')).results || []
+  const own = all.filter((r) => myMeters.has(r.meter))
   const foreign = all.filter((r) => !myMeters.has(r.meter))
-  if (foreign.length) {
-    throw new Error(
-      `ABORT: ${foreign.length} reading(s) belong to other stations. ` +
-      'This script must never delete them.'
-    )
-  }
-  step('every listed reading belongs to this station', true, `${all.length} reading(s) to consider`)
+  // Foreign readings are OUT OF SCOPE, never a reason to stop: aborting here
+  // made the reset unusable the moment a second station held any reading at
+  // all (which is the normal state of the database). The guard that matters is
+  // the one on the DELETE itself — only a meter in MY tree is ever deleted.
+  step('only this station’s readings are in scope',
+    own.length > 0 || all.length === 0,
+    `${own.length} of ${all.length} belong to «${STATION}» · ${foreign.length} left alone`)
+  if (!myMeters.size) throw new Error('ABORT: no meters resolved for this station — refusing to delete anything')
 
   let removed = 0
-  for (const r of all) {
+  for (const r of own) {
     const status = await page.evaluate(async ({ name, csrf }) => {
       const res = await fetch(`/api/meter-readings/${name}/`, {
         method: 'DELETE', credentials: 'include', headers: { 'X-Frappe-CSRF-Token': csrf },
@@ -63,7 +67,15 @@ const GUN_COUNTERS = { A: 500000, B: 300000, C: 0 }
     step(`delete reading ${r.name} (${r.meter})`, status < 400 || status === 404, `HTTP ${status}`)
     if (status < 400) removed++
   }
-  console.log(`\nremoved ${removed} reading(s) — all from «${STATION}» only`)
+  // Prove the negative, don't assume it: re-read the table and check every
+  // reading that was NOT mine survived. This is the assertion that would have
+  // caught the 32-row loss.
+  const after = (await apiGet(page, 'meter-readings/?limit_page_length=0')).results || []
+  const afterNames = new Set(after.map((r) => r.name))
+  const lost = foreign.map((r) => r.name).filter((n) => !afterNames.has(n))
+  step('another station’s readings survived untouched', lost.length === 0,
+    lost.length ? `LOST: ${lost.join(', ')}` : `${foreign.length} foreign reading(s) still present`)
+  console.log(`\nremoved ${removed} reading(s) — all from «${STATION}» only; ${foreign.length} foreign left alone`)
 
   // The day-close container and its financial records. A closed day is now
   // read-only (Round 3), so without this the walkthrough could never be

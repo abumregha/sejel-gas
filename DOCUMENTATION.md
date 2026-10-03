@@ -753,7 +753,7 @@ Login with username/password.
 | System Manager | `admin` |
 | Default | `supervisor` |
 
-**Station binding**: the User doctype has a custom `sejel_station` Link field (patch `v1_user_station_binding`). For `supervisor`-role users it is returned as `station_id` and hard-scopes their dashboard data; owners/admins/finance are unbound and may switch stations in the dashboard selector.
+**Station binding**: the User doctype has a custom `sejel_station` Link field (patch `v1_user_station_binding`). When set, it is returned as `station_id` and hard-scopes that user's data everywhere (lists, detail, reports, exports, and writes). System Manager and Sejel Manager are never scoped; any other role — supervisor, finance — is scoped as soon as `sejel_station` is set. Unbound users keep the multi-station selector.
 
 #### `GET /api/auth/me/`
 
@@ -766,6 +766,8 @@ Get current authenticated user. Requires valid session cookie.
 ### 6.3 Generic CRUD
 
 All resources follow the same pattern. The URL slug maps to a DocType via the `RESOURCES` dict in `views.py`.
+
+**Authentication**: every route here requires a session cookie — no CRUD route is reachable by a guest (2026-10-03; only the four `/api/auth/` routes and `api/ux.py:report_client_error` are `allow_guest`). **Scoping**: for a station-bound user, the list filter is injected server-side, a single-document GET/PUT/DELETE on a foreign row returns `PermissionError`, and a create/update payload naming a foreign station is refused with `403` before the row exists.
 
 #### `GET /api/{resource}/` — List
 
@@ -1231,7 +1233,7 @@ Role filtering: supervisors don't see stations/staff/finance-admin items; financ
 
 **Back button** (2026-09-12): the top bar shows a «رجوع» button (hidden on the home page) driven by vue-router history position.
 
-**Station scoping** (2026-09-12): users bound to a station (User field `sejel_station`, currently supervisors) see only their station everywhere — lists, detail pages, reports and exports are server-enforced. Unbound users keep the multi-station selector.
+**Station scoping** (2026-09-12, enforced 2026-10-03): users bound to a station (User field `sejel_station` — any role except admin/manager) see only their station everywhere — lists, detail pages, reports, exports and **creates/updates** are server-enforced (`api/scoping.py`: `check_station`, `check_station_payload`, `apply_to_filters`). A `?station=` parameter can only narrow a bound user's scope, never widen it, and a payload naming a foreign station is refused before the row exists. Unbound users keep the multi-station selector.
 
 **Help tooltips** (2026-09-12): a «؟» HelpTip component pops short Arabic explanations on dashboard KPI cards, tank cards, the reconciliation panel and key form fields.
 

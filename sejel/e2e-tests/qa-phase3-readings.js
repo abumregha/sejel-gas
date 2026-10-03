@@ -227,7 +227,8 @@ async function meterCounter(page, code) {
     `${await page.locator('[data-testid="gun-saved-current"]').count()} of ${nGuns}`)
   step('No editable input is offered for an already-read gun',
     await page.locator('[data-testid="gun-current-input"]').count() === 0)
-  step('Save button inert after save (no duplicate path)', await saveBtn.isDisabled().catch(() => true))
+  // a missing locator must FAIL the check, not pass it
+  step('Save button inert after save (no duplicate path)', await saveBtn.isDisabled().catch(() => false))
   await shot(page, 'qa-20-pilot-saved')
 
   appendRun('Console errors (phase 3 part A)', page.consoleErrors.length ? page.consoleErrors.map((e) => '- ' + e).join('\n') : '- none')
@@ -358,7 +359,8 @@ async function meterCounter(page, code) {
       const edgeShifts = ((await apiGet(page, 'shifts/?station=' + edge.name + '&limit_page_length=0')).results) || []
       const dates = [...new Set(edgeShifts.map((x) => String(x.date)))]
       step('every shift to clear belongs to this station',
-        edgeShifts.every((x) => x.station === edge.name), `${edgeShifts.length} shift(s), ${dates.length} date(s)`)
+        edgeShifts.length > 0 && edgeShifts.every((x) => x.station === edge.name),
+        `${edgeShifts.length} shift(s), ${dates.length} date(s)`)
       for (const d of dates) {
         const r = await qaResetStationDay(tAdmin, EDGE, d)
         console.log(`[teardown] ${d}: removed ${r.removed}, shifts ${r.clearedShifts}, left alone ${r.leftAlone}` +
@@ -383,8 +385,24 @@ async function meterCounter(page, code) {
         !del2.ok, 'HTTP ' + del2.status)
       step('the refusal names the blocking record',
         !!blocker.blocker, blocker.blocker || '(no blocker named — this is the defect)')
-      step('the SPA turns that refusal into an Arabic instruction', true,
-        'LinkExistsError → «لا يمكن الحذف: هذا السجل مرتبط بـ …» via friendlyError()')
+      // Was only ever a constant `true` (round 4 audit). Drive the actual
+      // button and read what the operator is told.
+      if (!del2.ok) {
+        await tAdmin.goto('http://localhost:8004/stations', { waitUntil: 'networkidle' })
+        await tAdmin.waitForTimeout(1200)
+        const card = tAdmin.locator('div.grid > div').filter({ hasText: EDGE }).first()
+        let spaMsg = '(no card for this station)'
+        if (await card.count()) {
+          await card.locator('button', { hasText: 'حذف' }).first().click()
+          await tAdmin.waitForTimeout(600)
+          await tAdmin.locator('.fixed.z-50 button', { hasText: 'حذف' }).last().click().catch(() => {})
+          await tAdmin.waitForTimeout(2500)
+          spaMsg = ((await tAdmin.locator('[data-testid="wizard-toast"]').innerText().catch(() => '')) || '(no toast)').replace(/\s+/g, ' ')
+        }
+        step('the SPA turns that refusal into an Arabic instruction',
+          /^لا يمكن الحذف/.test(spaMsg.trim()), spaMsg.slice(0, 120))
+        appendRun('Edge station teardown — SPA message', '- ' + spaMsg)
+      }
       if (!blocker.blocker) {
         defect({
           id: 'QA-9', severity: 'P3', area: 'Station teardown with operational history',

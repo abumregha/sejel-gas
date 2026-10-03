@@ -9,7 +9,7 @@
 //
 // The readings are written to the isolated acceptance station only; every
 // request names a meter that belongs to that station.
-const { launch, uiLogin, step, summary } = require('./qa')
+const { launch, uiLogin, step, summary, apiGet, qaResetStationDay, qaSeedCounters } = require('./qa')
 
 const STATION = 'QA موظف جديد'
 const iso = (d) => d.toISOString().slice(0, 10)
@@ -45,6 +45,51 @@ async function post(page, resource, body) {
 
 ;(async () => {
   const { browser, page } = await launch()
+
+  // ── a clean starting state ────────────────────────────────────────────────
+  // The matrix writes real rows: yesterday's baseline, today's eight cases,
+  // tomorrow's case 8b. A second run used to trip over its own history — every
+  // baseline came back 417 «قراءة الافتتاح لا تطابق آخر قراءة اختتام», gun C
+  // was no longer counter-less (so case 8 had nothing to test) and case 5 booked
+  // 0 L because its counter had already been reset to 50 by the previous run.
+  // Round 3's "re-runnable" claim never covered this suite; the bare `true`
+  // baseline assertion (round 4) is what had been hiding it.
+  //
+  // Scope: qaResetStationDay's own dashboard-tree guard (station → island →
+  // pump → meter) is what decides which readings are deleted, and this runs as
+  // ADMIN because deleting a Reconciliation needs Administrator. Counters go
+  // back to the fixture's own values so case 1 ("lower than previous") and
+  // case 8 (counter-less gun) are both reachable again.
+  const aCtx = await browser.newContext()
+  const aPage = await aCtx.newPage()
+  await uiLogin(aPage, 'admin@sejel.ly', 'admin123')
+  const stationList = await apiGet(aPage, 'stations/')
+  const mine = (stationList.results || []).find((s) => s.station_name === STATION)
+  if (!mine) {
+    console.log(`\n!! station «${STATION}» is missing — run qa-create-acceptance-station.js first`)
+    await browser.close()
+    return
+  }
+  const dayAfter = iso(new Date(Date.now() + 86400000))
+  const resetLog = []
+  let resetOk = true
+  for (const d of [yesterday, today, dayAfter]) {
+    const r = await qaResetStationDay(aPage, STATION, d)
+    resetLog.push(`${d.slice(5)}: ${r.removed} reading(s), ${r.clearedShifts} shift(s)`)
+    if (!r.ok) { resetOk = false; resetLog.push(...(r.problems || []).map((x) => '  ! ' + x)) }
+  }
+  const tree = await apiGet(aPage, `dashboard-station/?station=${encodeURIComponent(mine.name)}`)
+  const ownGuns = []
+  for (const isl of tree.islands || []) for (const mach of isl.machines || []) ownGuns.push(...(mach.meters || []))
+  const FIXTURE = { A: 500000, B: 300000, C: 0 }
+  const counters = {}
+  for (const g of ownGuns) if (FIXTURE[g.gun_letter] !== undefined) counters[g.meter_code] = FIXTURE[g.gun_letter]
+  const seed = await qaSeedCounters(aPage, STATION, counters)
+  step('clean starting state restored (own records only)',
+    resetOk && ownGuns.length === 3 && (seed.done || []).every((x) => x.includes('HTTP 200')),
+    resetLog.join(' · ') + ' · ' + (seed.done || []).join(', '))
+  await aCtx.close()
+
   await uiLogin(page, 'emp@sejel.ly', 'Sejel-QA-2026')
 
   // Resolve the acceptance station's own meters through the dashboard tree —
@@ -81,13 +126,17 @@ async function post(page, resource, body) {
   if (yesterdayShift.doc && !yesterdayShift.doc.closed) {
     // Only the guns that already have a counter get a baseline — the third gun
     // must stay untouched so case 8 has a genuine first reading to make.
+    const posted = []
     for (const m of info.meters.filter((x) => Number(x.current))) {
       const base = m.code === gunA.code ? 500000 : 600000
-      await post(page, 'meter-readings', {
+      const r = await post(page, 'meter-readings', {
         shift: yesterdayShift.doc.name, meter: m.id, start_reading: 0, end_reading: base, source: 'manual',
       })
+      posted.push(`${m.code}=${r.status}${r.exception ? ' ' + String(r.exception).slice(0, 40) : ''}`)
     }
-    step('baseline recorded for yesterday', true, '500,000 / 600,000')
+    // was a bare `true` (round 4 audit) — a rejected POST passed this step
+    step('baseline recorded for yesterday',
+      posted.length > 0 && posted.every((x) => x.endsWith('200')), posted.join(' · ') + ' · target 500,000 / 600,000')
   }
 
   // The continuity check compares start_reading with the LAST END READING, so

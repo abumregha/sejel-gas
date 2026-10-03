@@ -128,13 +128,21 @@ variance = actual_level - theoretical_level
 ### 2.3 Transfer Level Updates
 
 ```
-source_tank.current_level -= quantity
+source_tank.current_level -= quantity   # applied exactly once, on insert
 dest_tank.current_level += quantity
 ```
 
-- **Code:** `apps/core/models.py` (TankTransfer.clean) + transfer completion logic
-- **Validation:** Same station, same fuel type, source ≠ destination, quantity > 0
-- **Test:** `TankTransferTests` (11 tests)
+- **Code:** `sejel_app/sejel_app/doctype/tank_transfer/tank_transfer.py`
+  (`validate` for every rule, `after_insert` for the stock movement)
+- **Validation:** same station, same fuel type, source ≠ destination,
+  quantity > 0, **source level ≥ quantity** (may not go negative),
+  **destination level + quantity ≤ capacity** (may not overflow)
+- **Applied once:** the bounds are evaluated only while `is_new()`, and the
+  movement runs only from `after_insert` — a later save of the same document
+  re-validates against a level that has already been debited
+- **Test:** `qa-transfer-test.js` (19 steps, browser-driven), refusal messages
+  read from the form's own error box; `qa-phase6-reports.js` re-asserts the
+  Arabic refusals (3 × HTTP 417)
 
 ---
 
@@ -277,12 +285,24 @@ If shift is already closed, re-close replaces the reconciliation
 ### 8.1 Station Scoping
 
 ```
-admin/owner → all stations
-supervisor/finance → assigned station only
+admin/owner/manager → all stations
+supervisor/finance   → assigned station only (User.sejel_station)
 ```
 
-- **Code:** `apps/core/permissions.py`
-- **Test:** `AuthAndIsolationTests` (5 tests)
+- **Code:** `sejel_app/api/scoping.py`
+  - `scoped_station()` — who is bound (System Manager / Sejel Manager never are)
+  - `check_station()` — read path: a bound user loading a document outside
+    their station gets `PermissionError` («غير مصرح لك بالوصول إلا لبيانات محطتك»)
+  - `check_station_payload()` — write path: a create/update payload that names
+    another station is refused before the row exists
+  - `apply_to_filters()` — list path: the bound station is injected, and
+    `?station=` can only narrow it, never widen it
+- **Endpoints:** every `/api/…` route requires a session — the only
+  `allow_guest=True` endpoints left are the four auth routes and the client
+  error reporter (`api/ux.py`)
+- **Test:** `qa-round4-isolation.js` (25 steps) — list scoping, foreign
+  GET/PUT/create refusal, foreign station hidden from the picker, export and
+  daily sales cross-checked against backend rows, guest browser gets nothing
 
 ### 8.2 Operation Permissions
 
@@ -292,24 +312,42 @@ supervisor: operations CRUD (shifts, readings, employees)
 finance: financial CRUD (cash, vouchers, POS, expenses, reconciliation)
 ```
 
-- **Test:** `FinanceAccessTests` (5 tests), `UserManagementTests` (5 tests)
+- **Code:** DocType role permissions (`*.json` → `permissions`) — e.g.
+  Tank Transfer: System Manager / Sejel Manager / Sejel Supervisor; Expense:
+  create+write for Finance and Manager, read-only for Supervisor — plus
+  `ROLE_TO_FRAPPE` in `sejel_app/api/views.py` when the SPA picks a role
+- **Test:** `qa-round4-isolation.js` (bound supervisor / bound finance write
+  attempts), `qa-phase4-finance.js` (38 steps, finance-only numbers), `qa-phase3-readings.js` (42 steps, employee vs admin teardown)
 
 ---
 
 ## Test Coverage Summary
 
-| Invariant | Test Class | Tests |
-|-----------|-----------|-------|
-| 1.1-1.5 Shift reconciliation | P0MultiFuelTests | 11 |
-| 1.6 Net cash / expenses | P1ContinuityAndExpensesTests | 10 |
-| 2.1-2.3 Tank inventory | FuelReconciliationTests | 12 |
-| 3.1-3.3 Delivery | P1Phase2FuelDeliveryTests | 16 |
-| 4.1-4.2 Voucher settlement | VoucherSettlementTests | 12 |
-| 6.1 Meter continuity | P1ContinuityAndExpensesTests | (included above) |
-| 7.1-7.2 Shift lifecycle | RecurringShiftTests + P0MultiFuelTests | 10 |
-| 8.1-8.2 RBAC | AuthAndIsolationTests + FinanceAccessTests + UserManagementTests | 15 |
-| Other | GuideAndReportsTests + P2P3FeatureTests | 20 |
-| **Total** | | **113** |
+All coverage is **browser-driven** (`sejel/e2e-tests/`, Playwright/Chromium).
+The Python test classes that earlier revisions of this table listed
+(`AuthAndIsolationTests`, `P0MultiFuelTests`, …) never existed in this
+repository — there are zero `test_*.py` files in the app.
+
+| Invariant | Suite | Steps |
+|-----------|-------|-------|
+| 1.1-1.7 Shift reconciliation | `qa-phase4-finance.js` | 38 |
+| 2.1-2.3 Tank inventory / transfers | `qa-transfer-test.js` | 19 |
+| 3.1-3.3 Delivery | `qa-phase5-inventory.js` | 14 |
+| 4.1-4.2 Voucher settlement | `qa-phase4-finance.js` | (included above) |
+| 6.1-6.2 Meter continuity | `qa-phase3-readings.js` | 42 |
+| Exception matrix (refusals, Arabic) | `qa-exceptions-matrix.js` | 13 |
+| 7.1-7.2 Shift lifecycle | `qa-cycle-matrix.js` + `qa-round4-cycle.js` | 16 + 8 |
+| 8.1-8.2 RBAC / scoping | `qa-round4-isolation.js` | 25 |
+| Report refusals (tank transfer, QA-24) | `qa-phase6-reports.js` | 35 |
+| Harness safety (own-records-only) | `qa-harness-safety.js` | 12 |
+| End-to-end gun journey | `qa-phase8-journey.js` | 14 |
+| Responsive / mobile layout | `qa-phase7-responsive.js` + `qa-round4-mobile.js` | 33 + 12 |
+| Station fixture + teardown | `qa-round4-fixture.js` + `qa-round4-reset.js` | 10 + 4 |
+| **Total (round 4, 2026-10-03)** | | **295** |
+
+Step counts are from the round-4 runs recorded in `docs/QA_ROUND_4_REPORT.md`.
+Suites are re-runnable: each one restores its own station's state before it
+asserts anything, so a second consecutive run reports the same numbers.
 
 ---
 

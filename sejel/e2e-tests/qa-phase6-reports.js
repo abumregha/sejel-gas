@@ -209,9 +209,9 @@ const visible = async (page, route) => {
     }, { t1: t1 || {}, t2: t2 || {} })
     appendRun('## Phase 6 — QA-24 tank-transfer refusals',
       '\n```\n' + JSON.stringify(refusals, null, 1) + '\n```')
-    step('every tank-transfer refusal is refused with HTTP 417', refusals.every((r) => r.status === 417),
+    step('every tank-transfer refusal is refused with HTTP 417', refusals.length > 0 && refusals.every((r) => r.status === 417),
       refusals.map((r) => `${r.label}=${r.status}`).join(', '))
-    step('every tank-transfer refusal is in Arabic (QA-24)', refusals.every((r) => r.arabic),
+    step('every tank-transfer refusal is in Arabic (QA-24)', refusals.length > 0 && refusals.every((r) => r.arabic),
       refusals.map((r) => `${r.label}: ${r.message}`).join(' | '))
     const i = Math.max(0, t.indexOf('رجوع'))
     appendRun('## Phase 6 — tank transfer create',

@@ -69,8 +69,11 @@ const INVENTORY_ROUTES = [
     await page.waitForTimeout(1500)
     const t = await bodyText(page)
     const guided = /يجب|أدخل|خطأ|يرجى|لا يمكن/.test(t)
-    step('empty submit blocked (native required-field validation)', true,
-      guided ? 'inline message shown' : 'blocked silently by the browser — no in-page Arabic text')
+    // `true` here proved nothing (round 4 audit): the claim is that nothing
+    // was written and the operator was not navigated away.
+    step('empty submit blocked (still on the form, nothing saved)',
+      page.url().includes('/inventory/deliveries/create'),
+      guided ? 'inline Arabic message shown' : 'blocked by native validation — no in-page Arabic text')
     appendRun('## Phase 5 — delivery empty-submit validation',
       '- inline guidance shown: ' + guided +
       '\n- note: the form relies on HTML5 `required` only — an empty submit is blocked by the ' +
@@ -96,7 +99,11 @@ const INVENTORY_ROUTES = [
     await qaFillField(page, 'الكمية المطلوبة (لتر)', '4900')
     await qaFillField(page, 'القراءة قبل', '100000')
     await qaFillField(page, 'القراءة بعد', '104900')
-    step('delivery form filled (station + tank + quantities + readings)', true, 'invoice ' + invoice)
+    const invoiceField = await page
+      .locator("xpath=//label[normalize-space(.)='رقم الفاتورة']/following::input[1]").first()
+      .inputValue().catch(() => '')
+    step('delivery form filled (station + tank + quantities + readings)',
+      invoiceField === invoice, `invoice field=${invoiceField || '(empty)'}`)
     await saveBtn.click()
     await page.waitForTimeout(3000)
     const after = (await apiGet(page, 'deliveries/'))

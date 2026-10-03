@@ -68,12 +68,14 @@ async function clickNav(page, text) {
 const bodyText = (page) => page.locator('body').innerText()
 
 // Clear ONE station's readings for ONE date, so a day-scoped suite can be
-// replayed. Two hard rules, learned the hard way on 2026-10-03:
+// replayed. Three hard rules, learned the hard way on 2026-10-03:
 //   1. ownership is resolved through the island→pump→gun tree of THAT station,
 //      never through a list filter (Meter Reading has no `station` field, and
 //      `_get_filters` silently drops unknown ones — that is how an earlier
 //      version of the acceptance reset deleted all 32 readings in the site);
-//   2. if a single reading turns out to belong to another station, ABORT.
+//   2. a reading of ANOTHER station is never touched (counted, never deleted);
+//   3. a reading of THIS station on ANOTHER date is never touched either —
+//      membership alone used to make "clear today" wipe the station's history.
 // Deleting a reading rolls Meter.current_reading back (Meter Reading.on_trash),
 // so the caller should re-seed counters afterwards if it needs fixed values.
 async function qaResetStationDay(page, stationName, date) {
@@ -92,13 +94,24 @@ async function qaResetStationDay(page, stationName, date) {
 
     const me = await (await fetch('/api/auth/me/', { credentials: 'include' })).json()
     const csrf = (me.message || me).csrf_token
+    const shifts = await (await fetch(`/api/shifts/?station=${st.name}&limit_page_length=0`, { credentials: 'include' })).json()
+    const stationShifts = (shifts.message || shifts).results || []
+    const dayShiftNames = new Set(
+      stationShifts.filter((s) => String(s.date) === String(date)).map((s) => s.name)
+    )
     const all = await (await fetch('/api/meter-readings/?limit_page_length=0', { credentials: 'include' })).json()
     const rows = (all.message || all).results || []
-    // Delete ONLY rows whose meter belongs to this station. Filtering by
-    // membership is safe by construction — there is no code path that can
-    // reach a foreign reading — and unlike aborting on their presence it
-    // still works in a database that legitimately holds other stations' data.
-    const mine = rows.filter((r) => myMeters.has(r.meter))
+    // TWO conditions, both required. Membership alone was not enough: it is
+    // safe against other stations but reached THIS station's history, so a
+    // "clear today" call silently wiped every earlier day (the readings of a
+    // date live on that date's Shift; a reading with no Shift can only be
+    // placed by its recorded_at).
+    const mine = rows.filter((r) =>
+      myMeters.has(r.meter) &&
+      (dayShiftNames.has(r.shift) ||
+        (!r.shift && String(r.recorded_at || '').slice(0, 10) === String(date)))
+    )
+    const otherDay = rows.filter((r) => myMeters.has(r.meter) && !mine.includes(r))
     const foreign = rows.filter((r) => !myMeters.has(r.meter))
 
     const del = async (n) => (await fetch(`/api/meter-readings/${n}/`, {
@@ -118,12 +131,11 @@ async function qaResetStationDay(page, stationName, date) {
     // per-fuel summaries) → the shift itself. Every lookup is keyed on THAT
     // shift's name, so nothing outside this station and date is reachable.
     // This is also the guided teardown the QA-9 defect asks for.
-    const shifts = await (await fetch(`/api/shifts/?station=${st.name}&limit_page_length=0`, { credentials: 'include' })).json()
     let clearedShifts = 0
     const drop = async (resource, name) => (await fetch(`/api/${resource}/${name}/`, {
       method: 'DELETE', credentials: 'include', headers: { 'X-Frappe-CSRF-Token': csrf },
     })).status
-    for (const s of (shifts.message || shifts).results || []) {
+    for (const s of stationShifts) {
       if (String(s.date) !== String(date)) continue
       for (const resource of ['cash-collections', 'vouchers', 'pos-records']) {
         const j = await (await fetch(`/api/${resource}/?shift=${s.name}&limit_page_length=0`, { credentials: 'include' })).json()
@@ -147,6 +159,7 @@ async function qaResetStationDay(page, stationName, date) {
       ok: problems.length === 0,
       removed,
       leftAlone: foreign.length,
+      historyKept: otherDay.length,
       clearedShifts,
       problems,
       station: st.name,
