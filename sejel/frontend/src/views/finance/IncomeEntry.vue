@@ -21,6 +21,12 @@
               <option value="">اختر المناوبة</option>
               <option v-for="s in openShifts" :key="s.name" :value="s.name">{{ s.shift_name }} ({{ s.date }})</option>
             </select>
+            <!-- An operator who picks a station with no open shift used to see a
+                 dropdown listing OTHER stations' shifts, and could book this
+                 station's cash against a different station's shift. -->
+            <p v-if="form.station && !openShifts.length" data-testid="no-open-shift" class="text-xs text-amber-600 mt-1">
+              لا توجد مناوبة مفتوحة لهذه المحطة — افتح مناوبة من شاشة «يوم المحطة»
+            </p>
           </div>
         </div>
       </div>
@@ -66,6 +72,15 @@
           <label class="block text-sm font-medium text-gray-700 mb-1">المبلغ (د.ل)</label>
           <input v-model.number="form.epayment_amount" type="number" step="0.01" min="0" class="w-full border border-gray-300 rounded-lg px-4 py-2.5" placeholder="0.00" />
         </div>
+        <!-- QA-12: this used to be hardcoded to 1, so every POS record in the
+             site claimed exactly one card transaction and electronic-sales
+             volumes (how many sales, average ticket) were unreportable. -->
+        <div class="mt-4">
+          <label class="block text-sm font-medium text-gray-700 mb-1">عدد المعاملات الالكترونية</label>
+          <input v-model.number="form.epayment_count" data-testid="epayment-count" type="number" step="1" min="1"
+            class="w-full border border-gray-300 rounded-lg px-4 py-2.5" placeholder="1" />
+          <p class="text-xs text-gray-400 mt-1">اترك عدد المعاملات الإلكترونية في هذا اليوم — اترك عددها إذا مع المبلغ</p>
+        </div>
       </div>
 
       <div class="bg-primary/5 border border-primary/20 rounded-xl p-6">
@@ -101,19 +116,32 @@ const form = ref({
   cash_amount: 0,
   coupon_5: 0, coupon_6: 0, coupon_7: 0, coupon_8: 0,
   epayment_amount: 0,
+  epayment_count: 1,
 })
 const stations = ref([])
-const openShifts = ref([])
+const allShifts = ref([])
 const voucherCategories = ref([])
+// Only shifts belonging to the station chosen above. This list used to be
+// every open shift in the site, so an operator picking one station could
+// record its cash against a DIFFERENT station's shift — the postings would
+// then land on that other station's day close.
+const openShifts = computed(() => allShifts.value.filter(
+  (s) => (!form.value.station || s.station === form.value.station)
+    && (s.status === 'open' || s.status === 'in_progress'),
+))
 const couponTotal = computed(() => form.value.coupon_5 * 5 + form.value.coupon_6 * 6 + form.value.coupon_7 * 7 + form.value.coupon_8 * 8)
 const grandTotal = computed(() => form.value.cash_amount + couponTotal.value + form.value.epayment_amount)
 
 onMounted(async () => {
   try {
-    const [sRes, shRes, vcRes] = await Promise.all([api.get('/stations/'), api.get('/shifts/'), api.get('/voucher-categories/')])
+    // limit_page_length=0 is required: with the default page size the most
+    // recent shifts fell off page 1, so today's open shift was simply absent
+    // from the dropdown even when it existed.
+    const [sRes, shRes, vcRes] = await Promise.all([
+      api.get('/stations/'), api.get('/shifts/?limit_page_length=0'), api.get('/voucher-categories/'),
+    ])
     stations.value = sRes.data.results || sRes.data
-    const allShifts = shRes.data.results || shRes.data
-    openShifts.value = allShifts.filter(s => s.status === 'open' || s.status === 'in_progress')
+    allShifts.value = shRes.data.results || shRes.data
     voucherCategories.value = vcRes.data.results || vcRes.data
   } catch (e) { error.value = 'خطأ في تحميل البيانات' }
 })
@@ -157,7 +185,7 @@ const save = async () => {
       entries.push(api.post('/pos-records/', {
         shift: form.value.shift,
         total_amount: form.value.epayment_amount,
-        transaction_count: 1,
+        transaction_count: Number(form.value.epayment_count) || 1,
       }))
     }
     if (entries.length === 0) { error.value = 'أدخل مبلغاً واحداً على الأقل'; saving.value = false; return }

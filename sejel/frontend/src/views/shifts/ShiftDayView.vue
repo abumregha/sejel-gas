@@ -25,7 +25,50 @@
       {{ genMsg }}
     </div>
 
-    <!-- shifts grouped by status -->
+    <!-- all-stations summary: the one shape this screen can actually get when
+         no station is selected. Pick a station to see its shifts and meters. -->
+    <div v-if="isAggregate" class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-5">
+      <h3 class="font-bold mb-1">ملخصص يوم المحطة — اختر محطة لنُظرها المناوبات الفريدة</h3>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm min-w-[620px]">
+          <thead>
+            <tr class="text-xs text-gray-500 text-right border-b border-gray-100">
+              <th class="py-2 px-3 font-medium">المحطة</th>
+              <th class="font-medium">قراءات</th>
+              <th class="font-medium">مناوبات</th>
+              <th class="font-medium">اللترات</th>
+              <th class="font-medium">المتوقعت</th>
+              <th class="font-medium">الحالة</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="st in stationRows" :key="st.id" class="border-b border-gray-50 last:border-0">
+              <td class="py-2.5 px-3 font-bold">
+                <router-link :to="`/stations/${st.id}`" class="text-primary hover:underline">{{ st.name }}</router-link>
+              </td>
+              <td class="tabular-nums">
+                {{ (st.readings_status?.done || 0) }} / {{ (st.readings_status?.total || 0) }}
+                <span v-if="st.readings_status?.exceptions" class="text-red-600 text-xs">({{ st.readings_status.exceptions }} استثناء)</span>
+              </td>
+              <td class="tabular-nums">{{ st.shifts_today || 0 }}</td>
+              <td class="tabular-nums font-bold text-blue-700">{{ Number(st.total_liters || 0).toLocaleString('en-US') }}</td>
+              <td class="tabular-nums">{{ Number(st.expected_sales || 0).toLocaleString('en-US') }}</td>
+              <td>
+                <span v-if="st.day_closed" class="badge badge-green">مغلقة</span>
+                <span v-else-if="st.open_shifts" class="badge badge-yellow">جارية</span>
+                <span v-else class="text-gray-400 text-xs">—</span>
+              </td>
+            </tr>
+            <tr v-if="!stationRows.length">
+              <td colspan="6" class="text-center text-gray-400 py-6">لا توجد محطة</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- shifts grouped by status (single-station mode) -->
+    <template v-if="!isAggregate">
     <div v-for="g in groups" :key="g.status" class="mb-5">
       <h3 class="font-bold mb-2 flex items-center gap-2 text-sm">
         <span class="inline-block w-2.5 h-2.5 rounded-full" :style="{ background: g.color }" />
@@ -54,9 +97,10 @@
       </div>
       <div v-else class="text-xs text-gray-400 px-1">—</div>
     </div>
+    </template>
 
-    <!-- readings grid -->
-    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mt-6">
+    <!-- readings grid (single-station mode only) -->
+    <div v-if="!isAggregate" class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mt-6">
       <h3 class="font-bold mb-3 flex items-center gap-2">
         شبكة قراءات العدادات
         <span class="text-xs font-normal text-gray-400">مجموع اللترات: {{ totalLiters.toLocaleString('en-US') }}</span>
@@ -120,6 +164,16 @@ const employeeMap = ref({})
 
 const canSwitch = computed(() => auth.isAdmin || ['manager', 'finance'].includes(auth.role))
 
+// /dashboard-station/ answers in one of two shapes. With a station selected it
+// returns that station's shifts and meters; with "all stations" selected (the
+// default for a manager) it returns mode:"aggregate" and a stations[] summary
+// array with NO shifts/meters keys. This screen used to read the single-station
+// keys unconditionally, so an operator who had not picked a station saw four
+// empty shift groups, "0 litres" and "لا توجد عدادات" on a day that really had
+// 16,803 litres recorded (QA-27). Aggregate mode now renders its own summary.
+const isAggregate = computed(() => payload.value?.mode === 'aggregate')
+const stationRows = computed(() => payload.value?.stations || [])
+
 const groups = computed(() => {
   const defs = [
     { status: 'open', label: 'مناوبات جارية', color: '#22c55e' },
@@ -127,7 +181,7 @@ const groups = computed(() => {
     { status: 'submitted', label: 'بانتظار الإقفال', color: '#f59e0b' },
     { status: 'closed', label: 'مغلقة اليوم', color: '#3b82f6' },
   ]
-  const shifts = payload.value?.shifts || []
+  const shifts = isAggregate.value ? [] : (payload.value?.shifts || [])
   return defs.map((d) => ({ ...d, items: shifts.filter((s) => s.status === d.status) }))
 })
 

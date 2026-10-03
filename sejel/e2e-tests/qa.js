@@ -1,7 +1,7 @@
 // QA helpers — real-user-journey testing via Playwright Chromium.
 // Philosophy (per the QA prompt): UI-first interaction; APIs only to verify
 // the UI result matches the backend. Reuses launch/step/summary from helpers.
-const { launch, login, nav, goto, apiGet, apiPost, shot, step, summary, results, fillByLabel } = require('./helpers')
+const { launch, login, nav, goto, apiGet, apiPost, apiPut, shot, step, summary, results, fillByLabel } = require('./helpers')
 
 const BASE2 = process.env.QA_BASE || 'http://localhost:8004'
 const CKPT_DIR = __dirname + '/qa-checkpoints'
@@ -198,6 +198,116 @@ async function qaStationId(page, stationName) {
 }
 
 
+// Ensure an OPEN shift exists for a station on a date, creating one if not.
+//
+// This site has no Shift Definition rows at all, so POST /generate-shifts/
+// legitimately creates nothing — the "generate today's shifts" button on the
+// station-day screen can only ever report 0 here. Suites that need an open
+// shift to attach finance postings to must therefore create it directly.
+async function qaEnsureShift(page, stationId, date, opts = {}) {
+  const rows = await apiGet(page, `shifts/?station=${stationId}&limit_page_length=0`)
+  const forDate = ((rows && rows.results) || []).filter((x) => String(x.date || '').slice(0, 10) === date)
+  const open = forDate.find((x) => x.status === 'open' || x.status === 'scheduled')
+  if (open) return { ok: true, created: false, id: open.name, status: open.status }
+  const res = await apiPost(page, 'shifts/', {
+    station: stationId,
+    shift_name: opts.shift_name || `QA مناوبة ${date}`,
+    date,
+    start_time: opts.start_time || '06:00',
+    end_time: opts.end_time || '14:00',
+  })
+  if (res.__status && res.__status >= 400) {
+    return { ok: false, created: false, error: `HTTP ${res.__status}: ${String(res.message || res.exc || '').slice(0, 160)}` }
+  }
+  const id = res.name || (res.message || res).name
+  // A new Shift defaults to status "scheduled"; activation is a separate manual
+  // step (PUT status=open), which is exactly what the SPA's «تفعيل» button does.
+  // Finance postings only accept open/in_progress, so activate it here too.
+  const act = await apiPut(page, `shifts/${id}/`, { status: 'open' })
+  if (act && act.__status && act.__status >= 400) {
+    return { ok: false, created: true, id, error: `created but activation failed: HTTP ${act.__status}` }
+  }
+  return { ok: true, created: true, id, status: 'open' }
+}
+
+
+// Ensure the station's DAY-CLOSE container (is_day_close=1) exists for a date.
+//
+// This is a different Shift from the employee shifts finance postings attach to:
+// it is the station's reading/closing cycle for the date, and the readings screen
+// only offers «åââáá çليوم» against one. Creating it through
+// POST /ensure-day-close/ rather than POST /shifts/ keeps the create idempotent,
+// exactly as the SPA does — the previous inline version of this helper created a
+// plain employee shift, which the close button then refused to act on.
+async function qaEnsureDayClose(page, stationId, date) {
+  const res = await apiPost(page, 'ensure-day-close/', { station: stationId, date })
+  if (res && res.__status && res.__status >= 400) {
+    return { ok: false, error: `HTTP ${res.__status}: ${String(res.message || res.exc || '').slice(0, 160)}` }
+  }
+  const p = res && res.payload ? res.payload : res
+  return { ok: true, id: p && (p.name || p.id), status: p && p.status, closed: !!(p && p.closed), raw: res }
+}
+
+
+// Clear a station-day's FINANCE state while KEEPING its meter readings, then
+// reopen the day.
+//
+// qaResetStationDay() removes the readings too, which is right for phase 3
+// (it re-enters them) but wrong for phase 4: the reconciliation's litres come
+// from Shift Fuel Summaries built off those readings, so wiping them makes the
+// reconciliation report 0 L / 0 expected sales and the whole arithmetic
+// cross-check is meaningless. Deleting the day-close Shift is not an option
+// either — Frappe refuses while readings still link to it.
+async function qaReopenStationDay(page, stationName, date) {
+  return page.evaluate(async ({ stationName, date }) => {
+    const list = await (await fetch('/api/stations/', { credentials: 'include' })).json()
+    const st = ((list.message || list).results || []).find((s) => (s.station_name || '').trim() === stationName)
+    if (!st) return { ok: false, error: `station «${stationName}» not found` }
+    const me = await (await fetch('/api/auth/me/', { credentials: 'include' })).json()
+    const csrf = (me.message || me).csrf_token
+    const drop = async (r, n) => (await fetch(`/api/${r}/${n}/`, {
+      method: 'DELETE', credentials: 'include', headers: { 'X-Frappe-CSRF-Token': csrf },
+    })).status
+    const put = async (r, n, body) => (await fetch(`/api/${r}/${n}/`, {
+      method: 'PUT', credentials: 'include',
+      headers: { 'Content-Type': 'application/json', 'X-Frappe-CSRF-Token': csrf },
+      body: JSON.stringify(body),
+    })).status
+
+    const shifts = await (await fetch(`/api/shifts/?station=${st.name}&limit_page_length=0`, { credentials: 'include' })).json()
+    const rows = ((shifts.message || shifts).results || []).filter((s) => String(s.date || '').slice(0, 10) === date)
+    const problems = []
+    let removed = 0, reopened = 0, readingsKept = 0
+    for (const s of rows) {
+      for (const resource of ['cash-collections', 'vouchers', 'pos-records']) {
+        const j = await (await fetch(`/api/${resource}/?shift=${s.name}&limit_page_length=0`, { credentials: 'include' })).json()
+        for (const row of (j.message || j).results || []) {
+          const code = await drop(resource, row.name)
+          if (code < 400 || code === 404) removed++
+          else problems.push(`${resource} ${row.name} → HTTP ${code}`)
+        }
+      }
+      const recons = await (await fetch(`/api/reconciliations/?shift=${s.name}&limit_page_length=0`, { credentials: 'include' })).json()
+      for (const rec of (recons.message || recons).results || []) {
+        const sums = await (await fetch(`/api/shift-fuel-summaries/?reconciliation=${rec.name}&limit_page_length=0`, { credentials: 'include' })).json()
+        for (const x of ((sums.message || sums).results || [])) await drop('shift-fuel-summaries', x.name)
+        const code = await drop('reconciliations', rec.name)
+        if (code >= 400 && code !== 404) problems.push(`reconciliation ${rec.name} → HTTP ${code}`)
+        else removed++
+      }
+      const mr = await (await fetch(`/api/meter-readings/?shift=${s.name}&limit_page_length=0`, { credentials: 'include' })).json()
+      readingsKept += ((mr.message || mr).results || []).length
+      if (s.status !== 'open') {
+        const code = await put('shifts', s.name, { status: 'open' })
+        if (code >= 400) problems.push(`reopen shift ${s.name} (${s.status}) → HTTP ${code}`)
+        else reopened++
+      }
+    }
+    return { ok: problems.length === 0, removed, reopened, readingsKept, shifts: rows.length, problems, station: st.name, date }
+  }, { stationName, date })
+}
+
+
 // DELETE a doc through the generic API (backend cross-check / cleanup helper)
 async function qaDelete(page, resource, name) {
   return page.evaluate(async ({ r, n }) => {
@@ -250,4 +360,4 @@ async function qaFillField(page, label, value) {
   return ctrl
 }
 
-module.exports = { BASE2, CKPT_DIR, RUN_FILE, initRunLog, appendRun, defects, defect, capture, uiLogin, clickNav, bodyText, shot, step, summary, launch, login, nav, goto, apiGet, apiPost, fillByLabel, qaFill, qaFillField, qaDelete, qaResetStationDay, qaStationId, qaSeedCounters, PILOT_COUNTERS }
+module.exports = { BASE2, CKPT_DIR, RUN_FILE, initRunLog, appendRun, defects, defect, capture, uiLogin, clickNav, bodyText, shot, step, summary, launch, login, nav, goto, apiGet, apiPost, apiPut, fillByLabel, qaFill, qaFillField, qaDelete, qaResetStationDay, qaStationId, qaSeedCounters, qaEnsureShift, qaEnsureDayClose, qaReopenStationDay, PILOT_COUNTERS }

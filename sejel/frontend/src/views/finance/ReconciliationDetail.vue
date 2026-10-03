@@ -55,8 +55,9 @@
             <div class="text-lg font-bold text-orange-600">{{ Number(rec.total_expenses || 0).toLocaleString('en-US') }} د.ل</div>
           </div>
           <div>
-            <div class="text-sm text-gray-500">صافي النقدية</div>
+            <div class="text-sm text-gray-500">النقد في الصندوق</div>
             <div class="text-lg font-bold text-primary">{{ Number(rec.net_cash || 0).toLocaleString('en-US') }} د.ل</div>
+            <div class="text-xs text-gray-400">نقد فقط، بعد خصم المصروفات النقدية — لا يشمل الكوبونات و POS</div>
           </div>
           <div>
             <div class="text-sm text-gray-500">الحالة</div>

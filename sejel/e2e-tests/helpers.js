@@ -112,6 +112,27 @@ async function apiPost(page, url, body) {
   }, { u: url, b: body })
 }
 
+// PUT a doc through the generic API (partial update, e.g. shift activation).
+async function apiPut(page, url, body) {
+  return page.evaluate(async ({ u, b }) => {
+    const me = await fetch('/api/auth/me/', { credentials: 'include' })
+    if (!me.ok) return { __status: me.status }
+    const meMsg = (await me.json()).message || {}
+    const r = await fetch('/api/' + u, {
+      method: 'PUT',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json', 'X-Frappe-CSRF-Token': meMsg.csrf_token || '' },
+      body: b ? JSON.stringify(b) : undefined,
+    })
+    if (!r.ok) {
+      const j = await r.json().catch(() => ({}))
+      return { __status: r.status, __exc: j.exc_type || j.exception || '' }
+    }
+    const j = await r.json()
+    return j.message !== undefined ? j.message : j
+  }, { u: url, b: body })
+}
+
 // Fill the form control that follows the label with the given Arabic text.
 async function fillByLabel(page, label, value, scopeSel = 'form') {
   const scope = page.locator(scopeSel).first()
@@ -143,4 +164,4 @@ function summary() {
   return fail
 }
 
-module.exports = { BASE, SHOT_DIR, launch, login, nav, goto, apiGet, apiPost, fillByLabel, selectByOptionText, shot, step, summary, results }
+module.exports = { BASE, SHOT_DIR, launch, login, nav, goto, apiGet, apiPost, apiPut, fillByLabel, selectByOptionText, shot, step, summary, results }

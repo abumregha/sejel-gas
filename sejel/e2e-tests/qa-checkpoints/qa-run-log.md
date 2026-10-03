@@ -1660,3 +1660,198 @@ exception_type=reset
 - 401 /api/auth/me/
 - 417 /api/setup-station/
 - 417 /api/meter-readings/
+
+## DEFECT QA-12 [P2] POS entry
+
+- Repro: Income entry: enter 300 د.ل electronic sales (e.g. 7 card transactions) → save
+- Expected: Operator can enter the number of electronic transactions
+- Actual: IncomeEntry.vue hardcodes transaction_count: 1 — every POS record claims exactly one transaction, so electronic sales counts are unreportable
+- Evidence: pos-records/?shift=… → transaction_count=1
+
+## Reconciliation payload (pilot)
+
+{
+ "name": "ibk2oa5taq",
+ "shift": "hh6oop2gjg",
+ "station": "v5scsl18m5",
+ "total_liters": 16803,
+ "expected_sales": 2520.45,
+ "total_cash": 2000,
+ "total_vouchers": 90,
+ "total_pos": 300,
+ "total_collection": 2390,
+ "total_expenses": 0,
+ "net_cash": 2000,
+ "difference": -130.45,
+ "difference_type": "shortage",
+ "status": "draft",
+ "modified": "2026-10-03 19:17:04.402770"
+}
+
+## Console errors (phase 4)
+
+- Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)
+
+## Network ≥400 (phase 4)
+
+- 401 /api/auth/me/
+
+## DEFECT QA-12 [P2] POS entry
+
+- Repro: Income entry: enter 300 د.ل electronic sales (e.g. 7 card transactions) → save
+- Expected: Operator can enter the number of electronic transactions
+- Actual: IncomeEntry.vue hardcodes transaction_count: 1 — every POS record claims exactly one transaction, so electronic sales counts are unreportable
+- Evidence: pos-records/?shift=… → transaction_count=1
+
+## Reconciliation payload (pilot)
+
+{
+ "name": "3jrct1hbi0",
+ "shift": "3gtqneiodl",
+ "station": "v5scsl18m5",
+ "total_liters": 0,
+ "expected_sales": 0,
+ "total_cash": 2000,
+ "total_vouchers": 90,
+ "total_pos": 300,
+ "total_collection": 2390,
+ "total_expenses": 0,
+ "net_cash": 2000,
+ "difference": 2390,
+ "difference_type": "surplus",
+ "status": "draft",
+ "modified": "2026-10-03 19:46:31.532137"
+}
+
+## Console errors (phase 4)
+
+- Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)
+
+## Network ≥400 (phase 4)
+
+- 401 /api/auth/me/
+
+## Pilot guns (auto previous readings)
+
+4 guns: {"M01A":"3280418","M01B":"3077096","M02A":"27546777","M02B":"0"}
+
+## Baseline counters read from the screen
+
+{"M01A":3280418,"M01B":3077096,"M02A":27546777,"M02B":0}
+
+## Saved readings (backend payload)
+
+[
+ {
+  "code": "M01A",
+  "id": "v5uqls407p",
+  "start": 3280418,
+  "end": 3288641,
+  "liters": 8223
+ },
+ {
+  "code": "M01B",
+  "id": "v5uojs7nsa",
+  "start": 3077096,
+  "end": 3085676,
+  "liters": 8580
+ },
+ {
+  "code": "M02A",
+  "id": "v5up2fiea4",
+  "start": 27546777,
+  "end": 27546777,
+  "liters": 0
+ },
+ {
+  "code": "M02B",
+  "id": "v5uj96v5ri",
+  "start": 0,
+  "end": 0,
+  "liters": 0
+ }
+]
+
+## Console errors (phase 3 part A)
+
+- Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)
+
+## Edge station guns
+
+8 guns
+
+## Exception save (edge)
+
+exception_type=reset
+
+## Edge station teardown
+
+- direct delete → 417 (blocked: readings/shift history)
+
+## Console errors (phase 3 part B)
+
+- Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)
+- Failed to load resource: the server responded with a status of 417 (EXPECTATION FAILED)
+- Failed to load resource: the server responded with a status of 417 (EXPECTATION FAILED)
+
+## Network ≥400 (phase 3)
+
+- 401 /api/auth/me/
+- 417 /api/setup-station/
+- 417 /api/meter-readings/
+
+## Reconciliation payload (pilot)
+
+{
+ "name": "4v72ed4mag",
+ "shift": "4d68tj91fk",
+ "station": "v5scsl18m5",
+ "total_liters": 16803,
+ "expected_sales": 2520.45,
+ "total_cash": 2000,
+ "total_vouchers": 90,
+ "total_pos": 300,
+ "total_collection": 2390,
+ "total_expenses": 0,
+ "net_cash": 2000,
+ "difference": -130.45,
+ "difference_type": "shortage",
+ "status": "draft",
+ "modified": "2026-10-03 19:48:50.381768"
+}
+
+## Console errors (phase 4)
+
+- Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)
+
+## Network ≥400 (phase 4)
+
+- 401 /api/auth/me/
+
+## Reconciliation payload (pilot)
+
+{
+ "name": "5chfm75d90",
+ "shift": "4d68tj91fk",
+ "station": "v5scsl18m5",
+ "total_liters": 16803,
+ "expected_sales": 2520.45,
+ "total_cash": 2000,
+ "total_vouchers": 90,
+ "total_pos": 300,
+ "total_collection": 2390,
+ "total_expenses": 0,
+ "net_cash": 2000,
+ "difference": -130.45,
+ "difference_type": "shortage",
+ "status": "draft",
+ "modified": "2026-10-03 19:49:32.952819"
+}
+
+## Console errors (phase 4)
+
+- Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)
+
+## Network ≥400 (phase 4)
+
+- 401 /api/auth/me/
