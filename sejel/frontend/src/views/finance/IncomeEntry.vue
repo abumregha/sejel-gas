@@ -2,7 +2,24 @@
   <div class="max-w-2xl mx-auto">
     <h2 class="text-xl font-bold mb-6">إدخال إيرادات المناوبة</h2>
     <div v-if="error" class="bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 mb-4 text-sm">{{ error }}</div>
-    <div v-if="success" class="bg-green-50 border border-green-200 text-green-700 rounded-xl p-4 mb-4 text-sm">تم الحفظ بنجاح</div>
+    <div v-if="legs.length" data-testid="income-legs" class="rounded-xl p-4 mb-4 text-sm border"
+      :class="legsFailed ? 'bg-amber-50 border-amber-200 text-amber-900' : 'bg-green-50 border-green-200 text-green-800'">
+      <div class="font-bold mb-2">
+        {{ legsFailed
+          ? `تم حفظ ${legs.length - legsFailed} من ${legs.length} — الباقي لم يُحفظ`
+          : 'تم الحفظ بنجاح' }}
+      </div>
+      <ul class="space-y-1">
+        <li v-for="(l, i) in legs" :key="i" class="flex items-start gap-2">
+          <span>{{ l.ok ? '✓' : '⚠' }}</span>
+          <span>
+            <strong>{{ l.label }}:</strong>
+            {{ l.ok ? l.detail : l.detail }}
+            <span v-if="!l.ok" class="block text-xs opacity-80">لم يُحفظ — أعّد إدخال المبلغ ثم أعد الحفظ</span>
+          </span>
+        </li>
+      </ul>
+    </div>
 
     <form @submit.prevent="save" class="space-y-4">
       <div class="bg-white rounded-xl shadow-sm border p-6">
@@ -109,7 +126,8 @@ import api from '../../api'
 import { friendlyError } from '../../errors'
 const router = useRouter()
 const error = ref('')
-const success = ref(false)
+const legs = ref([])
+const legsFailed = computed(() => legs.value.filter((l) => !l.ok).length)
 const saving = ref(false)
 const form = ref({
   station: '', shift: '',
@@ -146,56 +164,99 @@ onMounted(async () => {
   } catch (e) { error.value = 'خطأ في تحميل البيانات' }
 })
 
+const money = (n) => `${Number(n || 0).toLocaleString('en-US')} د.ل`
+
+// One save posts up to six rows across three legs (cash / coupons / electronic).
+// Promise.all reported a single generic error if ANY leg failed, while the legs
+// that had already succeeded were committed — so the operator was told
+// "خطأ" with no way to tell which half of the day's money was recorded, and
+// often re-entered the lot, double-posting the legs that had worked (QA-13).
+//
+// Each leg is now settled individually and reported by name. Only the legs that
+// actually saved are cleared from the form, so a retry re-sends exactly the
+// amounts that are still missing.
 const save = async () => {
   error.value = ''
-  success.value = false
+  legs.value = []
   if (!form.value.shift) { error.value = 'اختر المناوبة أولاً'; return }
   saving.value = true
   try {
     const now = new Date().toISOString()
-    const entries = []
+    const posted = []
     if (form.value.cash_amount > 0) {
-      entries.push(api.post('/cash-collections/', {
-        shift: form.value.shift,
-        amount: form.value.cash_amount,
-        time: now,
-        // received_by is set server-side to the logged-in user
-      }))
+      posted.push({
+        leg: 'cash', label: 'المبيعات النقدية',
+        run: () => api.post('/cash-collections/', {
+          shift: form.value.shift, amount: form.value.cash_amount, time: now,
+        }),
+        detail: money(form.value.cash_amount),
+      })
     }
     const couponMap = [
-      { count: form.value.coupon_5, value: 5 },
-      { count: form.value.coupon_6, value: 6 },
-      { count: form.value.coupon_7, value: 7 },
-      { count: form.value.coupon_8, value: 8 },
+      { key: 'coupon_5', value: 5 }, { key: 'coupon_6', value: 6 },
+      { key: 'coupon_7', value: 7 }, { key: 'coupon_8', value: 8 },
     ]
     for (const cat of couponMap) {
-      if (cat.count > 0) {
-        const voucherCat = voucherCategories.value.find(vc => vc.value === cat.value)
-        if (voucherCat) {
-          entries.push(api.post('/vouchers/', {
-            shift: form.value.shift,
-            category: voucherCat.name,
-            count: cat.count,
-            total_value: cat.count * cat.value,
-          }))
-        }
+      const count = Number(form.value[cat.key] || 0)
+      if (count <= 0) continue
+      const voucherCat = voucherCategories.value.find((vc) => Number(vc.value) === cat.value)
+      if (!voucherCat) {
+        // A missing category used to be skipped in silence: the operator counted
+        // coupons that simply vanished.
+        legs.value.push({
+          ok: false, label: `كوبونات ${cat.value} د.ل`,
+          detail: `لا يوجد فئة الكوبونات لهذا الفئة`,
+        })
+        continue
       }
+      posted.push({
+        leg: cat.key, label: `كوبونات ${cat.value} د.ل`,
+        run: () => api.post('/vouchers/', {
+          shift: form.value.shift, category: voucherCat.name,
+          count, total_value: count * cat.value,
+        }),
+        detail: `${count} × ${cat.value} = ${money(count * cat.value)}`,
+      })
     }
     if (form.value.epayment_amount > 0) {
-      entries.push(api.post('/pos-records/', {
-        shift: form.value.shift,
-        total_amount: form.value.epayment_amount,
-        transaction_count: Number(form.value.epayment_count) || 1,
-      }))
+      posted.push({
+        leg: 'epayment', label: 'المبيعات الإلكترونية',
+        run: () => api.post('/pos-records/', {
+          shift: form.value.shift, total_amount: form.value.epayment_amount,
+          transaction_count: Number(form.value.epayment_count) || 1,
+        }),
+        detail: `${money(form.value.epayment_amount)} (${Number(form.value.epayment_count) || 1} معاملة)`,
+      })
     }
-    if (entries.length === 0) { error.value = 'أدخل مبلغاً واحداً على الأقل'; saving.value = false; return }
-    await Promise.all(entries)
-    success.value = true
-    form.value.cash_amount = 0
-    form.value.coupon_5 = 0; form.value.coupon_6 = 0; form.value.coupon_7 = 0; form.value.coupon_8 = 0
-    form.value.epayment_amount = 0
-  } catch (e) {
-    error.value = friendlyError(e)
+    if (!posted.length && !legs.value.length) {
+      error.value = 'أدخل مبلغاً واحدًعلى أقلّ'
+      saving.value = false
+      return
+    }
+
+    const settled = await Promise.allSettled(posted.map((p) => p.run()))
+    settled.forEach((r, i) => {
+      legs.value.push({
+        ok: r.status === 'fulfilled',
+        label: posted[i].label,
+        detail: posted[i].detail,
+        error: r.status === 'rejected' ? friendlyError(r.reason) : '',
+      })
+    })
+
+    // Clear only what landed. A leg that failed keeps its amount so a retry
+    // does not double-post the ones that succeeded.
+    const okLegs = new Set(legs.value.filter((l) => l.ok).map((l) => l.label))
+    if (okLegs.has('المبيعات النقدية')) form.value.cash_amount = 0
+    for (const cat of couponMap) {
+      if (okLegs.has(`كوبونات ${cat.value} د.ل`)) form.value[cat.key] = 0
+    }
+    if (okLegs.has('المبيعات الإلكترونية')) form.value.epayment_amount = 0
+
+    const failed = legs.value.filter((l) => !l.ok)
+    if (failed.length) {
+      error.value = `تعذّر حفظ ${failed.length} من البنود. تم حفظ الباقي — اضغط حفظ مرة أخرى لإكمال ما لم يُحفظ.`
+    }
   } finally { saving.value = false }
 }
 </script>

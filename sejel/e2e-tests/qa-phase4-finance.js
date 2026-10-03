@@ -98,6 +98,17 @@ const DECLARED = CASH + COUPON_5 * 5 + COUPON_8 * 8 + EPAYMENT  // 2390
   await page.waitForTimeout(2500)
   const saveTxt = await bodyText(page)
   step('Income entry saved with confirmation', saveTxt.includes('تم الحفظ بنجاح'))
+
+  // QA-13: one save posts cash / coupons / electronic independently. The screen
+  // must name each leg and its amount — a green tick with no figures tells an
+  // operator nothing when they are reconciling the till against the screen.
+  const legBox = page.locator('[data-testid="income-legs"]')
+  const legText = (await legBox.innerText().catch(() => '')).replace(/\s+/g, ' ')
+  step('each leg is confirmed by name with its amount (QA-13)',
+    /المبيعات النقدية/.test(legText)
+      && /كوبونات/.test(legText)
+      && /2,000/.test(legText),
+    legText.slice(0, 200))
   if (!saveTxt.includes('تم الحفظ بنجاح')) {
     defect({ id: 'QA-13', severity: 'P1', area: 'Shift income entry', repro: 'Income entry: station + shift + amounts → حفظ الإيرادات', expected: 'تم الحفظ بنجاح + cash/voucher/POS records', actual: 'No confirmation; page text: ' + saveTxt.slice(0, 160), evidence: 'phase 4 console' })
   }
