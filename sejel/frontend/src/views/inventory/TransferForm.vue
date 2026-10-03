@@ -21,8 +21,15 @@
         <label class="block text-sm font-medium text-gray-700 mb-1">إلى خزان</label>
         <select v-model="form.to_tank" required class="w-full border border-gray-300 rounded-lg px-4 py-2.5">
           <option value="">اختر الخزان</option>
-          <option v-for="t in filteredTanks" :key="t.name" :value="t.name">{{ t.tank_name }} ({{ fuelTypeName(t.fuel_type) }})</option>
+          <option v-for="t in destinationTanks" :key="t.name" :value="t.name">{{ t.tank_name }} ({{ fuelTypeName(t.fuel_type) }})</option>
         </select>
+        <!-- Fuel can only move between tanks holding the SAME fuel. This list
+             used to offer every tank at the station, so an operator picked two
+             incompatible tanks and only found out from a server rejection after
+             filling in the whole form. -->
+        <p v-if="fromTank && !destinationTanks.length" data-testid="no-compatible-tank" class="text-xs text-amber-600 mt-1">
+          لا يوجد خزان آخر من فرع الوقود في هذه المحطة — أضف خزانًا ثانيًا من نوع الوقود نفسه
+        </p>
       </div>
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-1">الكمية (لتر)</label>
@@ -41,7 +48,7 @@
   </div>
 </template>
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '../../api'
 import { friendlyError } from '../../errors'
@@ -54,6 +61,17 @@ const tanks = ref([])
 const fuelTypes = ref([])
 const filteredTanks = computed(() => form.value.station ? tanks.value.filter(t => t.station == form.value.station) : tanks.value)
 const fromTank = computed(() => tanks.value.find(t => t.name === form.value.from_tank))
+// Only same-station, same-fuel tanks can receive the transfer (and never the
+// source tank itself). Clearing the destination when the source changes keeps a
+// now-invalid selection from being submitted.
+const destinationTanks = computed(() => filteredTanks.value.filter(
+  (t) => t.name !== form.value.from_tank && (!fromTank.value || t.fuel_type === fromTank.value.fuel_type),
+))
+watch(() => form.value.from_tank, () => {
+  if (form.value.to_tank && !destinationTanks.value.some((t) => t.name === form.value.to_tank)) {
+    form.value.to_tank = ''
+  }
+})
 const fuelTypeName = (n) => (fuelTypes.value.find(f => f.name === n) || {}).fuel_name || n || '—'
 const levelPct = (t) => Math.round((Number(t.current_level || 0) / Math.max(1, Number(t.capacity || 1))) * 100)
 

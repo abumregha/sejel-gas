@@ -16,7 +16,12 @@
           </tr>
         </tbody>
       </table>
-      <div v-if="!gaps.length" class="text-gray-400 text-center py-8">لا توجد فجوات</div>
+      <div v-if="!gaps.length" class="text-gray-400 text-center py-8">
+        <template v-if="comparedMeters">
+          لا توجد فجوات — تمت مقابلة {{ comparedMeters }} عداداً
+        </template>
+        <template v-else>لا يمكن المقابلة بين قراءتين — سجّل قراءة أول انتناف دورة للمحطة لحساب الفجوة</template>
+      </div>
     </div>
   </div>
 </template>
@@ -26,17 +31,23 @@ import api from '../../api'
 const gaps = ref([])
 const meterMap = ref({})
 const stationMap = ref({})
+// How many meters actually had two readings to compare. Without this the empty
+// state reads as "no gaps found" even when there was nothing to compare yet.
+const comparedMeters = ref(0)
 const meterStationMap = ref({})
 
 onMounted(async () => {
   try {
-    const [mRes, sRes] = await Promise.all([api.get('/meters/'), api.get('/stations/')])
+    // limit_page_length=0: with the default page size the meters past page 1 were
+    // never examined, so the report silently under-reported gaps.
+    const [mRes, sRes] = await Promise.all([api.get('/meters/?limit_page_length=0'), api.get('/stations/?limit_page_length=0')])
     const meters = mRes.data.results || mRes.data
     stationMap.value = Object.fromEntries((sRes.data.results || sRes.data).map(s => [s.name, s.station_name]))
 
     for (const m of meters) {
-      const { data: rData } = await api.get(`/meter-readings/?meter=${m.name}`)
+      const { data: rData } = await api.get(`/meter-readings/?meter=${m.name}&limit_page_length=0`)
       const readings = (rData.results || rData).sort((a, b) => a.start_reading - b.start_reading)
+      if (readings.length > 1) comparedMeters.value++
       for (let i = 1; i < readings.length; i++) {
         const prevClosing = readings[i - 1].end_reading
         const currOpening = readings[i].start_reading

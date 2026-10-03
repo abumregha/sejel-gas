@@ -15,8 +15,20 @@
           </svg>
           طباعة
         </button>
-        <a :href="`/api/export/?view=station&name=${report.stations?.[0]?.id || ''}`" v-if="report?.stations?.length === 1"
-          class="border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm hover:bg-gray-50">⬇ Excel</a>
+        <!-- QA-25: this link was rendered only when the report covered exactly ONE
+             station. The manager role is precisely the multi-station case, so the
+             audience that most needs an export was the only one that could never
+             reach it. The endpoint takes a single station, so the operator now
+             picks which one explicitly instead of the control disappearing. -->
+        <template v-if="report?.stations?.length >= 1">
+          <select v-if="report.stations.length > 1" v-model="exportStation"
+            data-testid="export-station" class="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white">
+            <option v-for="s in report.stations" :key="s.id" :value="s.id">{{ s.name }}</option>
+          </select>
+          <a :href="`/api/export/?view=station&name=${exportStation}`"
+            data-testid="export-excel"
+            class="border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm hover:bg-gray-50">⬇ Excel</a>
+        </template>
       </div>
     </div>
 
@@ -120,10 +132,16 @@ const monthName = computed(() => months.find(m => m.v === Number(reportMonth.val
 const formatNum = (v) => (v || v === 0) ? Number(v).toLocaleString('en-US', { maximumFractionDigits: 2 }) : '0'
 const fuelName = (name) => fuelMap.value[name] || name
 
+// Defaults to the first station in the report, so the Excel link always points
+// somewhere real after the report loads.
+const exportStation = ref('')
+
 const loadReport = async () => {
   try {
     const { data } = await api.get(`/reports/monthly/?year=${reportYear.value}&month=${reportMonth.value}`)
     report.value = data
+    const ids = (data && data.stations || []).map((s) => s.id).filter(Boolean)
+    if (!ids.includes(exportStation.value)) exportStation.value = ids[0] || ''
   } catch (e) { alert('خطأ في تحميل التقرير') }
 }
 

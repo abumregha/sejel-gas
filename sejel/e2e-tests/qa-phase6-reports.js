@@ -10,6 +10,7 @@
 const { appendRun, capture, uiLogin, bodyText, defect, shot, step, summary, launch, apiGet, qaFillField, qaStationId } = require('./qa')
 
 const BASE = 'http://localhost:8004'
+const PILOT = 'محطة تجريبية — سجل'   // the only station with real data
 const REPORTS = ['/reports/daily', '/reports/monthly', '/reports/inventory', '/shifts/gaps', '/shifts/day']
 const FINANCE = [
   '/finance', '/finance/daily-sales', '/finance/fuel-prices', '/finance/cash',
@@ -74,9 +75,12 @@ const visible = async (page, route) => {
   }
 
   // ---------- B. export ----------
-  const exportProbe = await page.evaluate(async () => {
+  // Resolve the station id OUTSIDE the page: qaStationId is a Node helper and
+  // is not in scope inside page.evaluate (this used to throw ReferenceError).
+  const pilotId = await qaStationId(page, PILOT)
+  step('pilot station resolved by name', !!pilotId, String(pilotId))
+  const exportProbe = await page.evaluate(async (pilotId) => {
     const out = []
-    const pilotId = await qaStationId(page, PILOT)
     for (const url of [`/api/export/?view=station&name=${pilotId}`, '/api/export/?view=station', '/api/export/']) {
       const r = await fetch(url, { credentials: 'include' })
       const ct = r.headers.get('content-type') || ''
@@ -84,25 +88,31 @@ const visible = async (page, route) => {
       out.push({ url, status: r.status, contentType: ct, length: body.length, head: body.slice(0, 120) })
     }
     return out
-  })
+  }, pilotId)
   appendRun('## Phase 6 — export endpoint probe',
     '\n```\n' + JSON.stringify(exportProbe, null, 1) + '\n```')
   const ok = exportProbe.find((e) => e.status === 200)
   step('Excel export endpoint responds 200', !!ok,
     ok ? `${ok.url} → ${ok.contentType}` : exportProbe.map((e) => `${e.url}=${e.status}`).join(', '))
 
-  // is the Excel button even reachable for a multi-station report?
+  // QA-25: the Excel link used to render ONLY for a single-station report, so the
+  // manager role — the multi-station case — had no export at all. The link now
+  // renders whenever the report has stations, with a picker for which one.
   await page.goto(BASE + '/reports/monthly', { waitUntil: 'domcontentloaded' })
   await page.waitForTimeout(2500)
-  const excelLink = page.locator('a', { hasText: 'Excel' })
-  step('monthly report exposes an Excel link', (await excelLink.count()) > 0,
+  const excelLink = page.locator('[data-testid="export-excel"]')
+  step('monthly report exposes an Excel link for a multi-station report (QA-25)',
+    (await excelLink.count()) > 0,
     (await excelLink.count()) ? await excelLink.first().getAttribute('href') : 'not rendered')
+  const stationPicker = page.locator('[data-testid="export-station"]')
+  const pickerOpts = await stationPicker.locator('option').allTextContents().catch(() => [])
+  step('operator chooses which station to export', pickerOpts.length > 1,
+    pickerOpts.length ? pickerOpts.slice(0, 4).join(' | ') + (pickerOpts.length > 4 ? ` (+${pickerOpts.length - 4})` : '') : 'no picker')
   if (await excelLink.count()) {
     const href = await excelLink.first().getAttribute('href')
+    step('export href names a real station', /name=[a-z0-9]{6,}/i.test(href || ''), 'href: ' + href)
     appendRun('## Phase 6 — monthly report Excel link',
-      '- href: ' + href +
-      '\n- note: the link renders only when the report covers exactly one station ' +
-      '(`v-if="report?.stations?.length === 1"`), so with several stations there is no export at all.')
+      '- href: ' + href + '\n- station picker offers: ' + pickerOpts.join(' | '))
   }
 
   // ---------- C. finance screens as owner ----------
@@ -154,16 +164,56 @@ const visible = async (page, route) => {
     await qaFillField(page, 'المحطة', 'محطة تجريبية')
     await page.waitForTimeout(900)
     await qaFillField(page, 'من خزان', 'خزان 1')
-    await qaFillField(page, 'إلى خزان', 'خزان 2')
-    await qaFillField(page, 'الكمية (لتر)', '500')
-    await qaFillField(page, 'السبب', 'QA — اختبار التحويل')
-    step('transfer form filled (pilot, tank 1 → tank 2, 500 L)', true)
+    await page.waitForTimeout(700)
+    // The pilot's two tanks hold DIFFERENT fuels (بنزين / ديزل), so no
+    // legitimate same-fuel transfer exists in this dataset. What matters is
+    // that the form now says so BEFORE the operator fills in the rest, instead
+    // of offering both tanks and rejecting the save with an English error.
+    const toOpts = await page.locator('form select').nth(2).locator('option').allTextContents()
+    const toVal = await page.locator('form select').nth(2).inputValue()
+    step('destination list offers no tank of a different fuel (QA-24)',
+      !toOpts.some((o) => /خزان 2/.test(o)),
+      'options: ' + (toOpts.join(' | ') || '(none)') + ' selected=' + (toVal || '(empty)'))
+    step('incompatible pair is explained on the form, not on save',
+      (await page.locator('[data-testid="no-compatible-tank"]').count()) > 0,
+      await page.locator('[data-testid="no-compatible-tank"]').innerText().catch(() => 'hint missing'))
     const save = page.locator('button[type="submit"], button', { hasText: /حفظ|إضافة|تسجيل/ }).first()
     await save.click()
-    await page.waitForTimeout(2500)
+    await page.waitForTimeout(2000)
     const t = (await bodyText(page)).replace(/\s+/g, ' ')
-    const i = t.indexOf('رجوع')
-    step('transfer created', /تم|نجح/.test(t.slice(i, i + 400)), t.slice(i, i + 220))
+    // Assert the SERVER refusals are Arabic, not the page text: the body scan
+    // above matched the word «الخزانات» in the sidebar and so could never fail.
+    const tanks = await apiGet(page, 'tanks/?station=' + pilotId + '&limit_page_length=0')
+    const pilotTanks = ((tanks && tanks.results) || [])
+    const [t1, t2] = pilotTanks
+    const refusals = await page.evaluate(async ({ t1, t2 }) => {
+      const me = await (await fetch('/api/auth/me/', { credentials: 'include' })).json()
+      const csrf = (me.message || me).csrf_token
+      const cases = [
+        { label: 'different fuel', body: { from_tank: t1.name, to_tank: t2.name, quantity: 500 } },
+        { label: 'same tank', body: { from_tank: t1.name, to_tank: t1.name, quantity: 500 } },
+        { label: 'zero quantity', body: { from_tank: t1.name, to_tank: t2.name, quantity: 0 } },
+      ]
+      const out = []
+      for (const c of cases) {
+        const res = await fetch('/api/tank-transfers/', {
+          method: 'POST', credentials: 'include',
+          headers: { 'Content-Type': 'application/json', 'X-Frappe-CSRF-Token': csrf },
+          body: JSON.stringify(c.body),
+        })
+        const j = await res.json().catch(() => ({}))
+        const msg = String((j.exception || '').split('\n').pop() || '').trim()
+        out.push({ label: c.label, status: res.status, arabic: /[\u0600-\u06FF]/.test(msg), message: msg.slice(0, 80) })
+      }
+      return out
+    }, { t1: t1 || {}, t2: t2 || {} })
+    appendRun('## Phase 6 — QA-24 tank-transfer refusals',
+      '\n```\n' + JSON.stringify(refusals, null, 1) + '\n```')
+    step('every tank-transfer refusal is refused with HTTP 417', refusals.every((r) => r.status === 417),
+      refusals.map((r) => `${r.label}=${r.status}`).join(', '))
+    step('every tank-transfer refusal is in Arabic (QA-24)', refusals.every((r) => r.arabic),
+      refusals.map((r) => `${r.label}: ${r.message}`).join(' | '))
+    const i = Math.max(0, t.indexOf('رجوع'))
     appendRun('## Phase 6 — tank transfer create',
       '- text after save: ' + JSON.stringify(t.slice(i, i + 400)) + '\n- url: ' + page.url())
     await shot(page, 'qa-phase6-transfer')
