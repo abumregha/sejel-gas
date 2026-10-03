@@ -1,4 +1,4 @@
-// Phase 5: dashboard redesign e2e (docs/DASHBOARD_REDESIGN_PROMPT.md §28).
+// Phase 5: dashboard e2e \u2014 renders the operations dashboard and checks the KPI tiles.
 // Verifies: aggregate mode, dynamic island/machine/meter rendering, tank
 // cards, drawers, owner station switching, role-based actions — all against
 // real backend data (no mocks).

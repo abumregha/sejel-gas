@@ -1,5 +1,6 @@
 <script setup>
-// Sejel Operations Dashboard (docs/DASHBOARD_REDESIGN_PROMPT.md).
+// Sejel Operations Dashboard. Built to answer «شن المطلوب مني اليوم؟» before
+// any analytics; verified in a real browser by sejel/e2e-tests/phase5-dashboard.js.
 // One API load per render (§24): GET /api/dashboard-station/ returns the whole
 // payload; all numbers displayed are backend values (§27).
 import { ref, computed, onMounted, watch } from 'vue'
