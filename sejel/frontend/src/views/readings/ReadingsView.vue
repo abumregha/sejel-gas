@@ -215,6 +215,8 @@ async function save() {
   notice.value = ''
   try {
     const shiftId = await ensureShift()
+    const saved = []
+    const failed = []
     for (const r of pending) {
       const prev = prevOf(r)
       const body = {
@@ -232,19 +234,33 @@ async function save() {
       }
       try {
         await api.post('/meter-readings/', body)
+        r.savedNow = true
+        saved.push(r)
       } catch (e) {
-        // name the failing gun so the operator knows exactly which entry
-        // was rejected (client report 2026-10-01: opaque "error occurred")
-        e.readingContext = `${r.meter.meter_code}${r.mach?.name ? ' — ' + r.mach.name : ''}`
-        throw e
+        // Keep going. Readings are saved one gun at a time, so aborting on the
+        // first error left the guns before it stored while the screen showed a
+        // single error and a stale "0/9 complete" — the operator had no way to
+        // tell what had actually been kept.
+        failed.push({
+          label: `${r.meter.meter_code}${r.mach?.name ? ' — ' + r.mach.name : ''}`,
+          message: friendlyError(e),
+        })
       }
-      r.savedNow = true
     }
-    notice.value = `تم حفظ ${pending.length} قراءة بنجاح`
+    // Report both outcomes, always naming the counts.
+    if (saved.length && !failed.length) {
+      notice.value = `تم حفظ ${saved.length} قراءة بنجاح`
+      error.value = ''
+    } else if (saved.length && failed.length) {
+      notice.value = `تم حفظ ${saved.length} قراءة بنجاح`
+      error.value = `لم يتم حفظ ${failed.length} قراءة: ${failed.map((f) => `${f.label} — ${f.message}`).join(' · ')}`
+    } else if (failed.length) {
+      error.value = `لم يتم حفظ أي قراءة: ${failed.map((f) => `${f.label} — ${f.message}`).join(' · ')}`
+    }
+    // Always reload so the completed count on screen matches what is stored.
     await load()
   } catch (e) {
-    const msg = friendlyError(e)
-    error.value = e.readingContext ? `${e.readingContext}: ${msg}` : msg
+    error.value = friendlyError(e)
   } finally {
     saving.value = false
   }
@@ -395,16 +411,25 @@ async function closeDay() {
                 <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400 pointer-events-none select-none">لتر</span>
               </div>
               <div v-if="liveLiters(g.row) !== null" class="text-xs mt-1" :class="liveLiters(g.row) < 0 ? 'text-red-600' : 'text-gray-500'">
-                = {{ fmtNum(liveLiters(g.row)) }} لتر مباعة
+                <template v-if="liveLiters(g.row) < 0">القراءة الحالية أقل من القراءة السابقة</template>
+                <template v-else>= {{ fmtNum(liveLiters(g.row)) }} لتر مباعة</template>
               </div>
             </div>
             <!-- liters preview + expected sales (backend price) -->
             <div class="rounded-lg p-3" :class="liveLiters(g.row) !== null && liveLiters(g.row) < 0 ? 'bg-red-50' : 'bg-blue-50'">
               <div class="text-xs text-gray-500 mb-1">اللترات المباعة</div>
-              <b class="tabular-nums text-lg" :class="liveLiters(g.row) !== null && liveLiters(g.row) < 0 ? 'text-red-700' : 'text-blue-700'">
+              <template v-if="liveLiters(g.row) !== null && liveLiters(g.row) < 0">
+                <!-- Never show a negative litres figure: it is not a real
+                     quantity and it reads as a huge loss at a glance. -->
+                <b class="text-sm text-red-700 leading-snug">
+                  لا يمكن حساب المبيعات — القراءة أقل من السابقة
+                </b>
+                <div class="text-xs text-red-600 mt-1">اختر نوع الاستثناء بالأسفل لتسجيل السبب</div>
+              </template>
+              <b v-else class="tabular-nums text-lg text-blue-700">
                 {{ liveLiters(g.row) === null ? '—' : fmtNum(liveLiters(g.row)) + ' لتر' }}
               </b>
-              <div v-if="expectedOf(g.row) !== null" class="text-xs text-gray-500 mt-0.5">
+              <div v-if="expectedOf(g.row) !== null && !(liveLiters(g.row) !== null && liveLiters(g.row) < 0)" class="text-xs text-gray-500 mt-0.5">
                 المبيعات المتوقعة: <span class="tabular-nums">{{ fmtMoney(expectedOf(g.row)) }}</span>
               </div>
             </div>
