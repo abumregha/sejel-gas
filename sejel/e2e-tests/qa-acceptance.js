@@ -123,8 +123,20 @@ async function visibleControls(page) {
     })
     await page.goto(BASE + '/app/readings', { waitUntil: 'domcontentloaded' })
     await page.waitForTimeout(3000)
+    // A gun with no history has nothing to be "lower" than, so the case only
+    // means anything after a baseline exists: record yesterday first.
+    const dateBox = page.locator('[data-testid="readings-date"]')
+    const iso = (d) => d.toISOString().slice(0, 10)
+    const yesterday = new Date(Date.now() - 86400000)
+    console.log('\n>>> 4a: baseline yesterday, so «lower than the previous reading» is real')
+    await dateBox.fill(iso(yesterday)); await dateBox.dispatchEvent('change'); await page.waitForTimeout(2500)
+    let inputs = page.locator('[data-testid="gun-current-input"]')
+    for (let i = 0; i < await inputs.count(); i++) await inputs.nth(i).fill(String(500000 + i * 100000))
+    await tapSave(page)
+    await dateBox.fill(iso(new Date())); await dateBox.dispatchEvent('change'); await page.waitForTimeout(2500)
+
     await see(page, '4a-before-exception')
-    const inputs = page.locator('[data-testid="gun-current-input"]')
+    inputs = page.locator('[data-testid="gun-current-input"]')
     console.log(`\ngun inputs available: ${await inputs.count()}`)
     // a reading far BELOW the previous one, with no exception declared
     await inputs.first().fill('1')
@@ -215,6 +227,73 @@ async function visibleControls(page) {
     await page.goto(BASE + '/app/', { waitUntil: 'domcontentloaded' })
     await page.waitForTimeout(3500)
     await see(page, '5e-dashboard-after-close')
+  }
+
+  if (STAGE === '7') {
+    // PART 8 — the partial save. One good reading and one impossible one,
+    // pressed ONCE. The operator must learn exactly what was kept, must not
+    // have to type the saved value again, and the rejected one must still be
+    // there to correct.
+    page.on('response', async (r) => {
+      if (!/meter-readings/.test(r.url())) return
+      const body = await r.text().catch(() => '')
+      console.log(`\n[net] ${r.request().method()} meter-readings → ${r.status()} ${body.slice(0, 200)}`)
+    })
+    await page.goto(BASE + '/app/readings', { waitUntil: 'domcontentloaded' })
+    await page.waitForTimeout(3000)
+    const dateBox = page.locator('[data-testid="readings-date"]')
+    const today = new Date()
+    const iso = (d) => d.toISOString().slice(0, 10)
+    const yesterday = new Date(today.getTime() - 86400000)
+
+    // baseline yesterday so that "lower than previous" is meaningful today
+    console.log('\n>>> 7a: baseline yesterday')
+    await dateBox.fill(iso(yesterday)); await dateBox.dispatchEvent('change'); await page.waitForTimeout(2500)
+    let inputs = page.locator('[data-testid="gun-current-input"]')
+    for (let i = 0; i < await inputs.count(); i++) await inputs.nth(i).fill(String(500000 + i * 100000))
+    await tapSave(page)
+
+    console.log('\n>>> 7b: today — gun A valid, gun B impossible (lower than its previous)')
+    await dateBox.fill(iso(today)); await dateBox.dispatchEvent('change'); await page.waitForTimeout(2500)
+    inputs = page.locator('[data-testid="gun-current-input"]')
+    const n = await inputs.count()
+    if (n < 2) { console.log('!! expected 2 guns, found', n); }
+    await inputs.nth(0).fill('512000')   // 500000 → 512000, fine
+    if (n > 1) await inputs.nth(1).fill('5') // 600000 → 5, impossible
+    await page.waitForTimeout(400)
+    await see(page, '7a-before-partial-save')
+    await tapSave(page)
+    await see(page, '7b-after-partial-save')
+
+    console.log('\nsave-bar error :', (await page.locator('[data-testid="save-bar-error"]').innerText().catch(() => '(none)')).trim())
+    console.log('save-bar notice:', (await page.locator('[data-testid="save-bar-notice"]').innerText().catch(() => '(none)')).trim())
+    console.log('progress chip  :', (await page.locator('[data-testid="readings-progress"]').innerText()).replace(/\s+/g, ' '))
+    console.log('gun inputs still on screen (the rejected one must still be editable):',
+      await page.locator('[data-testid="gun-current-input"]').count())
+    console.log('saved reading blocks shown:',
+      await page.locator('[data-testid="gun-saved-current"]').count(),
+      '· litres blocks:',
+      await page.locator('[data-testid="gun-saved-liters"]').count())
+    // The saved gun must not ask to be typed again.
+    console.log('saved values on screen:')
+    for (const t of await page.locator('[data-testid="gun-saved-current"]').allInnerTexts()) {
+      console.log('   ', t.replace(/\s+/g, ' '))
+    }
+
+    console.log('\n>>> 7c: correcting the rejected gun with an exception and saving AGAIN')
+    const exSel = page.locator('select').filter({ hasText: 'تصفير العداد' }).last()
+    if (await exSel.count()) {
+      await exSel.selectOption('reset')
+      await page.locator('[data-testid="gun-current-input"]').first().fill('250')
+      await page.waitForTimeout(400)
+      await tapSave(page)
+      await see(page, '7c-corrected')
+      console.log('save-bar error :', (await page.locator('[data-testid="save-bar-error"]').innerText().catch(() => '(none)')).trim())
+      console.log('save-bar notice:', (await page.locator('[data-testid="save-bar-notice"]').innerText().catch(() => '(none)')).trim())
+      console.log('progress chip  :', (await page.locator('[data-testid="readings-progress"]').innerText()).replace(/\s+/g, ' '))
+    } else {
+      console.log('!! no exception dropdown for the rejected gun')
+    }
   }
 
   if (STAGE === '6') {

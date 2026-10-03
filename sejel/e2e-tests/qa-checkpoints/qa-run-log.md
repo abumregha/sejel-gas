@@ -2052,3 +2052,345 @@ QA Pil» 174×34
   - a «تعديل» 35×14
   - button «كلمة مرور جديدة» 92×20
   - button «تعطيل» 42×20
+
+## ## Phase 7 — viewport 390x844 (phone)
+
+
+
+## ### 390x844 /
+
+- document scrollWidth 390 vs viewport 390 → fits
+- unreachable (clipped) blocks: (none)
+- controls under 40px tall: 0
+
+## ### 390x844 /readings
+
+- document scrollWidth 390 vs viewport 390 → fits
+- unreachable (clipped) blocks: (none)
+- controls under 40px tall: 0
+
+## ### 390x844 /stations
+
+- document scrollWidth 390 vs viewport 390 → fits
+- unreachable (clipped) blocks: (none)
+- controls under 40px tall: 0
+
+## ### 390x844 /shifts
+
+- document scrollWidth 390 vs viewport 390 → fits
+- unreachable (clipped) blocks: (none)
+- controls under 40px tall: 0
+
+## ### 390x844 /shifts/day
+
+- document scrollWidth 390 vs viewport 390 → fits
+- unreachable (clipped) blocks: (none)
+- controls under 40px tall: 0
+
+## ### 390x844 /finance/income
+
+- document scrollWidth 390 vs viewport 390 → fits
+- unreachable (clipped) blocks: (none)
+- controls under 40px tall: 0
+
+## ### 390x844 /finance/reconciliations
+
+- document scrollWidth 390 vs viewport 390 → fits
+- unreachable (clipped) blocks: (none)
+- controls under 40px tall: 0
+
+## ### 390x844 /reports/daily
+
+- document scrollWidth 390 vs viewport 390 → fits
+- unreachable (clipped) blocks: (none)
+- controls under 40px tall: 0
+
+## ### 390x844 /inventory/deliveries
+
+- document scrollWidth 390 vs viewport 390 → fits
+- unreachable (clipped) blocks: (none)
+- controls under 40px tall: 0
+
+## ### 390x844 /inventory/shortages
+
+- document scrollWidth 390 vs viewport 390 → fits
+- unreachable (clipped) blocks: (none)
+- controls under 40px tall: 0
+
+## ### 390x844 /settings/users
+
+- document scrollWidth 390 vs viewport 390 → fits
+- unreachable (clipped) blocks: (none)
+- controls under 40px tall: 0
+
+## ## Phase 7 — viewport 1366x768 (laptop)
+
+
+
+## ### 1366x768 /
+
+- document scrollWidth 1366 vs viewport 1366 → fits
+- unreachable (clipped) blocks: (none)
+- controls under 40px tall: 3
+  - a «الدليل» 73×38
+  - button «» 34×34
+  - select «جميع المحطات
+QA Cy» 180×34
+
+## ### 1366x768 /readings
+
+- document scrollWidth 1366 vs viewport 1366 → fits
+- unreachable (clipped) blocks: (none)
+- controls under 40px tall: 2
+  - select «اختر المحطة
+QA موظ» 174×34
+  - button «إقفال اليوم» 115×36
+
+## ### 1366x768 /stations
+
+- document scrollWidth 1366 vs viewport 1366 → fits
+- unreachable (clipped) blocks: (none)
+- controls under 40px tall: 16
+  - a «⚡ إعداد محطة جديدة» 148×38
+  - a «+ إضافة بسيطة» 126×38
+  - a «تعديل» 35×20
+  - button «حذف» 28×20
+  - a «تعديل» 35×20
+  - button «حذف» 28×20
+  - a «تعديل» 35×20
+  - button «حذف» 28×20
+
+## ### 1366x768 /shifts
+
+- document scrollWidth 1366 vs viewport 1366 → fits
+- unreachable (clipped) blocks: (none)
+- controls under 40px tall: 12
+  - a «+ إضافة مناوبة» 115×36
+  - button «الكل» 51×34
+  - button «مجدولة» 68×34
+  - button «نشطة» 65×34
+  - button «مقدمة» 64×34
+  - button «مغلقة» 64×34
+  - button «موسّاة» 66×34
+  - button «تقديم» 32×20
+
+## ### 1366x768 /shifts/day
+
+- document scrollWidth 1366 vs viewport 1366 → fits
+- unreachable (clipped) blocks: (none)
+- controls under 40px tall: 3
+  - select «جميع المحطات المعن» 180×34
+  - button «⚙ توليد مناوبات ال» 152×36
+  - button «⚡ وضع الطوارئ (24 » 188×38
+
+## ### 1366x768 /finance/income
+
+- document scrollWidth 1366 vs viewport 1366 → fits
+- unreachable (clipped) blocks: (none)
+- controls under 40px tall: 0
+
+## ### 1366x768 /finance/reconciliations
+
+- document scrollWidth 1366 vs viewport 1366 → fits
+- unreachable (clipped) blocks: (none)
+- controls under 40px tall: 0
+
+## ### 1366x768 /reports/daily
+
+- document scrollWidth 1366 vs viewport 1366 → fits
+- unreachable (clipped) blocks: (none)
+- controls under 40px tall: 2
+  - button «عرض» 64×36
+  - button «🖨️ طباعة» 79×36
+
+## ### 1366x768 /inventory/deliveries
+
+- document scrollWidth 1366 vs viewport 1366 → fits
+- unreachable (clipped) blocks: (none)
+- controls under 40px tall: 1
+  - a «+ إضافة شحنة» 115×36
+
+## ### 1366x768 /inventory/shortages
+
+- document scrollWidth 1366 vs viewport 1366 → fits
+- unreachable (clipped) blocks: (none)
+- controls under 40px tall: 0
+
+## ### 1366x768 /settings/users
+
+- document scrollWidth 1366 vs viewport 1366 → fits
+- unreachable (clipped) blocks: (none)
+- controls under 40px tall: 10
+  - a «+ إضافة مستخدم» 132×36
+  - a «تعديل» 35×14
+  - button «كلمة مرور جديدة» 92×20
+  - button «تعطيل» 42×20
+  - a «تعديل» 35×14
+  - button «كلمة مرور جديدة» 92×20
+  - button «تعطيل» 42×20
+  - a «تعديل» 35×14
+
+## ## Phase 7 — viewport 1920x1080 (desktop)
+
+
+
+## ### 1920x1080 /
+
+- document scrollWidth 1920 vs viewport 1920 → fits
+- unreachable (clipped) blocks: (none)
+- controls under 40px tall: 3
+  - a «الدليل» 73×38
+  - button «» 34×34
+  - select «جميع المحطات
+QA Cy» 180×34
+
+## ### 1920x1080 /readings
+
+- document scrollWidth 1920 vs viewport 1920 → fits
+- unreachable (clipped) blocks: (none)
+- controls under 40px tall: 2
+  - select «اختر المحطة
+QA موظ» 174×34
+  - button «إقفال اليوم» 115×36
+
+## ### 1920x1080 /stations
+
+- document scrollWidth 1920 vs viewport 1920 → fits
+- unreachable (clipped) blocks: (none)
+- controls under 40px tall: 16
+  - a «⚡ إعداد محطة جديدة» 148×38
+  - a «+ إضافة بسيطة» 126×38
+  - a «تعديل» 35×20
+  - button «حذف» 28×20
+  - a «تعديل» 35×20
+  - button «حذف» 28×20
+  - a «تعديل» 35×20
+  - button «حذف» 28×20
+
+## ### 1920x1080 /shifts
+
+- document scrollWidth 1920 vs viewport 1920 → fits
+- unreachable (clipped) blocks: (none)
+- controls under 40px tall: 12
+  - a «+ إضافة مناوبة» 115×36
+  - button «الكل» 51×34
+  - button «مجدولة» 68×34
+  - button «نشطة» 65×34
+  - button «مقدمة» 64×34
+  - button «مغلقة» 64×34
+  - button «موسّاة» 66×34
+  - button «تقديم» 32×20
+
+## ### 1920x1080 /shifts/day
+
+- document scrollWidth 1920 vs viewport 1920 → fits
+- unreachable (clipped) blocks: (none)
+- controls under 40px tall: 3
+  - select «جميع المحطات المعن» 180×34
+  - button «⚙ توليد مناوبات ال» 152×36
+  - button «⚡ وضع الطوارئ (24 » 188×38
+
+## ### 1920x1080 /finance/income
+
+- document scrollWidth 1920 vs viewport 1920 → fits
+- unreachable (clipped) blocks: (none)
+- controls under 40px tall: 0
+
+## ### 1920x1080 /finance/reconciliations
+
+- document scrollWidth 1920 vs viewport 1920 → fits
+- unreachable (clipped) blocks: (none)
+- controls under 40px tall: 0
+
+## ### 1920x1080 /reports/daily
+
+- document scrollWidth 1920 vs viewport 1920 → fits
+- unreachable (clipped) blocks: (none)
+- controls under 40px tall: 2
+  - button «عرض» 64×36
+  - button «🖨️ طباعة» 79×36
+
+## ### 1920x1080 /inventory/deliveries
+
+- document scrollWidth 1920 vs viewport 1920 → fits
+- unreachable (clipped) blocks: (none)
+- controls under 40px tall: 1
+  - a «+ إضافة شحنة» 115×36
+
+## ### 1920x1080 /inventory/shortages
+
+- document scrollWidth 1920 vs viewport 1920 → fits
+- unreachable (clipped) blocks: (none)
+- controls under 40px tall: 0
+
+## ### 1920x1080 /settings/users
+
+- document scrollWidth 1920 vs viewport 1920 → fits
+- unreachable (clipped) blocks: (none)
+- controls under 40px tall: 10
+  - a «+ إضافة مستخدم» 132×36
+  - a «تعديل» 35×14
+  - button «كلمة مرور جديدة» 92×20
+  - button «تعطيل» 42×20
+  - a «تعديل» 35×14
+  - button «كلمة مرور جديدة» 92×20
+  - button «تعطيل» 42×20
+  - a «تعديل» 35×14
+
+---
+
+# Round 3 — new-employee acceptance (2026-10-03, 17:45)
+
+Isolated station «QA موظف جديد», 3 guns, employee `emp@sejel.ly` (Sejel
+Supervisor), phone viewport 390×844, nothing navigated by URL except the
+starting page of each stage.
+
+| stage | what the employee does | verdict |
+|---|---|---|
+| fixture | station + 3 guns (A 500 000, B 300 000, C never read) + employee | 7/7 |
+| reset | clears only this station, restores the known counters | 16/16 |
+| 1 | opens the app — what is on screen | primary action «إدخال القراءات» at y=269, all targets ≥44px |
+| 2 | finds the readings screen by reading the screen | reached; save button y=724, above the bottom nav at y=781 |
+| 3 | types all three readings, presses save once | «تم حفظ 3 قراءات بنجاح», all booked as opening baselines (QA-32 holds) |
+| 4 | types a reading LOWER than the previous one | refused in plain words, then the way forward works (reset exception → saved) |
+| 5 | plays a full day (baseline day + real day) | readings recorded; close-day hidden for a supervisor with «إقفال اليوم يتم من حساب المدير» |
+| 6 | manager closes the day | 200, one reconciliation, 45 000 L / 6 750 د.ل — exactly one shift and one reconciliation per day |
+| 7 | PART 8 partial save: one good + one impossible reading, one press | saved 1 / refused 1, saved gun not re-typed, rejected gun still editable, correction saves cleanly |
+| matrix | PART 9, the 8 exception cases | 12/12 |
+| responsive | PART 5 regression at 390 / 1366 / 1920 | 33/33 |
+
+## Defects this walkthrough found and the fixes that went in
+
+1. **A rejected save said nothing.** `load()` cleared `error` on entry and was
+   awaited *after* the message was set, so «لم يتم حفظ …» vanished the instant
+   the counts refreshed. `load({ keepMessage })` now survives the reload, and the
+   outcome repeats in the sticky save bar where a phone user is looking.
+2. **The operator was told they had no permission after confirming the dialog.**
+   Closing the day books a reconciliation that only managers may create, but the
+   button was offered to everyone. Now role-gated in the readings screen, the
+   shift list and the shift detail, with the dashboard CTA saying
+   «القراءات جاهزة — بانتظار المدير».
+3. **Closing a day twice booked it twice.** `ensure-day-close` ignored a closed
+   day, so the next save made a second day-close Shift and closing it produced a
+   duplicate reconciliation with identical figures. Closed days are now reported
+   as closed, readings are read-only, and `create_reconciliation` refuses a second
+   row for the same shift.
+4. **A deleted reading left a phantom previous value.** `Meter.current_reading`
+   is a denormalised copy of the last reading; deleting one without rolling it
+   back made the next cycle show a previous reading that no longer existed and
+   skip the opening baseline. Recomputed in `on_trash`.
+5. **Arabic plurals were wrong.** «تبقي 1 قراءات اليوم» — one counted phrase
+   helper (`countReadings` / `countExceptions`) now used everywhere.
+6. **Three identical alerts for one unfinished job.** Missing-reading alerts are
+   grouped per pump: «لم تُسجّل قراءات مضخة 1 اليوم (المسدسات A، B، C)».
+
+## Notes for whoever replays this
+
+- `qa-acceptance-reset.js` only ever touches «QA موظف جديد». It resolves the
+  station's own meters through the island→pump→gun tree and aborts if a single
+  reading belongs anywhere else. It also restores the fixture counters, because
+  deleting the readings correctly rolls them back to 0.
+- Stage 4 and the matrix both need a baseline day first: a gun with no history
+  has nothing to be "lower" than, so the case is vacuous without one.
+- `Meter` cannot be deleted through the API (403, by design), so the third gun is
+  created once by the fixture instead of per run.

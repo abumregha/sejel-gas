@@ -2,9 +2,10 @@
 // new-employee acceptance walkthrough.
 //
 // Nothing here touches the pilot station or any client/UAT row: it creates a
-// brand-new station «QA موظف جديد», two guns with known counters, and one real
-// station-employee login bound to it. Re-running it is safe (it re-uses the
-// station if it already exists).
+// brand-new station «QA موظف جديد», three guns (two with known counters and
+// one brand-new gun that has never been read), and one real station-employee
+// login bound to it. Re-running it is safe (it re-uses the station if it
+// already exists).
 const { launch, uiLogin, step, summary, apiGet } = require('./qa')
 
 const BASE = 'http://localhost:8004'
@@ -53,8 +54,29 @@ const GUNS = [
   const payload = (await apiGet(page, `dashboard-station/?station=${encodeURIComponent(station.name)}`))
   const guns = []
   for (const isl of payload.islands || []) for (const mach of isl.machines || []) guns.push(...(mach.meters || []))
-  step('station has exactly the 2 test guns', guns.length === 2, `found ${guns.length}`)
+
+  // The third gun exists so the exception matrix can test the "brand new gun,
+  // no counter yet" case (QA-32) every run without creating hardware on the fly:
+  // Meter is deliberately not deletable through the API, so a per-run fixture
+  // would be permanent clutter.
+  if (guns.length < 3) {
+    const tank = (await apiGet(page, `tanks/?station=${encodeURIComponent(station.name)}`)).results?.[0]
+    const machine = (payload.islands || []).flatMap((i) => i.machines || [])[0]
+    for (let i = guns.length; i < 3; i++) {
+      const res = await call('POST', '/api/meters/', {
+        machine: machine.id, meter_code: `QA01${String.fromCharCode(65 + i)}`,
+        fuel_type: 'بنزين', tank: tank.name, status: 'active',
+      })
+      step(`extra gun QA01${String.fromCharCode(65 + i)} created`, res.status < 400, `HTTP ${res.status}`)
+    }
+  }
+  const payload2 = (await apiGet(page, `dashboard-station/?station=${encodeURIComponent(station.name)}`))
+  guns.length = 0
+  for (const isl of payload2.islands || []) for (const mach of isl.machines || []) guns.push(...(mach.meters || []))
+  step('station has the 3 test guns', guns.length === 3, `found ${guns.length}`)
   const ordered = guns.sort((a, b) => String(a.gun_letter).localeCompare(String(b.gun_letter)))
+  // Only the first two get counters; the third stays at 0 so the matrix always
+  // has a genuine first-reading case.
   for (let i = 0; i < Math.min(ordered.length, GUNS.length); i++) {
     const res = await call('PUT', `/api/meters/${ordered[i].id}/`, {
       current_reading: GUNS[i].counter, fuel_type: 'بنزين',
