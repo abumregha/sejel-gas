@@ -15,7 +15,12 @@
             <h2 class="text-2xl font-bold tabular-nums flex items-center gap-2">
               <Icon name="clock" :size="22" class="text-primary" />
               <span v-if="cycleTime">{{ cycleTime }} ← {{ cycleTime }}</span>
-              <span v-else class="text-amber-700 text-lg">لم يتم ضبط وقت إقفال اليوم</span>
+              <!-- Still show the number the day is actually running on: an
+                   operator needs to know WHICH cycle they are entering readings
+                   into, not only that nobody configured one. -->
+              <span v-else class="text-amber-700 text-lg">
+                23:00 ← 23:00 <span class="text-sm font-normal">(مؤقت)</span>
+              </span>
             </h2>
             <p class="text-sm text-gray-600 mt-1">
               {{ readingDate }} · الحالة:
