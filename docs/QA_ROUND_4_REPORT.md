@@ -6,7 +6,7 @@ Every product claim below was driven through Chromium (Playwright) against
 what the UI said.
 
 **Backend commit:** `d83137b` · **Frontend/QA commit:** `180692a`
-(this file: `docs/PILOT_HANDOFF_AR.md` + this report, one commit on top).
+(this report and `docs/PILOT_HANDOFF_AR.md` follow it on `master`).
 
 **Bottom line:** 295 steps, 0 failures, across 15 suites — and the two most
 important numbers in this round are not green ones: **13 endpoints that served
@@ -153,9 +153,11 @@ Run log: `sejel/e2e-tests/qa-checkpoints/qa-run-log.md`.
 
 **12. Backend commit:** `d83137b` on `develop` (repo `sejel_app`).
 
-**13. Frontend/QA commit:** `180692a` on `master` (repo `Sejel`).
+**13. Frontend/QA commit:** `180692a` on `master` (repo `Sejel`) — the seven
+new suites, the harness-safety fixes and the assertion audit. This report and
+`docs/PILOT_HANDOFF_AR.md` are the commits that follow it.
 
-**14. Working-tree status:** clean in both repositories after the commit that
-adds this report and `docs/PILOT_HANDOFF_AR.md`. Modified files that remain
-untracked by design are regenerated run artefacts
-(`sejel/e2e-tests/qa-checkpoints/*`), which are rewritten by every run.
+**14. Working-tree status:** both repositories clean — 0 modified, 0 untracked
+(`git status --porcelain` empty). Running any suite rewrites
+`sejel/e2e-tests/qa-checkpoints/*` (run log and phase stamps), so those are
+expected to show as modified after the next run; nothing else changes.
