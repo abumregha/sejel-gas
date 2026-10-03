@@ -33,26 +33,46 @@ const METERS = [
     return { status: r.status, json: await r.json().catch(() => ({})) }
   }, { method, url, body, csrf })
 
-  // 1. the station, on an 11:00→11:00 cycle
-  const setup = await call('POST', '/api/setup-station/', {
-    station: {
-      station_name: PILOT, address: 'الطريق العام — تجريبي',
-      relationship_type: 'owned', status: 'active', day_close_time: '11:00:00',
-    },
-    islands: [{ machines: 2, meters: 1 }, { machines: 2, meters: 1 }],
-    tanks: [
-      { fuel_type: 'بنزين', capacity: 30000, tank_name: 'خزان 1' },
-      { fuel_type: 'ديزل', capacity: 15000, tank_name: 'خزان 2' },
-    ],
-  })
-  const stationId = (setup.json.message || setup.json).station
-  step('pilot station created', !!stationId, `${stationId} (HTTP ${setup.status})`)
+  // 1. the station, on an 11:00→11:00 cycle.
+  //    Idempotent: if it already exists, reuse it — the counters below are then
+  //    restored, which is what the suite needs after any run that saved
+  //    readings (Meter.current_reading follows the last reading, and a deleted
+  //    reading rolls it back to 0, which would make every later reading look
+  //    like a first-ever baseline).
+  const existing = ((await apiGet(page, 'stations/?limit_page_length=0')).results || [])
+    .find((x) => (x.station_name || '').trim() === PILOT)
+  let stationId = existing ? existing.name : null
+  if (stationId) {
+    step('pilot station already exists — reusing it', true, stationId)
+    const upd = await call('PUT', `/api/stations/${stationId}/`, { day_close_time: '11:00:00' })
+    step('pilot cycle restored to 11:00', upd.status === 200, `HTTP ${upd.status}`)
+  } else {
+    const setup = await call('POST', '/api/setup-station/', {
+      station: {
+        station_name: PILOT, address: 'الطريق العام — تجريبي',
+        relationship_type: 'owned', status: 'active', day_close_time: '11:00:00',
+      },
+      islands: [{ machines: 2, meters: 1 }, { machines: 2, meters: 1 }],
+      tanks: [
+        { fuel_type: 'بنزين', capacity: 30000, tank_name: 'خزان 1' },
+        { fuel_type: 'ديزل', capacity: 15000, tank_name: 'خزان 2' },
+      ],
+    })
+    stationId = (setup.json.message || setup.json).station
+    step('pilot station created', !!stationId, `${stationId} (HTTP ${setup.status})`)
+  }
 
-  // 2. relabel the generated meters back to M01A/M01B/M02A/M02B with their
-  //    original counters — the suite asserts against these exact values
-  const meters = (await apiGet(page, 'meters/')).results || []
-  const edge = meters.filter((m) => m.meter_code.endsWith('XX'))
+  // 2. relabel the pilot's own meters back to M01A/M01B/M02A/M02B with their
+  //    original counters — the suite asserts against these exact values.
+  //    Scoped to THIS station: Meter has no station column, so ownership is
+  //    resolved through island → machine.
+  const pilIslands = ((await apiGet(page, `islands/?station=${stationId}`)).results || []).map((i) => i.name)
+  const pilMachines = ((await apiGet(page, `machines/?station=${stationId}`)).results || [])
+    .filter((m) => pilIslands.includes(m.island)).map((m) => m.name)
+  const meters = (await apiGet(page, 'meters/?limit_page_length=0')).results || []
+  const edge = meters.filter((m) => pilMachines.includes(m.machine))
   const target = [...edge].sort((a, b) => a.meter_code.localeCompare(b.meter_code))
+  step('pilot owns exactly the 4 test meters', target.length === 4, target.map((m) => m.meter_code).join(','))
   for (let i = 0; i < Math.min(target.length, METERS.length); i++) {
     const m = target[i]
     const spec = METERS[i]

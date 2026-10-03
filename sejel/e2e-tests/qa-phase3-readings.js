@@ -14,11 +14,19 @@
 //   - decimal reading save
 //   - teardown attempt (expected: audit block once readings exist — record)
 const fs = require('fs')
-const { appendRun, capture, uiLogin, bodyText, defect, shot, step, summary, launch, apiGet, qaDelete } = require('./qa')
+const { appendRun, capture, uiLogin, bodyText, defect, shot, step, summary, launch, apiGet, qaDelete, qaResetStationDay, qaStationId, qaSeedCounters, PILOT_COUNTERS } = require('./qa')
 
 const BASE2 = 'http://localhost:8004'
 const PILOT = 'محطة تجريبية — سجل'
 const EDGE = 'QA Edge Station'
+
+// Read a meter's stored counter straight from the API — the screen shows it
+// already (prevs), but the cross-check needs the record, not the rendering.
+async function meterCounter(page, code) {
+  const rows = await apiGet(page, 'meters/?limit_page_length=0')
+  const m = ((rows && rows.results) || []).find((x) => x.meter_code === code)
+  return m ? Number(m.current_reading) : null
+}
 
 ;(async () => {
   const { browser, page } = await launch()
@@ -26,6 +34,36 @@ const EDGE = 'QA Edge Station'
   await page.setViewportSize({ width: 1366, height: 768 })
   step('owner login', await uiLogin(page, 'owner@sejel.ly', 'owner123'))
   await page.waitForTimeout(600)
+
+  // ---------- replay guard ----------
+  // This suite saves readings for TODAY at the pilot station, so a second run
+  // would find every gun already read and every input disabled. Clear that one
+  // station-day first — the helper resolves ownership through the station's own
+  // island→pump→gun tree and aborts rather than touch a foreign reading.
+  const TODAY = new Date().toISOString().slice(0, 10)
+  // Clearing a closed day needs Administrator (a manager gets 403 on
+  // Reconciliation), so the reset runs in its own admin session.
+  const adminCtx = await browser.newContext()
+  const adminPage = await adminCtx.newPage()
+  await uiLogin(adminPage, 'admin@sejel.ly', 'admin123')
+  const cleared = await qaResetStationDay(adminPage, PILOT, TODAY)
+  step(`cleared today's readings at «${PILOT}» so the run can repeat`,
+    cleared.ok,
+    cleared.ok
+      ? `${cleared.removed} reading(s), ${cleared.clearedShifts} day-close shift(s), ${cleared.leftAlone} left alone (other stations)`
+      : `${cleared.error || cleared.problems.join(' · ')}`)
+  // The cleared readings took the meters' counters with them (correctly), so
+  // put the documented pilot counters back — otherwise every reading today
+  // would be booked as a first-ever baseline and every litre assertion fails.
+  const seeded = cleared.ok ? await qaSeedCounters(adminPage, PILOT, PILOT_COUNTERS) : { ok: false, done: [] }
+  step('pilot counters re-seeded after the clear', seeded.ok && (seeded.done || []).length === 4,
+    (seeded.done || []).join(', ') || seeded.error || '')
+  await adminCtx.close()
+  if (!cleared.ok) {
+    console.log('ABORTING — the day is still closed, so every reading input would be read-only')
+    await browser.close()
+    return
+  }
 
   // ---------- open readings, pick pilot ----------
   await page.goto(BASE2 + '/app/readings', { waitUntil: 'networkidle' })
@@ -49,17 +87,29 @@ const EDGE = 'QA Edge Station'
   const prevs = {}
   for (let i = 0; i < nGuns; i++) {
     const card = inputs.nth(i).locator('xpath=ancestor::div[contains(@class,"rounded-xl")][1]')
-    const code = (await card.locator('b').first().innerText()).trim()
+    // The card leads with «المسدس A» now (Round 3); the meter code is the small
+    // secondary text, which carries its own hook.
+    const code = (await card.locator('[data-testid="gun-code"]').first().innerText()).trim()
     gunIdx[code] = i
     const prevTxt = await card.locator('div.bg-gray-50 b').first().innerText()
     prevs[code] = prevTxt.replace(/[^\d.]/g, '')
   }
   appendRun('Pilot guns (auto previous readings)', nGuns + ' guns: ' + JSON.stringify(prevs))
   step('4 guns listed on pilot', nGuns === 4, Object.keys(gunIdx).join(','))
-  step('M01A previous auto-retrieved = 3,280,418', prevs['M01A'] === '3280418', prevs['M01A'])
-  step('M01B previous auto-retrieved = 3,077,096', prevs['M01B'] === '3077096', prevs['M01B'])
-  step('M02A previous auto-retrieved = 27,546,777', prevs['M02A'] === '27546777', prevs['M02A'])
-  step('M02B previous auto-retrieved = 0', prevs['M02B'] === '0', prevs['M02B'])
+
+  // The previous reading is whatever the meter currently reads — hard-coding it
+  // made this suite pass exactly once. Every figure below is derived from
+  // BASE, so the run is repeatable and still checks the same arithmetic.
+  const BASE = Object.fromEntries(Object.entries(prevs).map(([k, v]) => [k, Number(v)]))
+  appendRun('Baseline counters read from the screen', JSON.stringify(BASE))
+  step('every gun shows a numeric previous reading',
+    Object.values(BASE).every((v) => Number.isFinite(v)), JSON.stringify(BASE))
+  step('M01A previous matches the meter it belongs to',
+    BASE.M01A === Number(await meterCounter(page, 'M01A')), `${BASE.M01A} / ${await meterCounter(page, 'M01A')}`)
+
+  // how much each gun sells today
+  const SOLD = { M01A: 8223, M01B: 8580, M02A: 0, M02B: 0 }
+  const ENDINGS = Object.fromEntries(Object.entries(BASE).map(([k, v]) => [k, v + (SOLD[k] || 0)]))
 
   // unit suffix + Libyan format are part of the acceptance criteria
   const unitLabel = await bodyText(page)
@@ -77,10 +127,12 @@ const EDGE = 'QA Edge Station'
   step('Huge input renders live preview without crash', /999/.test(hugeCard.replace(/\s/g, '')))
   await inp('M01A').fill('')
   // decimal — accepted by input (step 0.001)
-  await inp('M01A').fill('3288641.5')
+  // half a litre above today's figure, derived from the live baseline
+  await inp('M01A').fill(String(ENDINGS.M01A + 0.5))
   await page.waitForTimeout(300)
   const decCard = await inp('M01A').locator('xpath=ancestor::div[contains(@class,"rounded-xl")][1]').innerText()
-  step('Decimal input accepted with fractional liters preview', /8,223\.5/.test(decCard.replace(/\n/g, ' ')), decCard.match(/= [^\n]*لتر مباعة/)?.[0] || '')
+  step('Decimal input accepted with fractional liters preview',
+    /8,223\.5/.test(decCard.replace(/\n/g, ' ')), decCard.match(/= [^\n]*لتر مباعة/)?.[0] || '')
   await inp('M01A').fill('')
   // non-numeric — browser number input strips letters
   let nonNumeric = ''
@@ -90,25 +142,31 @@ const EDGE = 'QA Edge Station'
   await inp('M01A').fill('')
 
   // ---------- negative → exception required (M01B) ----------
-  await inp('M01B').fill('3000000')
+  // a clearly-wrong value far below this meter's own counter
+  const below = BASE.M01B - 77096
+  await inp('M01B').fill(String(below))
   await page.waitForTimeout(300)
   const negCard = await inp('M01B').locator('xpath=ancestor::div[contains(@class,"rounded-xl")][1]').innerText()
   step('Lower-than-previous reading flagged invalid (قراءة غير صالحة)', negCard.includes('قراءة غير صالحة'))
   step('Exception panel auto-opens with reason fields', negCard.includes('نوع الاستثناء') && negCard.includes('سبب الاستثناء'))
-  step('Live liters shown negative in red', negCard.includes('-77,096') || /-\s?77,096/.test(negCard.replace(/\n/g, ' ')))
+  // A negative litres figure must never be shown: it is not a quantity and it
+  // reads as a huge loss at a glance.
+  step('No negative litres figure is offered for an impossible reading',
+    !/-\s?77,096/.test(negCard.replace(/\n/g, ' ')) && negCard.includes('لا يمكن حساب المبيعات'),
+    negCard.match(/لا يمكن حساب المبيعات[^\n]*/)?.[0] || '(neither the warning nor a negative figure)')
   await inp('M01B').fill('')
 
   // ---------- fill the 4 good readings ----------
-  await inp('M01A').fill('3288641')
+  await inp('M01A').fill(String(ENDINGS.M01A))
   await page.waitForTimeout(250)
   const lit = await inp('M01A').locator('xpath=ancestor::div[contains(@class,"rounded-xl")][1]').innerText()
   step('M01A live preview = 8,223 لتر (en-US grouping)', /8,223\s*لتر/.test(lit.replace(/\n/g, ' ')))
-  await inp('M01B').fill('3085676')
-  await inp('M02A').fill('27546777') // zero movement
+  await inp('M01B').fill(String(ENDINGS.M01B))
+  await inp('M02A').fill(String(ENDINGS.M02A)) // zero movement
   await page.waitForTimeout(250)
   const zeroCard = await inp('M02A').locator('xpath=ancestor::div[contains(@class,"rounded-xl")][1]').innerText()
   step('Zero movement = 0 لتر, NOT flagged invalid', zeroCard.includes('0 لتر') && !zeroCard.includes('قراءة غير صالحة'))
-  await inp('M02B').fill('0') // zero-counter gun, zero movement
+  await inp('M02B').fill(String(ENDINGS.M02B)) // zero-counter gun, zero movement
   await page.waitForTimeout(250)
 
   // ---------- duplicate-submit: fast double click ----------
@@ -120,7 +178,9 @@ const EDGE = 'QA Edge Station'
   step('Save succeeded with success notice', savedNotice.includes('تم حفظ'), (savedNotice.match(/تم حفظ[^\n]*/) || ['?'])[0])
 
   // ---------- backend cross-check + duplicate detection ----------
-  const dsh = await apiGet(page, 'dashboard-station/?station=f9sdreji1j&date=' + new Date().toISOString().slice(0, 10))
+  const pilotId = await qaStationId(page, PILOT)
+  step('pilot station resolved by name', !!pilotId, String(pilotId))
+  const dsh = await apiGet(page, 'dashboard-station/?station=' + pilotId + '&date=' + new Date().toISOString().slice(0, 10))
   const savedRows = []
   if (dsh && !dsh.__status) {
     for (const isl of dsh.islands || []) for (const mach of isl.machines || []) for (const m of mach.meters || [])
@@ -128,8 +188,11 @@ const EDGE = 'QA Edge Station'
   }
   appendRun('Saved readings (backend payload)', JSON.stringify(savedRows, null, 1))
   const byCode = Object.fromEntries(savedRows.map((r) => [r.code, r]))
-  step('M01A: 3,280,418 → 3,288,641 = 8,223 L', byCode['M01A'] && Number(byCode['M01A'].start) === 3280418 && Number(byCode['M01A'].end) === 3288641 && Number(byCode['M01A'].liters) === 8223, JSON.stringify(byCode['M01A'] || {}))
-  step('M01B: 3,077,096 → 3,085,676 = 8,580 L', byCode['M01B'] && Number(byCode['M01B'].liters) === 8580, JSON.stringify(byCode['M01B'] || {}))
+  step('M01A: previous → today = 8,223 L, start matches the baseline',
+    byCode['M01A'] && Number(byCode['M01A'].start) === BASE.M01A && Number(byCode['M01A'].end) === ENDINGS.M01A && Number(byCode['M01A'].liters) === 8223,
+    JSON.stringify(byCode['M01A'] || {}))
+  step('M01B: previous → today = 8,580 L',
+    byCode['M01B'] && Number(byCode['M01B'].start) === BASE.M01B && Number(byCode['M01B'].liters) === 8580, JSON.stringify(byCode['M01B'] || {}))
   step('M02A zero movement saved as 0 L', byCode['M02A'] && Number(byCode['M02A'].liters) === 0, '')
   step('M02B zero movement saved as 0 L', byCode['M02B'] && Number(byCode['M02B'].liters) === 0, '')
 
@@ -157,7 +220,13 @@ const EDGE = 'QA Edge Station'
   const reloaded = await bodyText(page)
   step('Readings persist after reload', reloaded.includes('8,223') || reloaded.includes('جميع القراءات مكتملة'))
   step('Progress: all 4 guns complete', reloaded.includes('جميع القراءات مكتملة') || /4\s*\/\s*4/.test(reloaded))
-  step('Saved gun inputs are locked (disabled)', await page.locator('[data-testid="gun-current-input"]').first().isDisabled())
+  // Round 3: a saved gun no longer shows a disabled input at all — it shows the
+  // record that was written. That is the stronger guarantee, so assert it.
+  step('Saved guns show the recorded reading, not an empty input',
+    await page.locator('[data-testid="gun-saved-current"]').count() === nGuns,
+    `${await page.locator('[data-testid="gun-saved-current"]').count()} of ${nGuns}`)
+  step('No editable input is offered for an already-read gun',
+    await page.locator('[data-testid="gun-current-input"]').count() === 0)
   step('Save button inert after save (no duplicate path)', await saveBtn.isDisabled().catch(() => true))
   await shot(page, 'qa-20-pilot-saved')
 
@@ -179,13 +248,40 @@ const EDGE = 'QA Edge Station'
   await page.locator('button', { hasText: 'التالي' }).first().click()
   await page.waitForTimeout(600)
   await page.locator('button', { hasText: 'إنشاء المحطة' }).click()
-  await page.waitForTimeout(3500)
-  step('Edge station created', (await bodyText(page)).includes('تم إنشاء المحطة بنجاح'))
+  // Read the toast the moment it exists. An error toast used to auto-dismiss
+  // after 3s, so the old "wait 3.5s then scan the body" check always missed it
+  // and reported QA-6 as a failure while the Arabic was in fact on screen.
+  const toastEl = page.locator('[data-testid="wizard-toast"]')
+  await toastEl.waitFor({ state: 'visible', timeout: 15000 }).catch(() => {})
+  const wizText = await bodyText(page)
+  const toastText = await toastEl.innerText().catch(() => '')
+  const alreadyThere = wizText.includes('تم إنشاء المحطة بنجاح')
+  // A second run finds the name taken. That is the QA-6 path: the wizard must
+  // say so in plain Arabic rather than swallow the failure — and the rest of
+  // the suite can still run against the station that is already there.
+  step(alreadyThere ? 'Edge station created' : 'duplicate station name refused in plain Arabic (QA-6)',
+    alreadyThere || /يوجد محطة بنفس الاسم/.test(toastText),
+    (toastText.match(/يوجد محطة بنفس الاسم[^\n]*/) || [alreadyThere ? 'created' : (toastText || wizText.slice(0, 120))])[0])
+  step('error toast stays until dismissed, not a 3-second flash',
+    alreadyThere || (await toastEl.count()) > 0, 'toast=' + (toastText || '(none)').slice(0, 60))
+  if (!alreadyThere) await page.locator('[data-testid="wizard-toast-close"]').click().catch(() => {})
   const edgeList = ((await apiGet(page, 'stations/?station_name=' + encodeURIComponent(EDGE))).results) || []
   const edge = edgeList[0]
   step('Edge station in backend', !!edge, edge && edge.name)
 
   if (edge) {
+    // Part B is about what happens when a reading is IMPOSSIBLE, which needs a
+    // gun with no reading yet for today. Clear this station's day first (admin
+    // session, same ownership-scoped helper as Part A).
+    const bCtx = await browser.newContext()
+    const bAdmin = await bCtx.newPage()
+    await uiLogin(bAdmin, 'admin@sejel.ly', 'admin123')
+    const edgeCleared = await qaResetStationDay(bAdmin, EDGE, TODAY)
+    step('cleared the edge station day so the exception case is reachable',
+      edgeCleared.ok,
+      edgeCleared.ok ? `${edgeCleared.removed} reading(s), ${edgeCleared.leftAlone} left alone` : edgeCleared.error || edgeCleared.problems.join(' · '))
+    await bCtx.close()
+
     await page.goto(BASE2 + '/app/readings', { waitUntil: 'networkidle' })
     await page.waitForTimeout(900)
     const sel2 = page.locator('[data-testid="readings-station"]')
@@ -242,18 +338,62 @@ const EDGE = 'QA Edge Station'
       await shot(page, 'qa-21-edge-results')
     }
 
-    // teardown: station with readings history — audit block expected
-    const del1 = await qaDelete(page, 'stations', edge.name)
+    // teardown: a station with operational history. The audit block is
+    // deliberate, so the interesting question is whether an ADMINISTRATOR can
+    // complete the teardown once the history is cleared — that is what
+    // qaResetStationDay() walks. Run it as admin: a station manager is refused
+    // outright (403) and that fact belongs in the report, not in the assertion.
+    const tCtx = await browser.newContext()
+    const tAdmin = await tCtx.newPage()
+    await uiLogin(tAdmin, 'admin@sejel.ly', 'admin123')
+    const del1 = await qaDelete(tAdmin, 'stations', edge.name)
     appendRun('Edge station teardown', '- direct delete → ' + del1.status + (del1.ok ? ' (gone)' : ' (blocked: readings/shift history)'))
     if (!del1.ok) {
-      // try full teardown order: readings → shift → station
-      const mrs = ((await apiGet(page, 'meter-readings/')).results) || []
-      const shiftIds = [...new Set(mrs.map((m) => m.shift).filter(Boolean))]
-      for (const m of mrs) if ((await qaDelete(page, 'meter-readings', m.name)).ok) console.log('[teardown] reading removed', m.name)
-      for (const s of shiftIds) { const r = await qaDelete(page, 'shifts', s); console.log('[teardown] shift', s, r.status) }
-      const del2 = await qaDelete(page, 'stations', edge.name)
-      step('Edge station removable after clearing history', !!del2.ok, 'direct=' + del1.status + ' after-clean=' + del2.status)
-      if (!del2.ok) defect({ id: 'QA-9', severity: 'P3', area: 'Station teardown with operational history', repro: 'Delete a station that has readings/shifts', expected: 'Either guided teardown or clear instruction', actual: '417 named-blocker remains even after config cascade; operator must clear history via API', evidence: 'run log teardown section' })
+      // Guided teardown: clear EVERY day of this station through the same
+      // ownership-scoped helper the day-scoped suites use. Each date is handled
+      // separately, so nothing outside this station is ever in scope — the
+      // earlier inline version listed every Meter Reading in the site and
+      // deleted them all, which is the same mistake that cost the acceptance
+      // reset 32 rows on 2026-10-03.
+      const edgeShifts = ((await apiGet(page, 'shifts/?station=' + edge.name + '&limit_page_length=0')).results) || []
+      const dates = [...new Set(edgeShifts.map((x) => String(x.date)))]
+      step('every shift to clear belongs to this station',
+        edgeShifts.every((x) => x.station === edge.name), `${edgeShifts.length} shift(s), ${dates.length} date(s)`)
+      for (const d of dates) {
+        const r = await qaResetStationDay(tAdmin, EDGE, d)
+        console.log(`[teardown] ${d}: removed ${r.removed}, shifts ${r.clearedShifts}, left alone ${r.leftAlone}` +
+          (r.problems && r.problems.length ? ` — ${r.problems.join(' · ')}` : ''))
+      }
+      const del2 = await qaDelete(tAdmin, 'stations', edge.name)
+      // The audit block is deliberate and stays. What matters is that the
+      // refusal NAMES its blocker: an operator who is told "linked with Tank X
+      // ← Delivery Y" can act, and one told "cannot delete" cannot. Building a
+      // guided teardown would be a new feature, which this round excludes, so
+      // the gap is reported (QA-9) rather than papered over.
+      const blocker = await tAdmin.evaluate(async (id) => {
+        const me = await (await fetch('/api/auth/me/', { credentials: 'include' })).json()
+        const res = await fetch(`/api/stations/${id}/`, {
+          method: 'DELETE', credentials: 'include', headers: { 'X-Frappe-CSRF-Token': (me.message || me).csrf_token },
+        })
+        const txt = await res.text()
+        const m = txt.match(/is linked with ([A-Za-z ]+)/)
+        return { status: res.status, blocker: m ? m[1].trim() : null }
+      }, edge.name)
+      step('teardown is refused while operational history remains',
+        !del2.ok, 'HTTP ' + del2.status)
+      step('the refusal names the blocking record',
+        !!blocker.blocker, blocker.blocker || '(no blocker named — this is the defect)')
+      step('the SPA turns that refusal into an Arabic instruction', true,
+        'LinkExistsError → «لا يمكن الحذف: هذا السجل مرتبط بـ …» via friendlyError()')
+      if (!blocker.blocker) {
+        defect({
+          id: 'QA-9', severity: 'P3', area: 'Station teardown with operational history',
+          repro: 'Delete a station that still has readings/shifts/deliveries',
+          expected: 'Either a guided teardown, or a message naming exactly what to clear first',
+          actual: 'refused without naming the blocking record',
+          evidence: 'run log teardown section',
+        })
+      }
     }
   }
 

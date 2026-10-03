@@ -7,7 +7,7 @@
 //   C. every remaining /finance/* screen as the OWNER role — the nav offers all of them,
 //      so a screen the station employee cannot use is a defect, not a curiosity
 //   D. a tank reading + tank transfer (the pilot station has two tanks)
-const { appendRun, capture, uiLogin, bodyText, defect, shot, step, summary, launch, apiGet, qaFillField } = require('./qa')
+const { appendRun, capture, uiLogin, bodyText, defect, shot, step, summary, launch, apiGet, qaFillField, qaStationId } = require('./qa')
 
 const BASE = 'http://localhost:8004'
 const REPORTS = ['/reports/daily', '/reports/monthly', '/reports/inventory', '/shifts/gaps', '/shifts/day']
@@ -76,7 +76,8 @@ const visible = async (page, route) => {
   // ---------- B. export ----------
   const exportProbe = await page.evaluate(async () => {
     const out = []
-    for (const url of ['/api/export/?view=station&name=f9sdreji1j', '/api/export/?view=station', '/api/export/']) {
+    const pilotId = await qaStationId(page, PILOT)
+    for (const url of [`/api/export/?view=station&name=${pilotId}`, '/api/export/?view=station', '/api/export/']) {
       const r = await fetch(url, { credentials: 'include' })
       const ct = r.headers.get('content-type') || ''
       const body = r.status === 200 ? (await r.text()).slice(0, 160) : ''

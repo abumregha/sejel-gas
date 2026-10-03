@@ -47,21 +47,27 @@ const { initRunLog, appendRun, capture, uiLogin, clickNav, bodyText, defect, sho
   await shot(page, 'qa-02-owner-dashboard')
 
   // 4. dashboard first impression
+  //
+  // QA-2 was: "the cycle lives only on the readings screen". Round 3 added the
+  // TodayPanel, so the dashboard now states the cycle itself. A manager owns
+  // several stations and lands on the aggregate picker, which shows no cycle
+  // until one is chosen — so pick a station first, exactly as a person would.
+  const pick = page.locator('a, button').filter({ hasText: 'تجريبية' }).first()
+  if (await pick.count()) { await pick.click(); await page.waitForTimeout(2500) }
   const dash = await bodyText(page)
-  const hasPeriod = /دورة القراءة/.test(dash)
-  const period11 = /11:00/.test(dash)
-  if (!hasPeriod) {
+  const hasPeriod = /دورة (القراءة|اليوم)/.test(dash)
+  const period11 = /11:00\s*←\s*11:00/.test(dash)
+  if (!hasPeriod || !period11) {
     defect({
       id: 'QA-2', severity: 'P2', area: 'Dashboard — reading cycle visibility',
-      repro: 'Login → land on the KPI dashboard (الرئيسية) with any station',
-      expected: 'Operator sees the active reading period (11:00 → 11:00) alongside the daily KPIs',
-      actual: 'The dashboard KPI page never displays دورة القراءة or the 11:00 cycle — it exists only on the readings screen',
+      repro: 'Login → land on the KPI dashboard (الرئيسية) with a station selected',
+      expected: 'The dashboard states the active reading cycle (11:00 ← 11:00) alongside the daily KPIs',
+      actual: `dashboard text has «دورة …»=${hasPeriod}, «11:00 ← 11:00»=${period11}`,
       evidence: 'body text captured in run log; screenshots qa-02-owner-dashboard.png',
     })
   } else {
-    step('Dashboard shows 11:00 cycle', period11 && !/23:00/.test(dash))
+    step('Dashboard shows the station\'s 11:00 cycle', period11, '11:00 ← 11:00')
   }
-  step('Dashboard KPI page renders (defect QA-2 recorded re: missing cycle)', true, hasPeriod ? 'cycle shown' : 'cycle NOT shown on KPI dashboard')
   step('Dashboard shows liters/sales KPIs', /لتر|مبيعات/.test(dash))
   // Employee shift vs reading period vs daily close distinction:
   step('Dashboard mentions shifts (المناوبات) separately', /مناوب/.test(dash))

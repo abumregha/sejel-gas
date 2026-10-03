@@ -106,6 +106,9 @@
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
         </svg>
         <span>{{ toast.message }}</span>
+        <button v-if="toast.type === 'error'" data-testid="global-toast-close"
+          class="mr-1 text-current opacity-70 hover:opacity-100" aria-label="إغلاق"
+          @click="dismiss">✕</button>
       </div>
     </Transition>
 
@@ -121,7 +124,7 @@ import { useAuthStore } from '../stores/auth'
 import UxFeedbackWidget from '../components/UxFeedbackWidget.vue'
 import { useToast } from '../composables/useToast'
 
-const { toast } = useToast()
+const { toast, dismiss } = useToast()
 
 const auth = useAuthStore()
 const router = useRouter()

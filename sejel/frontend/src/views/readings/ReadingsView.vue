@@ -102,12 +102,19 @@ const islandList = computed(() => {
 
 function liveLiters(row) {
   if (row.current === '' || row.current === null || row.current === undefined) return null
+  // While the operator is typing, the model briefly holds "-" (or "1e"), which
+  // Number() turns into NaN. Treating that as a quantity produced a card that
+  // showed nothing and reacted to nothing until the field was completed.
+  const current = Number(row.current)
+  if (!Number.isFinite(current)) return null
   // An unsaved opening reading has nothing to sell yet — showing
   // current − 0 would display the meter's entire cumulative counter.
   if (isOpening(row)) return null
   const prev = prevOf(row)
   if (prev === null || prev === undefined) return null
-  return Number(row.current) - Number(prev)
+  const p = Number(prev)
+  if (!Number.isFinite(p)) return null
+  return current - p
 }
 
 // A gun with neither a saved reading nor an established counter: this entry
@@ -120,7 +127,25 @@ function isOpening(row) {
 }
 
 function needsException(row) {
-  return liveLiters(row) !== null && liveLiters(row) < 0
+  const litres = liveLiters(row)
+  if (litres !== null && litres < 0) return true
+  // A meter never reads below zero. On a gun with no history yet there is no
+  // previous reading to compare against, so the litres preview is legitimately
+  // blank — but a negative number typed in is still simply wrong, and used to
+  // produce no feedback at all.
+  const typed = Number(row.current)
+  return row.current !== '' && row.current !== null && row.current !== undefined
+    && Number.isFinite(typed) && typed < 0
+}
+
+// Say WHY the reason is required: a negative number and a meter that went
+// backwards are different mistakes.
+function exceptionHint(row) {
+  if (!needsException(row)) return ''
+  const litres = liveLiters(row)
+  return litres === null || litres >= 0
+    ? '(مطلوب — لا يمكن إدخال قراءة سالبة)'
+    : '(مطلوب — القراءة أقل من السابقة)'
 }
 
 function rowStatus(row) {
@@ -404,7 +429,7 @@ async function closeDay() {
           {{ countExceptions(exceptionGuns) }}
         </span>
         <span class="mr-auto text-sm text-gray-600 tabular-nums">
-          إجمالي اللترات: <b class="text-blue-700">{{ fmtNum(todayLiters) }}</b> لتر
+          إجمالي اللترات: <b class="text-blue-700">{{ fmtNum(todayLiters, 3) }}</b> لتر
         </span>
       </div>
 
@@ -430,7 +455,7 @@ async function closeDay() {
               <b class="text-base">المسدس {{ g.row.gunLetter }}</b>
               <span class="text-xs text-gray-500">{{ g.mach.name }}</span>
               <span class="text-xs bg-gray-100 text-gray-600 rounded-full px-2 py-0.5">{{ g.row.meter.fuel_type }}</span>
-              <span class="text-[11px] text-gray-400 tabular-nums">{{ g.row.meter.meter_code }}</span>
+              <span class="text-[11px] text-gray-400 tabular-nums" data-testid="gun-code">{{ g.row.meter.meter_code }}</span>
             </div>
             <!-- per-gun status (§25): complete / pending / exception -->
             <span v-if="rowStatus(g.row) === 'saved'" class="text-[11px] bg-green-50 text-green-700 border border-green-200 rounded-full px-2 py-0.5 flex items-center gap-1">
@@ -460,17 +485,17 @@ async function closeDay() {
             <template v-if="g.row.meter.reading && g.row.meter.reading.end_reading !== null && g.row.meter.reading.end_reading !== undefined">
               <div class="bg-gray-50 rounded-lg p-3" data-testid="gun-previous">
                 <div class="text-xs text-gray-500 mb-1">القراءة السابقة</div>
-                <b class="tabular-nums text-lg">{{ fmtNum(g.row.meter.reading.start_reading ?? prevOf(g.row)) }}</b>
+                <b class="tabular-nums text-lg">{{ fmtNum(g.row.meter.reading.start_reading ?? prevOf(g.row), 3) }}</b>
               </div>
               <div class="bg-emerald-50 border border-emerald-200 rounded-lg p-3" data-testid="gun-saved-current">
                 <div class="text-xs text-emerald-700 mb-1 flex items-center gap-1">
                   <Icon name="check" :size="12" /> القراءة المسجلة اليوم
                 </div>
-                <b class="tabular-nums text-lg text-emerald-800">{{ fmtNum(g.row.meter.reading.end_reading) }}</b>
+                <b class="tabular-nums text-lg text-emerald-800">{{ fmtNum(g.row.meter.reading.end_reading, 3) }}</b>
               </div>
               <div class="rounded-lg p-3 bg-blue-50" data-testid="gun-saved-liters">
                 <div class="text-xs text-gray-500 mb-1">اللترات المباعة</div>
-                <b class="tabular-nums text-lg text-blue-700">{{ fmtNum(g.row.meter.reading.liters_sold || 0) }} لتر</b>
+                <b class="tabular-nums text-lg text-blue-700">{{ fmtNum(g.row.meter.reading.liters_sold || 0, 3) }} لتر</b>
                 <div v-if="expectedOf(g.row) !== null" class="text-xs text-gray-500 mt-0.5">
                   المبيعات المتوقعة: <span class="tabular-nums">{{ fmtMoney(expectedOf(g.row)) }}</span>
                 </div>
@@ -482,7 +507,7 @@ async function closeDay() {
             <!-- previous reading (auto, read-only) -->
             <div class="bg-gray-50 rounded-lg p-3" data-testid="gun-previous">
               <div class="text-xs text-gray-500 mb-1">القراءة السابقة (تلقائية)</div>
-              <b class="tabular-nums text-lg">{{ fmtNum(prevOf(g.row)) }}</b>
+              <b class="tabular-nums text-lg">{{ fmtNum(prevOf(g.row), 3) }}</b>
             </div>
             <!-- current reading: the only input the operator fills (§10) -->
             <div>
@@ -503,22 +528,22 @@ async function closeDay() {
               </div>
               <div v-if="liveLiters(g.row) !== null" class="text-xs mt-1" :class="liveLiters(g.row) < 0 ? 'text-red-600' : 'text-gray-500'">
                 <template v-if="liveLiters(g.row) < 0">القراءة الحالية أقل من القراءة السابقة</template>
-                <template v-else>= {{ fmtNum(liveLiters(g.row)) }} لتر مباعة</template>
+                <template v-else>= {{ fmtNum(liveLiters(g.row), 3) }} لتر مباعة</template>
               </div>
             </div>
             <!-- liters preview + expected sales (backend price) -->
-            <div class="rounded-lg p-3" :class="liveLiters(g.row) !== null && liveLiters(g.row) < 0 ? 'bg-red-50' : 'bg-blue-50'">
+            <div class="rounded-lg p-3" :class="needsException(g.row) ? 'bg-red-50' : 'bg-blue-50'">
               <div class="text-xs text-gray-500 mb-1">اللترات المباعة</div>
-              <template v-if="liveLiters(g.row) !== null && liveLiters(g.row) < 0">
+              <template v-if="needsException(g.row)">
                 <!-- Never show a negative litres figure: it is not a real
                      quantity and it reads as a huge loss at a glance. -->
                 <b class="text-sm text-red-700 leading-snug">
-                  لا يمكن حساب المبيعات — القراءة أقل من السابقة
+                  {{ liveLiters(g.row) === null ? 'لا يمكن إدخال قراءة سالبة' : 'لا يمكن حساب المبيعات — القراءة أقل من السابقة' }}
                 </b>
                 <div class="text-xs text-red-600 mt-1">اختر نوع الاستثناء بالأسفل لتسجيل السبب</div>
               </template>
               <b v-else class="tabular-nums text-lg text-blue-700">
-                {{ liveLiters(g.row) === null ? '—' : fmtNum(liveLiters(g.row)) + ' لتر' }}
+                {{ liveLiters(g.row) === null ? '—' : fmtNum(liveLiters(g.row), 3) + ' لتر' }}
               </b>
               <div v-if="expectedOf(g.row) !== null && !(liveLiters(g.row) !== null && liveLiters(g.row) < 0)" class="text-xs text-gray-500 mt-0.5">
                 المبيعات المتوقعة: <span class="tabular-nums">{{ fmtMoney(expectedOf(g.row)) }}</span>
@@ -530,7 +555,7 @@ async function closeDay() {
           <!-- negative / exception flow (§13): block silent submission, require reason -->
           <div v-if="needsException(g.row) || g.row.showException" class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3 bg-amber-50 border border-amber-200 rounded-lg p-3">
             <div>
-              <label class="block text-xs text-amber-800 mb-1">نوع الاستثناء {{ needsException(g.row) ? '(مطلوب — القراءة أقل من السابقة)' : '' }}</label>
+              <label class="block text-xs text-amber-800 mb-1">نوع الاستثناء {{ exceptionHint(g.row) }}</label>
               <select v-model="g.row.exception_type" class="w-full border border-amber-300 rounded-lg px-3 py-2 text-sm bg-white">
                 <option value="">لا يوجد</option>
                 <option value="reset">تصفير العداد</option>
@@ -568,7 +593,7 @@ async function closeDay() {
           أدخلت الآن: <b>{{ filledNow }}</b> · مكتملة: <b>{{ doneGuns }}/{{ totalGuns }}</b>
         </span>
         <span class="text-sm text-gray-600 tabular-nums hidden sm:inline">
-          الإجمالي: <b class="text-blue-700">{{ fmtNum(todayLiters) }}</b> لتر
+          الإجمالي: <b class="text-blue-700">{{ fmtNum(todayLiters, 3) }}</b> لتر
         </span>
         <button
           data-testid="save-readings"

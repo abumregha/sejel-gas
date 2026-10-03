@@ -5,7 +5,7 @@
 // phase 3: M01A 8,223 L بنزين + M01B 8,580 L ديزل = 16,803 L; fuel price 0.15 د.ل/لتر.
 // Inputs: cash 2,000 | coupons 10×5 + 5×8 = 90 | POS 300 → declared revenue 2,390.00
 // Expected: expected_sales 2,520.45 → difference −130.45 (short) → net_cash 2,390.00
-const { appendRun, capture, uiLogin, bodyText, defect, shot, step, summary, launch, apiGet } = require('./qa')
+const { appendRun, capture, uiLogin, bodyText, defect, shot, step, summary, launch, apiGet, qaStationId } = require('./qa')
 
 const BASE2 = 'http://localhost:8004'
 const PILOT = 'محطة تجريبية — سجل'
@@ -65,7 +65,9 @@ const DECLARED = CASH + COUPON_5 * 5 + COUPON_8 * 8 + EPAYMENT  // 2390
   await shot(page, 'qa-30-income-entry')
 
   // ================= backend verification of the three postings =================
-  const shifts = ((await apiGet(page, 'shifts/?station=f9sdreji1j')).results) || []
+  const pilotId = await qaStationId(page, PILOT)
+  step('pilot station resolved by name', !!pilotId, String(pilotId))
+  const shifts = ((await apiGet(page, 'shifts/?station=' + pilotId)).results) || []
   const todaysShift = shifts.find((s) => (s.date || '').slice(0, 10) === today)
   const shiftId = todaysShift && todaysShift.name
   const cashRows = ((await apiGet(page, 'cash-collections/?shift=' + shiftId)).results) || []
@@ -99,7 +101,7 @@ const DECLARED = CASH + COUPON_5 * 5 + COUPON_8 * 8 + EPAYMENT  // 2390
   await shot(page, 'qa-31-day-closed')
 
   // ================= reconciliation arithmetic =================
-  const recs = ((await apiGet(page, 'reconciliations/?station=f9sdreji1j')).results) || []
+  const recs = ((await apiGet(page, 'reconciliations/?station=' + pilotId)).results) || []
   const rec = recs[0]
   appendRun('Reconciliation payload (pilot)', JSON.stringify(rec || null, null, 1))
   step('Reconciliation record created', !!rec, rec && rec.name)

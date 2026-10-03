@@ -170,6 +170,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '../../api'
+import { friendlyError } from '../../errors'
 import Toast from '../../components/Toast.vue'
 
 const router = useRouter()
@@ -282,9 +283,11 @@ const create = async () => {
     step.value = 4
     toast.value.show('تم إنشاء المحطة بنجاح')
   } catch (e) {
-    const raw = e.response?.data?.message || e.response?.data?.exc || e.message
-    const msg = typeof raw === 'string' ? raw.replace(/<[^>]+>/g, '').split('\n')[0].substring(0, 200) : 'خطأ في الإنشاء'
-    toast.value.show(msg, 'error')
+    // friendlyError() knows the Frappe error shapes. The ad-hoc chain this
+    // replaced preferred `exc`, which is a JSON-stringified Python traceback —
+    // so a duplicate station name surfaced as a stack trace or as
+    // "Request failed with status code 417" (QA-6).
+    toast.value.show(friendlyError(e), 'error')
   } finally { creating.value = false }
 }
 
