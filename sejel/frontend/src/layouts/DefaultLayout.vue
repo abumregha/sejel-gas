@@ -5,8 +5,9 @@
     <aside
       :class="[
         'fixed top-0 right-0 h-full bg-gray-900 text-white z-40 transition-all duration-300 overflow-y-auto overflow-x-hidden',
-        sidebarOpen ? 'w-64' : 'w-0 lg:w-64'
+        sidebarOpen ? 'w-64' : 'w-0 lg:w-64 invisible lg:visible'
       ]"
+      :aria-hidden="!sidebarOpen ? 'true' : 'false'"
     >
       <div class="p-2">
         <!-- Logo -->
@@ -36,31 +37,36 @@
     <!-- Main content -->
     <!-- overflow-x-clip: one long unbreakable token (e.g. a stretched meter
          code) must never widen the whole page on phones. `clip` (not hidden)
-         keeps position:sticky/-fixed working since no scroll container is created. -->
-    <div class="flex-1 min-h-screen overflow-x-clip lg:mr-64">
+         keeps position:sticky/-fixed working since no scroll container is created.
+         min-w-0: this is the flex child that must be allowed to shrink below its
+         content width. Without it the automatic minimum size of a flex item is
+         its content's min-content width, so any wide child (a table, a long row)
+         pushes the whole app wider than the phone — the root cause of the page-
+         level horizontal scroll on 390px screens. -->
+    <div class="flex-1 min-w-0 min-h-screen overflow-x-clip lg:mr-64">
       <!-- Top Bar -->
-      <header class="sticky top-0 bg-white border-b border-gray-200 z-20 h-14 flex items-center px-4 justify-between">
-        <div class="flex items-center gap-3">
+      <header class="sticky top-0 bg-white border-b border-gray-200 z-20 h-14 flex items-center gap-2 px-3 sm:px-4 justify-between">
+        <div class="flex items-center gap-2 sm:gap-3 min-w-0">
           <!-- Hamburger: mobile drawer toggle only (desktop menu never collapses) -->
-          <button @click="sidebarOpen = !sidebarOpen" :title="sidebarOpen ? 'إخفاء القائمة' : 'إظهار القائمة'" class="p-2 rounded-lg hover:bg-gray-100 lg:hidden">
+          <button @click="sidebarOpen = !sidebarOpen" :aria-label="sidebarOpen ? 'إخفاء القائمة' : 'إظهار القائمة'" :title="sidebarOpen ? 'إخفاء القائمة' : 'إظهار القائمة'" class="shrink-0 grid place-items-center w-11 h-11 rounded-lg hover:bg-gray-100 lg:hidden">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
           <!-- Back button (client request) — hidden on the home page -->
-          <button v-if="canGoBack" @click="router.back()" title="رجوع"
-            class="p-2 rounded-lg hover:bg-gray-100 text-gray-600 flex items-center gap-1">
+          <button v-if="canGoBack" @click="router.back()" title="رجوع" aria-label="رجوع"
+            class="shrink-0 min-w-11 min-h-11 px-2 rounded-lg hover:bg-gray-100 text-gray-600 flex items-center gap-1">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
             </svg>
             <span class="text-sm hidden sm:inline">رجوع</span>
           </button>
-          <h1 class="text-lg font-bold text-gray-800">سجل — نظام إدارة محطات الوقود</h1>
+          <h1 class="text-base sm:text-lg font-bold text-gray-800 truncate min-w-0">سجل — نظام إدارة محطات الوقود</h1>
         </div>
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2 sm:gap-3 shrink-0">
           <span class="text-sm text-gray-500 hidden sm:block">{{ auth.user?.first_name || auth.user?.username }}</span>
           <span class="badge badge-blue text-xs">{{ roleLabel }}</span>
-          <button @click="handleLogout" aria-label="تسجيل الخروج" title="تسجيل الخروج" class="p-2 text-gray-400 hover:text-red-500 rounded-lg hover:bg-gray-100">
+          <button @click="handleLogout" aria-label="تسجيل خروج" title="تسجيل خروج" class="shrink-0 grid place-items-center w-11 h-11 text-gray-400 hover:text-red-500 rounded-lg hover:bg-gray-100">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
             </svg>
@@ -68,8 +74,9 @@
         </div>
       </header>
 
-      <!-- Page content -->
-      <main class="p-4 lg:p-6">
+      <!-- Page content. `min-w-0` here too, and the bottom padding clears the
+           fixed mobile nav so the last card is never hidden behind it. -->
+      <main class="min-w-0 p-3 sm:p-4 lg:p-6 pb-36 lg:pb-6">
         <router-view />
       </main>
     </div>

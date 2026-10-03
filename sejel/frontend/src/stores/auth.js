@@ -17,6 +17,12 @@ export const useAuthStore = defineStore('auth', {
     stationId: (s) => s.user?.station_id || null,
     isAdmin: (s) => s.user?.is_staff || s.user?.role === 'admin',
     isOwner: (s) => s.user?.role === 'admin',
+    // Closing the day creates the day's Reconciliation, which only Sejel
+    // Manager / Finance may create. Offering the button to a supervisor ended
+    // in a bare «ليست لديك صلاحية لتنفيذ هذا الإجراء» after they had already
+    // confirmed the dialog — so the UI has to know who can do it.
+    canCloseDay: (s) =>
+      !!s.user && (s.user.is_staff || ['admin', 'manager', 'finance'].includes(s.user.role)),
   },
   actions: {
     // Awaitable session restore — safe to call from anywhere; runs once.

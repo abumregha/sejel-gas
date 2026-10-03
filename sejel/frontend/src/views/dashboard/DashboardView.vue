@@ -18,7 +18,7 @@ import QuickActions from '../../components/dashboard/QuickActions.vue'
 import TrendSection from '../../components/dashboard/TrendSection.vue'
 import TodayPanel from '../../components/dashboard/TodayPanel.vue'
 import { fmtNum, fmtMoney, fmtTime } from '../../components/dashboard/format'
-import { SHIFT_STATUS_PRIMARY, label } from '../../utils/labels'
+import { SHIFT_STATUS_PRIMARY, label, countReadings, countExceptions } from '../../utils/labels'
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -123,6 +123,36 @@ const diffTone = computed(() => {
   const t = data.value?.kpis?.difference_type
   return t === 'shortage' ? 'red' : t === 'surplus' ? 'amber' : 'green'
 })
+
+// ── aggregate mode: who still owes work today? ────────────────────────────────
+function workNeededLabel(s) {
+  const r = s.readings_status || {}
+  if (!r.total) return 'لا توجد مسدسات'
+  if (r.pending > 0) return `تبقي ${countReadings(r.pending)} اليوم`
+  if (r.exceptions > 0) return `${countExceptions(r.exceptions)} اليوم`
+  if (!s.day_close_time) return 'لم يتم ضبط وقت إقفال اليوم'
+  if (!s.day_closed) return 'القراءات مكتملة — ينتظر الإقفال'
+  return 'اليوم مكتمل ومُقفل'
+}
+function dayTone(s) {
+  const r = s.readings_status || {}
+  if (!r.total || !s.day_close_time) {
+    return { box: 'bg-amber-50 border-amber-200', text: 'text-amber-800' }
+  }
+  if (r.pending > 0 || r.exceptions > 0) {
+    return { box: 'bg-amber-50 border-amber-200', text: 'text-amber-800' }
+  }
+  if (!s.day_closed) {
+    return { box: 'bg-emerald-50 border-emerald-200', text: 'text-emerald-800' }
+  }
+  return { box: 'bg-gray-50 border-gray-200', text: 'text-gray-600' }
+}
+const stationsNeedingWork = computed(() =>
+  (data.value?.stations || []).filter((s) => {
+    const r = s.readings_status || {}
+    return r.pending > 0 || r.exceptions > 0 || (r.total > 0 && !s.day_closed) || !s.day_close_time
+  })
+)
 </script>
 
 <template>
@@ -194,6 +224,19 @@ const diffTone = computed(() => {
 
     <!-- ============ AGGREGATE MODE (§3: all stations) ============ -->
     <div v-else-if="isAggregate" class="space-y-4">
+      <!-- The first question is never "how much money?" — it is "which station
+           still owes readings today?". Answer it above the money. -->
+      <div v-if="stationsNeedingWork.length" class="bg-amber-50 border border-amber-200 rounded-2xl p-4"
+        data-testid="stations-needing-work">
+        <p class="font-bold text-amber-900 mb-1">محطات تحتاج تدخلًا اليوم ({{ stationsNeedingWork.length }})</p>
+        <ul class="flex flex-wrap gap-2">
+          <li v-for="s in stationsNeedingWork" :key="s.id">
+            <button class="bg-white border border-amber-300 text-amber-900 rounded-lg px-3 py-2 text-sm min-h-[44px] hover:bg-amber-50"
+              @click="selected = s.id">{{ s.name }} — {{ workNeededLabel(s) }}</button>
+          </li>
+        </ul>
+      </div>
+
       <AlertsPanel v-if="data?.alerts?.length" :alerts="data.alerts" />
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <button
@@ -209,6 +252,20 @@ const diffTone = computed(() => {
             </span>
           </div>
           <div v-if="s.address" class="text-xs text-gray-400 mb-3">{{ s.address }}</div>
+
+          <!-- today's operational state of this station -->
+          <div class="rounded-lg border px-3 py-2 mb-3 text-sm" :class="dayTone(s).box">
+            <div class="flex items-center justify-between">
+              <span class="text-xs">دورة اليوم</span>
+              <span class="font-semibold tabular-nums">{{ (s.day_close_time || '').slice(0, 5) || 'غير مضبوطة' }}</span>
+            </div>
+            <div class="flex items-center justify-between mt-1">
+              <span class="text-xs">القراءات</span>
+              <span class="font-semibold tabular-nums">{{ s.readings_status?.done || 0 }} / {{ s.readings_status?.total || 0 }}</span>
+            </div>
+            <div class="text-xs mt-1" :class="dayTone(s).text">{{ workNeededLabel(s) }}</div>
+          </div>
+
           <div class="grid grid-cols-3 gap-2 text-center text-sm mb-3">
             <div class="bg-gray-50 rounded-lg py-2"><div class="text-[11px] text-gray-500">اللترات</div><b class="tabular-nums">{{ fmtNum(s.total_liters ?? 0) }}</b></div>
             <div class="bg-gray-50 rounded-lg py-2"><div class="text-[11px] text-gray-500">التحصيل</div><b class="tabular-nums">{{ fmtNum(s.total_collection ?? 0) }}</b></div>
@@ -262,8 +319,8 @@ const diffTone = computed(() => {
           <div class="text-xs text-gray-500">
             {{ data.readings_status.pending === 0
               ? 'جميع قراءات المسدسات مسجلة لهذا اليوم'
-              : data.readings_status.pending + ' قراءة متبقية — انقر لإدخال القراءات' }}
-            <span v-if="data.readings_status.exceptions" class="text-red-600"> · {{ data.readings_status.exceptions }} استثناء</span>
+              : 'تبقي ' + countReadings(data.readings_status.pending) + ' اليوم — انقر لإدخال القراءات' }}
+            <span v-if="data.readings_status.exceptions" class="text-red-600"> · {{ countExceptions(data.readings_status.exceptions) }}</span>
           </div>
         </div>
         <Icon name="arrowright" :size="16" class="mr-auto text-gray-400 rotate-180" />

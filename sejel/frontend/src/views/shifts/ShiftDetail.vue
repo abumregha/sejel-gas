@@ -12,8 +12,14 @@
           class="bg-green-600 text-white px-4 py-2 rounded-xl text-sm">+ إضافة قراءات</router-link>
         <button v-if="shift?.status === 'open'" @click="submitShift"
           class="bg-yellow-600 text-white px-4 py-2 rounded-xl text-sm">إنهاء وتقديم</button>
-        <button v-if="shift?.status === 'submitted'" @click="closeShift"
+        <!-- Creating the reconciliation is a manager/finance action; a supervisor
+             used to press this and be refused with a bare permission error. -->
+        <button v-if="shift?.status === 'submitted' && auth.canCloseDay" @click="closeShift"
           class="bg-primary text-white px-4 py-2 rounded-xl text-sm">إقفال المناوبة وإنشاء التسوية</button>
+        <span v-else-if="shift?.status === 'submitted'" data-testid="close-hint"
+          class="text-xs bg-gray-50 text-gray-600 border border-gray-200 rounded-lg px-3 py-2 self-center">
+          إقفال المناوبة وإنشاء التسوية يتم من حساب المدير أو المالية
+        </span>
       </div>
     </div>
     <div v-if="shift" class="space-y-6">
@@ -79,6 +85,8 @@ import { useRoute, useRouter } from 'vue-router'
 import api from '../../api'
 import { SHIFT_STATUS_PRIMARY, SHIFT_BADGE } from '../../utils/labels'
 import { friendlyError } from '../../errors'
+import { useAuthStore } from '../../stores/auth'
+const auth = useAuthStore()
 const route = useRoute(), router = useRouter()
 const id = route.params.id
 const shift = ref(null)

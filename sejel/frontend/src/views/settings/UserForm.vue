@@ -59,7 +59,10 @@ onMounted(async () => {
   const { data } = await api.get('/stations/'); stations.value = data.results || data
   if (isEdit.value) {
     const { data: d } = await api.get(`/users/${route.params.id}/`)
-    form.value = { username: d.username, password: '', first_name: d.first_name || '', last_name: d.last_name || '', email: d.email || '', role: d.role || 'supervisor', station: d.station_id || '' }
+    // The list/detail endpoint returns the binding as `sejel_station`; reading
+  // `station_id` here silently blanked it, so saving an unrelated edit
+  // unassigned the employee from their station.
+  form.value = { username: d.username, password: '', first_name: d.first_name || '', last_name: d.last_name || '', email: d.email || '', role: d.role || 'supervisor', station: d.sejel_station || '' }
   }
 })
 const save = async () => {

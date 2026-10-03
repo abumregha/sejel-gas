@@ -23,6 +23,7 @@ import { friendlyError } from '../../errors'
 import { useAuthStore } from '../../stores/auth'
 import Icon from '../../components/dashboard/Icon.vue'
 import { fmtNum, fmtMoney } from '../../components/dashboard/format'
+import { countReadings, countExceptions } from '../../utils/labels'
 
 const auth = useAuthStore()
 
@@ -48,9 +49,15 @@ function buildRows(payload, prevRows = {}) {
   const map = {}
   for (const isl of payload?.islands || []) {
     for (const mach of isl.machines || []) {
+      let letter = 0
       for (const m of mach.meters || []) {
         if (m.status === 'inactive') continue
-        map[m.id] = { meter: m, island: isl, current: '', exception_type: '', notes: '', showException: false, savedNow: false }
+        // Position on the pump = how the operator names the gun («مسدس A»).
+        map[m.id] = {
+          meter: m, island: isl, mach, gunLetter: String.fromCharCode(65 + letter),
+          current: '', exception_type: '', notes: '', showException: false, savedNow: false,
+        }
+        letter++
       }
     }
   }
@@ -82,9 +89,12 @@ const islandList = computed(() => {
   const out = []
   for (const isl of data.value?.islands || []) {
     const guns = []
-    for (const mach of isl.machines || [])
-      for (const m of mach.meters || [])
-        if (rows.value[m.id]) guns.push({ mach, row: rows.value[m.id] })
+    for (const mach of isl.machines || []) {
+      for (const m of mach.meters || []) {
+        if (!rows.value[m.id]) continue
+        guns.push({ mach, row: rows.value[m.id] })
+      }
+    }
     if (guns.length) out.push({ island: isl, guns })
   }
   return out
@@ -149,10 +159,15 @@ function expectedOf(row) {
 }
 
 // ---- data loading -----------------------------------------------------------
-async function load() {
+// `keepMessage` is for the post-action reload (after save / day close): the
+// reload is what keeps the on-screen counts honest, but it used to run *after*
+// the message was set and cleared it — «لم يتم حفظ …» therefore disappeared
+// the instant the counts refreshed. Explicit navigation (date or station
+// change) still clears both banners.
+async function load({ keepMessage = false } = {}) {
   if (!stationSel.value) { data.value = null; loading.value = false; return }
   loading.value = true
-  error.value = ''
+  if (!keepMessage) { error.value = ''; notice.value = '' }
   try {
     const params = { date: date.value }
     if (stationSel.value) params.station = stationSel.value
@@ -160,7 +175,7 @@ async function load() {
     data.value = d
     rows.value = buildRows(d, rows.value)
   } catch (e) {
-    error.value = friendlyError(e)
+    error.value = error.value ? `${error.value} · ${friendlyError(e)}` : friendlyError(e)
   } finally {
     loading.value = false
   }
@@ -188,6 +203,16 @@ const activeShift = computed(() => {
     || list.find((s) => s.is_day_close && s.status === 'in_progress')
     || list.find((s) => s.is_day_close && s.status === 'submitted') || null
 })
+// A disabled close button with no wording left the manager wondering whether
+// the day was already closed or whether something was broken.
+const dayClosed = computed(() =>
+  (data.value?.shifts || []).some((s) => s.is_day_close && s.status === 'closed'))
+const closeLabel = computed(() => {
+  if (closing.value) return '...'
+  if (dayClosed.value) return 'تم إقفال اليوم'
+  if (!activeShift.value) return 'إقفال اليوم'
+  return 'إقفال اليوم'
+})
 
 // The station's own configured reading cycle. The persisted Station value is
 // the single source of truth — the previous hard-coded 23:00 fallback made a
@@ -207,7 +232,18 @@ async function ensureShift() {
     station: stationSel.value,
     date: date.value,
   })
+  // A closed day is financially sealed. Booking more readings into it created
+  // a second day-close Shift and, on closing it, a duplicate reconciliation.
+  if (sh.closed || sh.status === 'closed') {
+    throw new Error('تم إقفال هذا اليوم — لا يمكن إضافة قراءات إليه. تواصل مع المدير.')
+  }
   return sh.name
+}
+
+// Arabic counts: 1 → قراءة واحدة, 2 → قراءتان, 3+ → N قراءات. Saying
+// «تم حفظ 1 قراءة» reads like a form field name, not a sentence.
+function savedPhrase(n) {
+  return `تم حفظ ${countReadings(n)} بنجاح`
 }
 
 async function save() {
@@ -244,24 +280,28 @@ async function save() {
         // first error left the guns before it stored while the screen showed a
         // single error and a stale "0/9 complete" — the operator had no way to
         // tell what had actually been kept.
+        // Name the gun exactly as its card does (letter + pump), so the
+        // operator can match the message to the physical pump without
+        // translating the database's island/pump hierarchy.
         failed.push({
-          label: `${r.meter.meter_code}${r.mach?.name ? ' — ' + r.mach.name : ''}`,
+          label: `المسدس ${r.gunLetter || '—'}${r.mach?.name ? ' — ' + r.mach.name : ''}`,
           message: friendlyError(e),
         })
       }
     }
     // Report both outcomes, always naming the counts.
     if (saved.length && !failed.length) {
-      notice.value = `تم حفظ ${saved.length} قراءة بنجاح`
+      notice.value = savedPhrase(saved.length)
       error.value = ''
     } else if (saved.length && failed.length) {
-      notice.value = `تم حفظ ${saved.length} قراءة بنجاح`
-      error.value = `لم يتم حفظ ${failed.length} قراءة: ${failed.map((f) => `${f.label} — ${f.message}`).join(' · ')}`
+      notice.value = savedPhrase(saved.length)
+      error.value = `لم يتم حفظ ${countReadings(failed.length)}: ${failed.map((f) => `${f.label} — ${f.message}`).join(' · ')}`
     } else if (failed.length) {
       error.value = `لم يتم حفظ أي قراءة: ${failed.map((f) => `${f.label} — ${f.message}`).join(' · ')}`
     }
-    // Always reload so the completed count on screen matches what is stored.
-    await load()
+    // Always reload so the completed count on screen matches what is stored,
+    // without discarding the save outcome reported just above.
+    await load({ keepMessage: true })
   } catch (e) {
     error.value = friendlyError(e)
   } finally {
@@ -283,7 +323,7 @@ async function closeDay() {
     }
     await api.post(`/shifts/${shiftId}/close/`)
     notice.value = 'تم إقفال اليوم وإنشاء التسوية المالية بنجاح'
-    await load()
+    await load({ keepMessage: true })
   } catch (e) {
     error.value = friendlyError(e)
   } finally {
@@ -309,12 +349,23 @@ async function closeDay() {
           <option value="" disabled>اختر المحطة</option>
           <option v-for="s in stations" :key="s.id" :value="s.id">{{ s.name }}</option>
         </select>
-        <button data-testid="close-day" :disabled="closing || !activeShift" @click="closeDay"
-          :title="'دورة الإقفال اليومية ' + dayCloseTime + ' ← ' + dayCloseTime"
+        <!-- Closing the day books the day’s reconciliation, a manager-only action.
+             A supervisor used to be offered this button, confirmed the dialog,
+             and was then refused with «ليست لديك صلاحية» — say who does it
+             instead of showing a button that cannot work. -->
+        <button v-if="auth.canCloseDay" data-testid="close-day" :disabled="closing || !activeShift" @click="closeDay"
+          :title="dayClosed
+            ? 'تم إقفال هذا اليوم وإنشاء التسوية المالية'
+            : (!activeShift ? 'احفظ قراءة واحدة أولاً حتى تبدأ دورة الإقفال' : 'دورة الإقفال اليومية ' + dayCloseTime + ' ← ' + dayCloseTime)"
           class="bg-gray-900 text-white px-4 py-2 rounded-lg text-sm hover:bg-gray-800 disabled:opacity-40 flex items-center gap-1.5">
-          <Icon name="clock" :size="15" />
-          {{ closing ? '...' : 'إقفال اليوم' }}
+          <Icon :name="dayClosed ? 'check' : 'clock'" :size="15" />
+          {{ closeLabel }}
         </button>
+        <span v-else data-testid="close-day-hint"
+          class="text-xs bg-gray-50 text-gray-600 border border-gray-200 rounded-lg px-3 py-2 flex items-center gap-1.5">
+          <Icon name="clock" :size="15" />
+          إقفال اليوم يتم من حساب المدير
+        </span>
       </div>
     </div>
 
@@ -334,6 +385,10 @@ async function closeDay() {
         <span class="text-xs bg-gray-50 text-gray-600 border border-gray-200 rounded-full px-2.5 py-1" data-testid="reading-period">
           دورة القراءة: {{ date }} {{ dayCloseTime }} ← {{ dayCloseTime }}
         </span>
+        <span v-if="dayClosed" data-testid="day-closed-banner"
+          class="text-xs bg-green-50 text-green-800 border border-green-200 rounded-full px-2.5 py-1 flex items-center gap-1">
+          <Icon name="check" :size="13" /> هذا اليوم مقفل — القراءات مسجلة والتسوية المالية أُنشئت
+        </span>
         <span v-if="cycleNotConfigured" data-testid="cycle-warning"
           class="text-xs bg-amber-50 text-amber-800 border border-amber-200 rounded-full px-2.5 py-1">
           لم يتم ضبط وقت إقفال اليوم لهذه المحطة — يتم استخدام 23:00 مؤقتاً. اضبطه من صفحة تعديل المحطة.
@@ -343,10 +398,10 @@ async function closeDay() {
         </span>
         <span v-else class="flex items-center gap-2 text-amber-700 font-bold">
           <Icon name="alert" :size="18" /> {{ doneGuns }} / {{ totalGuns }} مكتملة
-          <span class="text-xs font-normal text-gray-500">— {{ totalGuns - doneGuns }} قراءة متبقية</span>
+          <span class="text-xs font-normal text-gray-500">— تبقي {{ countReadings(totalGuns - doneGuns) }} اليوم</span>
         </span>
         <span v-if="exceptionGuns" class="text-xs bg-red-50 text-red-700 border border-red-200 rounded-full px-2.5 py-1">
-          {{ exceptionGuns }} استثناء
+          {{ countExceptions(exceptionGuns) }}
         </span>
         <span class="mr-auto text-sm text-gray-600 tabular-nums">
           إجمالي اللترات: <b class="text-blue-700">{{ fmtNum(todayLiters) }}</b> لتر
@@ -366,12 +421,16 @@ async function closeDay() {
             ({{ isl.guns.filter((g) => g.row.meter.reading).length }}/{{ isl.guns.length }})
           </span>
         </h3>
-        <div v-for="g in isl.guns" :key="g.row.meter.id" class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+        <div v-for="(g, gi) in isl.guns" :key="g.row.meter.id" class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
           <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
-            <div class="flex items-center gap-2">
-              <b class="tabular-nums break-all">{{ g.row.meter.meter_code }}</b>
+            <!-- The operator knows a gun by its position on the pump («مسدس A»),
+                 not by its generated meter code. The code stays as small
+                 secondary text for whoever cross-checks the physical pump. -->
+            <div class="flex items-center gap-2 flex-wrap">
+              <b class="text-base">المسدس {{ g.row.gunLetter }}</b>
               <span class="text-xs text-gray-500">{{ g.mach.name }}</span>
               <span class="text-xs bg-gray-100 text-gray-600 rounded-full px-2 py-0.5">{{ g.row.meter.fuel_type }}</span>
+              <span class="text-[11px] text-gray-400 tabular-nums">{{ g.row.meter.meter_code }}</span>
             </div>
             <!-- per-gun status (§25): complete / pending / exception -->
             <span v-if="rowStatus(g.row) === 'saved'" class="text-[11px] bg-green-50 text-green-700 border border-green-200 rounded-full px-2 py-0.5 flex items-center gap-1">
@@ -395,8 +454,33 @@ async function closeDay() {
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+            <!-- ALREADY SAVED today: show the record that was written, not an
+                 empty "current" field. Reloading the page used to make a saved
+                 reading look like nothing had been entered. -->
+            <template v-if="g.row.meter.reading && g.row.meter.reading.end_reading !== null && g.row.meter.reading.end_reading !== undefined">
+              <div class="bg-gray-50 rounded-lg p-3" data-testid="gun-previous">
+                <div class="text-xs text-gray-500 mb-1">القراءة السابقة</div>
+                <b class="tabular-nums text-lg">{{ fmtNum(g.row.meter.reading.start_reading ?? prevOf(g.row)) }}</b>
+              </div>
+              <div class="bg-emerald-50 border border-emerald-200 rounded-lg p-3" data-testid="gun-saved-current">
+                <div class="text-xs text-emerald-700 mb-1 flex items-center gap-1">
+                  <Icon name="check" :size="12" /> القراءة المسجلة اليوم
+                </div>
+                <b class="tabular-nums text-lg text-emerald-800">{{ fmtNum(g.row.meter.reading.end_reading) }}</b>
+              </div>
+              <div class="rounded-lg p-3 bg-blue-50" data-testid="gun-saved-liters">
+                <div class="text-xs text-gray-500 mb-1">اللترات المباعة</div>
+                <b class="tabular-nums text-lg text-blue-700">{{ fmtNum(g.row.meter.reading.liters_sold || 0) }} لتر</b>
+                <div v-if="expectedOf(g.row) !== null" class="text-xs text-gray-500 mt-0.5">
+                  المبيعات المتوقعة: <span class="tabular-nums">{{ fmtMoney(expectedOf(g.row)) }}</span>
+                </div>
+              </div>
+            </template>
+
+            <!-- not saved yet: the operator fills exactly one field -->
+            <template v-else>
             <!-- previous reading (auto, read-only) -->
-            <div class="bg-gray-50 rounded-lg p-3">
+            <div class="bg-gray-50 rounded-lg p-3" data-testid="gun-previous">
               <div class="text-xs text-gray-500 mb-1">القراءة السابقة (تلقائية)</div>
               <b class="tabular-nums text-lg">{{ fmtNum(prevOf(g.row)) }}</b>
             </div>
@@ -410,7 +494,7 @@ async function closeDay() {
                   type="number"
                   step="0.001"
                   inputmode="decimal"
-                  :disabled="!!g.row.meter.reading"
+                  :disabled="!!g.row.meter.reading || dayClosed"
                   :class="needsException(g.row) ? 'border-red-400 ring-1 ring-red-200' : 'border-gray-300'"
                   class="w-full border rounded-lg pl-14 pr-4 py-3 text-lg font-bold tabular-nums focus:outline-none focus:ring-2 focus:ring-blue-300"
                   placeholder="أدخل القراءة الحالية"
@@ -440,6 +524,7 @@ async function closeDay() {
                 المبيعات المتوقعة: <span class="tabular-nums">{{ fmtMoney(expectedOf(g.row)) }}</span>
               </div>
             </div>
+            </template>
           </div>
 
           <!-- negative / exception flow (§13): block silent submission, require reason -->
@@ -458,15 +543,26 @@ async function closeDay() {
               <input v-model="g.row.notes" class="w-full border border-amber-300 rounded-lg px-3 py-2 text-sm" placeholder="اكتب السبب هنا" />
             </div>
           </div>
-          <button v-else type="button" class="mt-2 text-xs text-gray-400 hover:text-gray-600" @click="g.row.showException = true">
+          <button v-else-if="!g.row.meter.reading" type="button" class="mt-2 text-xs text-gray-400 hover:text-gray-600 min-h-[44px]" @click="g.row.showException = true">
             + تسجيل استثناء (تصفير / استبدال العداد)
           </button>
         </div>
       </div>
     </div>
 
-    <!-- sticky save bar -->
-    <div v-if="data && stationSel" class="fixed bottom-0 left-0 right-0 lg:right-14 bg-white border-t border-gray-200 px-4 py-3 z-30 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
+    <!-- sticky save bar. On a phone it sits ABOVE the fixed bottom nav
+         (bottom-16) — pinned to bottom-0 it was painted underneath the nav,
+         hiding the one button the employee must press. -->
+    <div v-if="data && stationSel" class="fixed bottom-16 lg:bottom-0 left-0 right-0 lg:right-14 bg-white border-t border-gray-200 px-4 py-3 z-30 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
+      <!-- Outcome of the last save, repeated next to the button that was
+           pressed. The banner at the top of the page is off-screen on a phone
+           once the gun list is scrolled, so a failed save looked like nothing
+           happened at all. -->
+      <div v-if="error || notice" class="max-w-6xl mx-auto mb-2 text-xs leading-snug rounded-lg px-3 py-2"
+        :class="error ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-green-50 text-green-700 border border-green-200'"
+        :data-testid="error ? 'save-bar-error' : 'save-bar-notice'">
+        {{ error || notice }}
+      </div>
       <div class="max-w-6xl mx-auto flex items-center gap-3 flex-wrap">
         <span class="text-sm text-gray-600">
           أدخلت الآن: <b>{{ filledNow }}</b> · مكتملة: <b>{{ doneGuns }}/{{ totalGuns }}</b>
@@ -476,7 +572,7 @@ async function closeDay() {
         </span>
         <button
           data-testid="save-readings"
-          :disabled="saving || !filledNow"
+          :disabled="saving || !filledNow || dayClosed"
           @click="save"
           class="mr-auto bg-primary text-white px-6 py-2.5 rounded-lg text-sm font-medium disabled:opacity-40 hover:bg-primary/90"
         >

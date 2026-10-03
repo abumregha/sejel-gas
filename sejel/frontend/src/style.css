@@ -47,8 +47,46 @@ body { @apply bg-gray-50 text-gray-800 m-0; }
 .tank-bar-fill { @apply h-full rounded-full transition-all duration-500; }
 
 /* ── Mobile bottom nav ─────────────────────────── */
-.bottom-nav-item { @apply flex flex-col items-center gap-0.5 text-xs text-gray-400; }
+.bottom-nav-item { @apply flex flex-col items-center justify-center gap-0.5 text-xs text-gray-400 h-16; }
 .bottom-nav-item.active { @apply text-blue-600; }
+
+/* ── Bounded table scroller ────────────────────── */
+/* A wide table must scroll INSIDE its own box, never widen the page. */
+.table-scroll { @apply w-full min-w-0 overflow-x-auto; -webkit-overflow-scrolling: touch; }
+
+/* ── Phone ergonomics (≤640px) ─────────────────── */
+/* The station employee is standing at the pump with one hand on a phone.
+   These rules apply once, globally, instead of page by page. */
+@media (max-width: 640px) {
+  /* Tap-target floor: 44px for anything pressable. Checkboxes and radios keep
+     their natural size (they are already inside 44px labels). */
+  button, a, input, select, textarea, summary { min-height: 44px; }
+  input[type='checkbox'], input[type='radio'] { min-height: 0; }
+  button.p-1, button.p-1\.5, button.p-2 { min-width: 44px; }
+
+  /* A link is `display:inline` by default, and min-height does not apply to
+     inline boxes — so the floor above would silently do nothing for the many
+     router-links that act as buttons. Make the control-like ones inline-flex
+     so they actually grow. Big card links (p-6) keep their own layout. */
+  a.rounded:not([class*='p-6']),
+  a[class*='hover:underline'],
+  a.text-primary {
+    display: inline-flex;
+    align-items: center;
+  }
+
+  /* iOS zooms the page on focus for any font under 16px — that alone makes
+     a form feel broken on a phone. */
+  input:not([type='checkbox']):not([type='radio']),
+  select,
+  textarea { font-size: 16px; }
+
+  /* Tighter cell padding buys back room without dropping below 12px. */
+  .data-table th, .data-table td { padding-left: 0.75rem; padding-right: 0.75rem; }
+
+  /* Long labels wrap instead of stretching the card. */
+  .kpi-value { font-size: 1.5rem; }
+}
 
 /* ── Printable reports (التقرير الشهري) ─────────────────────────────── */
 @page { size: A4 portrait; margin: 12mm; }

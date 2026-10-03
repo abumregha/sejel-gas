@@ -1,8 +1,8 @@
 <template>
   <div>
-    <div class="flex items-center justify-between mb-6">
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
       <h2 class="text-xl font-bold">التقرير اليومي</h2>
-      <div class="flex items-center gap-3">
+      <div class="flex flex-wrap items-center gap-2 sm:gap-3">
         <input v-model="reportDate" type="date" class="border border-gray-300 rounded-lg px-4 py-2" />
         <button @click="loadReport" class="bg-primary text-white px-4 py-2 rounded-lg text-sm">عرض</button>
         <button @click="printReport" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm">🖨️ طباعة</button>
@@ -17,6 +17,9 @@
       </div>
       <div v-if="report.stations?.length" class="bg-white rounded-xl shadow-sm border p-4">
         <h3 class="font-bold mb-3">مقارنة المحطات</h3>
+        <!-- The comparison table is wider than a phone. It scrolls inside its own
+             box so the numbers stay reachable instead of being clipped. -->
+        <div class="table-scroll -mx-4 px-4 sm:mx-0 sm:px-0">
         <table class="data-table">
           <thead><tr><th>المحطة</th><th>اللترات</th><th>المبيعات</th><th>التحصيل</th><th>الفرق</th></tr></thead>
           <tbody>
@@ -29,6 +32,7 @@
             </tr>
           </tbody>
         </table>
+        </div>
       </div>
     </div>
     <div v-else class="text-center py-12 text-gray-400">اختر تاريخاً لعرض التقرير</div>

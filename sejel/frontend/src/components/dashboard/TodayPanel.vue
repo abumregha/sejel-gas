@@ -33,7 +33,7 @@
             </div>
             <div class="text-xs text-gray-500">مكتملة</div>
             <div v-if="pending" class="text-sm font-semibold text-amber-700 mt-1" data-testid="today-pending">
-              {{ pending }} قراءات متبقية
+              تبقي {{ pendingLabel }} اليوم
             </div>
             <div v-else class="text-sm font-semibold text-green-700 mt-1">كل القراءات مكتملة</div>
           </div>
@@ -148,18 +148,38 @@
 <script setup>
 import { computed } from 'vue'
 import Icon from '../../components/dashboard/Icon.vue'
+import { countReadings } from '../../utils/labels'
+import { useAuthStore } from '../../stores/auth'
 
 const props = defineProps({
   data: { type: Object, required: true },
 })
 
+const auth = useAuthStore()
+
 const stationId = computed(() => props.data?.station?.id || '')
+// «Today» must be spelled out: the employee has to know WHICH day the panel
+// is talking about before typing any reading into it.
+const readingDate = computed(() => {
+  const d = props.data?.meta?.date
+  if (!d) return ''
+  try {
+    return new Date(d).toLocaleDateString('ar-LY-u-nu-latn', {
+      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+    })
+  } catch {
+    return String(d)
+  }
+})
 const cycleTime = computed(() => (props.data?.station?.day_close_time || '').slice(0, 5))
 const islands = computed(() => props.data?.islands || [])
 const kpis = computed(() => props.data?.kpis || {})
 const summary = computed(() => props.data?.summary || {})
 const status = computed(() => props.data?.readings_status || { total: 0, done: 0, exceptions: 0 })
 const pending = computed(() => Number(status.value.pending || 0))
+// «تبقي 1 قراءات اليوم» was grammatically wrong and read as a glitch on the
+// one sentence the employee opens the app to read.
+const pendingLabel = computed(() => countReadings(pending.value))
 
 const dayShift = computed(() => (props.data?.shifts || []).find((s) => s.is_day_close))
 const dayClosed = computed(() => dayShift.value?.status === 'closed')
@@ -188,7 +208,12 @@ const primaryAction = computed(() => {
     return { to: '/readings', label: 'إدخال القراءات', icon: 'gauge', tone: 'bg-primary hover:opacity-90' }
   }
   if (!dayClosed.value) {
-    return { to: '/readings', label: 'إقفال اليوم', icon: 'check', tone: 'bg-green-600 hover:bg-green-700' }
+    // Closing the day is a manager action (it creates the reconciliation), so a
+    // supervisor must not be sent to a button that will refuse them.
+    if (auth.canCloseDay) {
+      return { to: '/readings', label: 'إقفال اليوم', icon: 'check', tone: 'bg-green-600 hover:bg-green-700' }
+    }
+    return { to: '/readings', label: 'القراءات جاهزة — بانتظار المدير', icon: 'check', tone: 'bg-green-600 hover:bg-green-700' }
   }
   return { to: '/finance/reconciliations', label: 'مراجعة تسوية اليوم', icon: 'report', tone: 'bg-gray-700 hover:bg-gray-800' }
 })
@@ -210,11 +235,16 @@ const attention = computed(() => {
   }
   // guns still missing
   if (pending.value > 0) {
-    items.push({ message: `${pending.value} مسدس ما زالت بانتظار القراءة اليوم`, to: '/readings' })
+    items.push({ message: `تبقي ${pendingLabel.value} لم تُدخل اليوم`, to: '/readings' })
   }
   // day not closed yet
   if (cycleTime.value && !dayClosed.value && pending.value === 0) {
-    items.push({ message: 'كل القراءات مكتملة واليوم جاهز، لكنه لم يُقفل بعد', to: '/readings' })
+    items.push({
+      message: auth.canCloseDay
+        ? 'كل القراءات مكتملة واليوم جاهز، لكنه لم يُقفل بعد'
+        : 'كل القراءات مكتملة — بانتظار المدير لإقفال اليوم',
+      to: '/readings',
+    })
   }
   // backend alerts (empty tanks, low stock, ...)
   for (const a of props.data?.alerts || []) {

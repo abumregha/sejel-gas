@@ -32,7 +32,8 @@
             <td class="flex gap-2">
               <button v-if="s.status === 'scheduled'" @click.stop="activateShift(s)" class="text-blue-600 text-sm">بدء</button>
               <button v-if="s.status === 'open'" @click.stop="submitShift(s)" class="text-yellow-600 text-sm">تقديم</button>
-              <button v-if="s.status === 'submitted'" @click.stop="closeShift(s)" class="text-primary text-sm">إقفال</button>
+              <button v-if="s.status === 'submitted' && auth.canCloseDay" @click.stop="closeShift(s)" class="text-primary text-sm">إقفال</button>
+              <span v-else-if="s.status === 'submitted'" class="text-gray-400 text-xs">بانتظار المدير</span>
             </td>
           </tr>
         </tbody>
@@ -47,6 +48,8 @@ import { useRouter } from 'vue-router'
 import api from '../../api'
 import { SHIFT_STATUS_PRIMARY, SHIFT_BADGE } from '../../utils/labels'
 import { friendlyError } from '../../errors'
+import { useAuthStore } from '../../stores/auth'
+const auth = useAuthStore()
 const router = useRouter()
 const items = ref([])
 const stationMap = ref({})
