@@ -92,9 +92,21 @@ const islandList = computed(() => {
 
 function liveLiters(row) {
   if (row.current === '' || row.current === null || row.current === undefined) return null
+  // An unsaved opening reading has nothing to sell yet — showing
+  // current − 0 would display the meter's entire cumulative counter.
+  if (isOpening(row)) return null
   const prev = prevOf(row)
   if (prev === null || prev === undefined) return null
   return Number(row.current) - Number(prev)
+}
+
+// A gun with neither a saved reading nor an established counter: this entry
+// establishes the baseline, so it is not fuel that was sold (QA-32). The
+// backend books 0 L for it — the UI must say so before the operator saves,
+// otherwise the liters preview shows the meter's whole cumulative counter.
+function isOpening(row) {
+  if (row.meter.reading) return !!row.meter.reading.is_opening
+  return !prevOf(row)
 }
 
 function needsException(row) {
@@ -350,6 +362,12 @@ async function closeDay() {
             </span>
             <span v-else class="text-[11px] bg-gray-50 text-gray-500 border border-gray-200 rounded-full px-2 py-0.5 flex items-center gap-1">
               <Icon name="clock" :size="12" /> بانتظار القراءة
+            </span>
+            <!-- first reading of a gun with no counter yet: it sets the baseline,
+                 it is not a sale (QA-32 — the backend books 0 L for these) -->
+            <span v-if="isOpening(g.row)" data-testid="opening-badge"
+              class="text-[11px] bg-sky-50 text-sky-700 border border-sky-200 rounded-full px-2 py-0.5 flex items-center gap-1">
+              <Icon name="info" :size="12" /> قراءة افتتاحية — تُحفظ كخط أساس ولا تُحتسب مبيعات
             </span>
           </div>
 

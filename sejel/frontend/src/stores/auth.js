@@ -53,7 +53,15 @@ export const useAuthStore = defineStore('auth', {
         this.user = null
       }
     },
-    logout() {
+    async logout() {
+      // End the session server-side first. Clearing the store alone left the
+      // `sid` cookie valid, so Back / a cached tab restored an authenticated
+      // session with no credential (QA-1).
+      try {
+        await api.post('/auth/logout/')
+      } catch {
+        // Already invalid or the network is down — clear local state anyway.
+      }
       this.user = null
       setCsrfToken('')
       if (!window.location.pathname.startsWith('/login')) {

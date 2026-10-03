@@ -60,7 +60,7 @@
         <div class="flex items-center gap-3">
           <span class="text-sm text-gray-500 hidden sm:block">{{ auth.user?.first_name || auth.user?.username }}</span>
           <span class="badge badge-blue text-xs">{{ roleLabel }}</span>
-          <button @click="handleLogout" class="p-2 text-gray-400 hover:text-red-500 rounded-lg hover:bg-gray-100">
+          <button @click="handleLogout" aria-label="تسجيل الخروج" title="تسجيل الخروج" class="p-2 text-gray-400 hover:text-red-500 rounded-lg hover:bg-gray-100">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
             </svg>
@@ -200,8 +200,10 @@ const mobileNavItems = [
   { to: '/reports/daily', icon: '📊', label: 'التقارير' },
 ]
 
-const handleLogout = () => {
-  auth.logout()
+const handleLogout = async () => {
+  // Await: logout() now ends the session server-side, so redirecting first
+  // would leave the POST racing the navigation.
+  await auth.logout()
   router.push('/login/')
 }
 </script>
