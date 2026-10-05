@@ -1,7 +1,7 @@
 # Initial meter readings (القراءات الافتتاحية) — design
 
 **Date:** 2026-10-05
-**Status:** approved for implementation
+**Status:** approved for implementation; client acceptance (§6) gates rollout
 **Problem:** after creating a station the end user has no supported place to
 enter each gun's physical counter. The only path today is to generate a day
 shift and type the counters through the readings screen, which books them as
@@ -19,6 +19,7 @@ In scope:
 - «تجاوز» (force) button to replace an initial value that was already saved,
   permitted only while the meter still has zero readings.
 - New e2e script + doc updates.
+- End-user acceptance run by the client on the live pilot site (§6).
 
 Out of scope:
 - Editing or deleting saved `Meter Reading` rows (rejected: the counter is
@@ -196,3 +197,32 @@ is modified by this feature.
   admin/owner only; afterwards the reading rows are the only source of truth.
 - `docs/PILOT_HANDOFF_AR.md`: the «القراءات الافتتاحية» wizard step and the
   station-panel force button, in Arabic, with who may use them.
+
+## 6. End-user acceptance (client must test and feed back)
+
+The client tests on the live pilot site in the Arabic UI; their wording and
+flow expectations win over the draft copy in §2.
+
+- **Test surface:** a throwaway station created through the real wizard.
+  Their live station `محطة الراحلة 23` (real counters, one open shift) is
+  **never** touched during acceptance.
+- **Scripted walk-through for the client:**
+  1. Create a station, type values on the new «القراءات الافتتاحية» step,
+     leave one gun empty on purpose.
+  2. Open the station page → verify saved values, use «تجاوز» on one gun and
+     confirm the dialog, save a changed value.
+  3. Take the first readings and verify «القراءة السابقة» equals what they
+     typed and the litres book correctly (not 0).
+  4. Come back → that gun must now show «مقفلة بعد أول قراءة» with no
+     «تجاوز» button; the skipped gun still shows an empty editable input.
+- **Feedback loop:** client reports what felt wrong (labels, missing field,
+  confusing step, permission message) → those become follow-up tickets
+  against this spec before any broader rollout; UI text changes are cheap
+  and do not touch the guard.
+- **While they test:** `qa-initial-readings.js` (§4) plus the full 295-step
+  set guard regressions; the test station is deleted afterwards so pilot
+  data stays clean.
+- **Rollout gate:** feature ships behind the normal deploy (frontend build
+  + bench restart); nothing in §2.1 requires a data migration, so it is
+  trivially reversible — reverting the feature commits restores old
+  behaviour with no data cleanup.
