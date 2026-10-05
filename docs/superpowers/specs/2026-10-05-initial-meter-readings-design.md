@@ -55,16 +55,24 @@ Two verified facts make this sufficient:
 - **The only gap is the zero-readings rule.** `Meter.validate()` gains:
 
   ```
-  if (not self.is_new()
-          and self.has_value_changed("current_reading")
-          and Meter Reading rows exist for self.name):
-      frappe.throw(«لا يمكن تعديل القراءة الافتتاحية للعداد {code} بعد وجود قراءات»)
+  when current_reading changed on save:
+      sanity: value must be a finite number, 0 ≤ value ≤ 1e9
+      rows = count(Meter Reading for this meter)
+      if rows == 0:                     allowed (initial value)
+      if value == last reading's end_reading (±0.001):  allowed (re-sync)
+      else: frappe.throw(«لا يمكن تعديل القراءة الافتتاحية للعداد {code} — عليها {n} قراءة محفوظة»)
   ```
 
-  (Guard fires only when the counter actually changed on an existing meter;
-  a no-change save of other fields, and every insert — `setup_station`, the
-  meters form — is unaffected because the meter trivially has zero readings
-  there.)
+  (Guard fires on any doc save — insert passes through because the meter
+  trivially has zero rows there; a no-change save of other fields is
+  unaffected.)
+
+  **The re-sync allowance is deliberate:** the cache is *required* to equal
+  the last `end_reading` (§6.2 invariant), so writing that exact value is a
+  no-op repair, not history rewriting. It keeps `qa-repair-counters.js` —
+  the tool that repairs counter drift — functional. Every other value on a
+  meter with readings is refused, which is what the wizard, the panel and
+  «تجاوز» all send.
 
 `frappe.db.set_value()` writes direct SQL and bypasses `validate()`, by
 design: `meter_reading.py:124/:147` keep rewriting the counter from reading
@@ -99,8 +107,10 @@ codes after the global `used_codes` dedupe — the wizard must key by `name`.
 - The step renders one input per meter slot, ordered exactly like
   `meterPreview`, labelled with the expected code and fuel type. Inputs are
   `type=number min=0 step=0.001`, prefilled empty.
-- The step is never blocking: «التالي» is enabled regardless, and empty
-  values simply mean "not set now".
+- The step never blocks on empty values: «التالي» stays enabled and an empty
+  input simply means "not set now". A typed value that is negative or not a
+  number is refused up front with the toast «القراءات الافتتاحية يجب أن تكون
+  أرقاماً موجبة» (the server would refuse it anyway).
 - `create()` becomes: `POST /setup-station/` → if any value was typed and the
   response carries `meters`, issue `PUT /api/meters/<name>/` for each typed
   slot, keyed by the returned `name`s (values positional against the preview
@@ -157,7 +167,8 @@ keep today's behaviour: no counter, no rows → first entry flagged
 | Case | Response |
 |---|---|
 | non-manager session (emp/supervisor/finance) | Frappe permission error from `doc.save()`, humanized to Arabic by `crud._humanize` — no guard code needed |
-| meter has readings | `Meter.validate()` → 417 Arabic refusal naming the meter code |
+| meter has readings, value ≠ last `end_reading` | `Meter.validate()` → 417 Arabic refusal naming the meter code and the reading count |
+| meter has readings, value == last `end_reading` (±0.001) | allowed — cache re-sync, keeps `qa-repair-counters.js` working |
 | value `NaN`, non-numeric, `< 0`, or `> 1e9` sanity bound | 417 Arabic validation error |
 | one gun of a bulk save refused | that PUT fails, the rest still attempt; UI names the gun and keeps other values staged |
 | wizard PUT fails (any) | success step shows amber notice + panel hint; station kept |
