@@ -120,7 +120,7 @@
   </div>
 </template>
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '../../api'
 import { friendlyError } from '../../errors'
@@ -172,30 +172,27 @@ const money = (n) => `${Number(n || 0).toLocaleString('en-US')} د.ل`
 // "خطأ" with no way to tell which half of the day's money was recorded, and
 // often re-entered the lot, double-posting the legs that had worked (QA-13).
 //
-// Each leg is now settled individually and reported by name. Only the legs that
-// actually saved are cleared from the form, so a retry re-sends exactly the
-// amounts that are still missing.
+// One request, one request id per entry. The server stores that id on every
+// leg it creates, so pressing «حفظ» again after a partial failure finishes ONLY
+// what is missing — the legs that already posted are skipped instead of being
+// duplicated (which is how two identical Voucher rows and an inflated
+// total_vouchers appeared on a closed day's reconciliation).
+const newRequestId = () =>
+  `income-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
+const requestId = ref(newRequestId())
+watch(() => form.value.shift, () => { requestId.value = newRequestId() })
+
 const save = async () => {
   error.value = ''
   legs.value = []
   if (!form.value.shift) { error.value = 'اختر المناوبة أولاً'; return }
   saving.value = true
   try {
-    const now = new Date().toISOString()
-    const posted = []
-    if (form.value.cash_amount > 0) {
-      posted.push({
-        leg: 'cash', label: 'المبيعات النقدية',
-        run: () => api.post('/cash-collections/', {
-          shift: form.value.shift, amount: form.value.cash_amount, time: now,
-        }),
-        detail: money(form.value.cash_amount),
-      })
-    }
     const couponMap = [
       { key: 'coupon_5', value: 5 }, { key: 'coupon_6', value: 6 },
       { key: 'coupon_7', value: 7 }, { key: 'coupon_8', value: 8 },
     ]
+    const couponLegs = []
     for (const cat of couponMap) {
       const count = Number(form.value[cat.key] || 0)
       if (count <= 0) continue
@@ -209,54 +206,64 @@ const save = async () => {
         })
         continue
       }
-      posted.push({
-        leg: cat.key, label: `كوبونات ${cat.value} د.ل`,
-        run: () => api.post('/vouchers/', {
-          shift: form.value.shift, category: voucherCat.name,
-          count, total_value: count * cat.value,
-        }),
-        detail: `${count} × ${cat.value} = ${money(count * cat.value)}`,
-      })
+      couponLegs.push({ category: voucherCat.name, count, value: cat.value })
     }
-    if (form.value.epayment_amount > 0) {
-      posted.push({
-        leg: 'epayment', label: 'المبيعات الإلكترونية',
-        run: () => api.post('/pos-records/', {
-          shift: form.value.shift, total_amount: form.value.epayment_amount,
-          transaction_count: Number(form.value.epayment_count) || 1,
-        }),
-        detail: `${money(form.value.epayment_amount)} (${Number(form.value.epayment_count) || 1} معاملة)`,
-      })
-    }
-    if (!posted.length && !legs.value.length) {
+    const hasAmount = Number(form.value.cash_amount || 0) > 0
+      || couponLegs.length > 0
+      || Number(form.value.epayment_amount || 0) > 0
+    if (!hasAmount && !legs.value.length) {
       error.value = 'أدخل مبلغاً واحدًعلى أقلّ'
       saving.value = false
       return
     }
 
-    const settled = await Promise.allSettled(posted.map((p) => p.run()))
-    settled.forEach((r, i) => {
-      legs.value.push({
-        ok: r.status === 'fulfilled',
-        label: posted[i].label,
-        detail: posted[i].detail,
-        error: r.status === 'rejected' ? friendlyError(r.reason) : '',
-      })
+    const { data } = await api.post('/income/', {
+      shift: form.value.shift,
+      cash_amount: Number(form.value.cash_amount || 0),
+      coupon_legs: couponLegs,
+      epayment_amount: Number(form.value.epayment_amount || 0),
+      epayment_count: Number(form.value.epayment_count || 0),
+      request_id: requestId.value,
     })
+    const result = data.message || data
 
-    // Clear only what landed. A leg that failed keeps its amount so a retry
-    // does not double-post the ones that succeeded.
-    const okLegs = new Set(legs.value.filter((l) => l.ok).map((l) => l.label))
-    if (okLegs.has('المبيعات النقدية')) form.value.cash_amount = 0
-    for (const cat of couponMap) {
-      if (okLegs.has(`كوبونات ${cat.value} د.ل`)) form.value[cat.key] = 0
+    const labelOf = (leg) => {
+      if (leg === 'cash') return 'المبيعات النقدية'
+      if (leg === 'epayment') return 'المبيعات الإلكترونية'
+      const cat = voucherCategories.value.find((vc) => vc.name === String(leg).replace('coupon_', ''))
+      return `كوبونات ${cat ? cat.value : ''} د.ل`
     }
-    if (okLegs.has('المبيعات الإلكترونية')) form.value.epayment_amount = 0
+    const saved = new Set()
+    for (const leg of result.legs || []) {
+      if (!leg.ok) continue
+      saved.add(leg.leg)
+      legs.value.push({
+        ok: true, label: labelOf(leg.leg),
+        detail: leg.skipped ? 'سبق تسجيله' : 'تم الحفظ',
+      })
+    }
+    for (const f of result.failed || []) {
+      legs.value.push({ ok: false, label: labelOf(f.leg), detail: f.error || 'تعذّر الحفظ', error: f.error })
+    }
+
+    // Clear only what landed. A leg that failed keeps its amount, and the SAME
+    // request id is reused so the retry cannot double-post the successful ones.
+    if (saved.has('cash')) form.value.cash_amount = 0
+    if (saved.has('epayment')) form.value.epayment_amount = 0
+    for (const cat of couponMap) {
+      const voucherCat = voucherCategories.value.find((vc) => Number(vc.value) === cat.value)
+      if (voucherCat && saved.has(`coupon_${voucherCat.name}`)) form.value[cat.key] = 0
+    }
 
     const failed = legs.value.filter((l) => !l.ok)
     if (failed.length) {
       error.value = `تعذّر حفظ ${failed.length} من البنود. تم حفظ الباقي — اضغط حفظ مرة أخرى لإكمال ما لم يُحفظ.`
+    } else if (result.ok) {
+      // Everything landed: the next entry for this shift is a NEW entry.
+      requestId.value = newRequestId()
     }
+  } catch (e) {
+    error.value = friendlyError(e)
   } finally { saving.value = false }
 }
 </script>
