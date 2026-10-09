@@ -168,6 +168,7 @@ const navGroups = computed(() => {
       title: 'العمليات',
       items: [
         { to: '/readings', icon: '🎯', label: 'قراءات المضخات' },
+        { to: '/readings/deletions', icon: '🗑️', label: 'سجل حذف القراءات', roles: ['admin', 'manager', 'finance'] },
         { to: '/shifts/day', icon: '🗓️', label: 'يوم المحطة' },
         { to: '/shifts', icon: '🔄', label: 'المناوبات' },
         { to: '/stations', icon: '⛽', label: 'المحطات', roles: ['admin', 'manager'] },

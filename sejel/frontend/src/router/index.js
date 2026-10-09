@@ -14,6 +14,7 @@ const routes = [
 
       // قراءات المضخات — primary pump/gun reading workflow (client prompt §9)
       { path: 'readings', name: 'readings', component: () => import('../views/readings/ReadingsView.vue') },
+      { path: 'readings/deletions', name: 'reading-deletions', component: () => import('../views/readings/DeletionLogList.vue') },
 
       // Core - Stations
       { path: 'stations', name: 'stations', component: () => import('../views/stations/StationList.vue') },
