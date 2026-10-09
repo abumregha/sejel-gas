@@ -249,6 +249,223 @@ const stationCycle = computed(() => {
 const dayCloseTime = computed(() => stationCycle.value || '23:00')
 const cycleNotConfigured = computed(() => !stationCycle.value)
 
+// ---- previous-reading correction («القراءة السابقة» = 0) --------------------
+// Gate: same sessions that may close the day (admin/manager/finance) and only
+// while the day is still open — the correction rewrites today's litres.
+const prevEdit = ref(null)
+const prevEditError = ref('')
+const prevEditSaving = ref(false)
+
+const canFixPrev = computed(() => auth.canCloseDay && !dayClosed.value)
+
+function showFixPrev(row) {
+  if (!canFixPrev.value || !row.meter.reading) return false
+  if (prevEdit.value && prevEdit.value.id === row.meter.id) return false
+  return Number(row.meter.reading.start_reading ?? 0) === 0
+}
+
+function showAddPrev(row) {
+  if (!canFixPrev.value || row.meter.reading) return false
+  if (prevEdit.value && prevEdit.value.id === row.meter.id) return false
+  return Number(prevOf(row) || 0) === 0
+}
+
+function prevEditActive(row, mode) {
+  return !!prevEdit.value && prevEdit.value.id === row.meter.id && prevEdit.value.mode === mode
+}
+
+function closePrevEdit() {
+  prevEdit.value = null
+  prevEditError.value = ''
+}
+
+// The dashboard payload carries today's reading values but not the row's
+// docname — resolve it with one read-only list call before the PUT.
+async function openFixPrev(row) {
+  const ok = window.confirm('سيتم استبدال القراءة السابقة (0) بقيمة جديدة وستُعاد حساب لترات اليوم المباعة. هل أنت متأكد؟')
+  if (!ok) return
+  prevEditError.value = ''
+  prevEdit.value = { id: row.meter.id, mode: 'fix', input: '', readingName: '' }
+  try {
+    const res = await api.get('/meter-readings/', { params: { meter: row.meter.id, limit_page_length: 0 } })
+    const list = res.data.results || res.data || []
+    const today = row.meter.reading
+    const hit = list.find((r) => (today.recorded_at && r.recorded_at === today.recorded_at)
+      || (activeShift.value && r.shift === activeShift.value.id))
+    if (hit) {
+      prevEdit.value.readingName = hit.name
+    } else {
+      closePrevEdit()
+      error.value = 'تعذر تحديد قراءة اليوم المحفوظة — أعد تحميل الصفحة ثم أعد المحاولة'
+    }
+  } catch (e) {
+    closePrevEdit()
+    error.value = friendlyError(e)
+  }
+}
+
+function openAddPrev(row) {
+  const ok = window.confirm('سيتم اعتماد هذه القراءة كبداية للمسدس — ستُحتسب مبيعات اليوم منها. هل أنت متأكد؟')
+  if (!ok) return
+  prevEditError.value = ''
+  prevEdit.value = { id: row.meter.id, mode: 'add', input: '', readingName: '' }
+}
+
+async function savePrevEdit(row) {
+  const edit = prevEdit.value
+  if (!edit || prevEditSaving.value) return
+  // Number('') === 0 — an empty/blank field must never be coerced into 0
+  // (that would un-baseline the row and book the whole counter as a sale).
+  const raw = String(edit.input ?? '').trim()
+  if (raw === '') {
+    prevEditError.value = edit.mode === 'fix'
+      ? `أدخل قيمة بين 0 و ${fmtNum(Number(row.meter.reading?.end_reading), 3)}`
+      : 'أدخل قيمة بين 0 و 1,000,000,000'
+    return
+  }
+  const x = Number(raw)
+  if (edit.mode === 'fix') {
+    const end = Number(row.meter.reading?.end_reading)
+    if (!Number.isFinite(x) || x < 0 || x > end) {
+      prevEditError.value = `أدخل قيمة بين 0 و ${fmtNum(end, 3)}`
+      return
+    }
+    if (!edit.readingName) {
+      prevEditError.value = 'تعذر تحديد قراءة اليوم المحفوظة — أعد تحميل الصفحة ثم أعد المحاولة'
+      return
+    }
+  } else if (!Number.isFinite(x) || x < 0 || x > 1e9) {
+    prevEditError.value = 'أدخل قيمة بين 0 و 1,000,000,000'
+    return
+  }
+  prevEditSaving.value = true
+  prevEditError.value = ''
+  try {
+    if (edit.mode === 'fix') {
+      await api.put(`/meter-readings/${edit.readingName}/`, { start_reading: x, is_opening: 0 })
+      notice.value = 'تم تصحيح القراءة السابقة وإعادة حساب لترات اليوم'
+    } else {
+      await api.put(`/meters/${row.meter.id}/`, { current_reading: x })
+      notice.value = 'تم حفظ القراءة السابقة للمسدس'
+    }
+    closePrevEdit()
+    await load({ keepMessage: true })
+  } catch (e) {
+    prevEditError.value = friendlyError(e)
+  } finally {
+    prevEditSaving.value = false
+  }
+}
+
+// ---- edit / delete a SAVED reading ------------------------------------------
+// Any role may correct a reading (all four hold Meter Reading write); only
+// admin may delete a wrong row. Independent of dayClosed: a closed day is
+// still correctable and the backend refreshes that day's reconciliation.
+const rowEdit = ref(null)
+const rowEditError = ref('')
+const rowEditSaving = ref(false)
+
+function showEdit(row) {
+  return !!row.meter.reading && !(rowEdit.value && rowEdit.value.id === row.meter.id)
+}
+
+// The dashboard payload carries today's reading values but not the row's
+// docname — resolve it with one read-only list call before any write.
+async function resolveReadingName(row) {
+  const res = await api.get('/meter-readings/', { params: { meter: row.meter.id, limit_page_length: 0 } })
+  const list = res.data.results || res.data || []
+  const today = row.meter.reading
+  const hit = list.find((r) => (today.recorded_at && r.recorded_at === today.recorded_at)
+    || (activeShift.value && r.shift === activeShift.value.id))
+  return hit ? hit.name : ''
+}
+
+async function openEdit(row) {
+  rowEditError.value = ''
+  // Resolve BEFORE opening: a failed resolve must never leave an editor whose
+  // save would 404.
+  const name = await resolveReadingName(row)
+  if (!name) {
+    error.value = 'تعذر تحديد قراءة اليوم المحفوظة — أعد تحميل الصفحة ثم أعد المحاولة'
+    return
+  }
+  rowEdit.value = {
+    id: row.meter.id,
+    readingName: name,
+    start: String(row.meter.reading.start_reading ?? ''),
+    end: String(row.meter.reading.end_reading ?? ''),
+    exceptionType: '',
+    notes: '',
+  }
+}
+
+function closeEdit() {
+  rowEdit.value = null
+  rowEditError.value = ''
+}
+
+function editBackwards() {
+  if (!rowEdit.value) return false
+  const s = Number(rowEdit.value.start)
+  const e = Number(rowEdit.value.end)
+  return Number.isFinite(s) && Number.isFinite(e) && s >= 0 && e >= 0 && e < s
+}
+
+async function saveEdit(row) {
+  const edit = rowEdit.value
+  if (!edit || rowEditSaving.value) return
+  // Number('') === 0 — a blank field must never overwrite a good reading.
+  const rawStart = String(edit.start ?? '').trim()
+  const rawEnd = String(edit.end ?? '').trim()
+  const start = Number(rawStart)
+  const end = Number(rawEnd)
+  if (!rawStart || !Number.isFinite(start) || start < 0) {
+    rowEditError.value = 'أدخل القراءة السابقة برقم صحيح غير سالب'
+    return
+  }
+  if (!rawEnd || !Number.isFinite(end) || end < 0) {
+    rowEditError.value = 'أدخل القراءة الحالية برقم صحيح غير سالب'
+    return
+  }
+  rowEditSaving.value = true
+  rowEditError.value = ''
+  const body = { start_reading: start, end_reading: end }
+  if (edit.exceptionType) {
+    body.exception_type = edit.exceptionType
+    body.notes = edit.notes || ''
+  }
+  try {
+    await api.put(`/meter-readings/${edit.readingName}/`, body)
+    notice.value = 'تم تعديل القراءة'
+    closeEdit()
+    await load({ keepMessage: true })
+  } catch (e) {
+    rowEditError.value = friendlyError(e)
+  } finally {
+    rowEditSaving.value = false
+  }
+}
+
+async function deleteReading(row) {
+  if (!auth.isAdmin) return
+  const name = await resolveReadingName(row)
+  if (!name) {
+    error.value = 'تعذر تحديد قراءة اليوم المحفوظة — أعد تحميل الصفحة ثم أعد المحاولة'
+    return
+  }
+  const ok = window.confirm('سيتم حذف هذه القراءة نهائياً ثم يمكنك إعادة إدخالها. هل أنت متأكد؟')
+  if (!ok) return
+  error.value = ''
+  try {
+    await api.delete(`/meter-readings/${name}/`)
+    notice.value = 'تم حذف القراءة'
+    closeEdit()
+    await load({ keepMessage: true })
+  } catch (e) {
+    error.value = friendlyError(e)
+  }
+}
+
 async function ensureShift() {
   // Server-side idempotent ensure: the dashboard payload this view rendered
   // from can be stale — client-side check-then-create duplicated the day-close
@@ -470,6 +687,19 @@ async function closeDay() {
             <span v-else class="text-[11px] bg-gray-50 text-gray-500 border border-gray-200 rounded-full px-2 py-0.5 flex items-center gap-1">
               <Icon name="clock" :size="12" /> بانتظار القراءة
             </span>
+            <!-- fixing a saved reading: available to every role and even after
+                 «إقفال اليوم» — the day stays correctable, and the backend
+                 recomputes that day's reconciliation when it changes. -->
+            <span v-if="showEdit(g.row)" class="flex items-center gap-1">
+              <button data-testid="reading-edit" @click="openEdit(g.row)"
+                class="text-[11px] text-gray-600 border border-gray-300 rounded-full px-2 py-0.5 hover:bg-gray-50">
+                تعديل
+              </button>
+              <button v-if="auth.isAdmin" data-testid="reading-delete" @click="deleteReading(g.row)"
+                class="text-[11px] text-red-600 border border-red-200 rounded-full px-2 py-0.5 hover:bg-red-50">
+                حذف القراءة
+              </button>
+            </span>
             <!-- first reading of a gun with no counter yet: it sets the baseline,
                  it is not a sale (QA-32 — the backend books 0 L for these) -->
             <span v-if="isOpening(g.row)" data-testid="opening-badge"
@@ -483,9 +713,68 @@ async function closeDay() {
                  empty "current" field. Reloading the page used to make a saved
                  reading look like nothing had been entered. -->
             <template v-if="g.row.meter.reading && g.row.meter.reading.end_reading !== null && g.row.meter.reading.end_reading !== undefined">
+              <!-- editor for a saved reading: two values, plus a documented
+                   reason the backend demands for some corrections (a gap
+                   against the newest reading, or a backwards counter). -->
+              <div v-if="rowEdit && rowEdit.id === g.row.meter.id" data-testid="reading-editor" class="sm:col-span-3 rounded-lg border border-gray-200 bg-white p-3">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-xs text-gray-500 mb-1">القراءة السابقة</label>
+                    <input v-model="rowEdit.start" data-testid="reading-edit-start" type="number" min="0" step="0.001"
+                      class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm tabular-nums" />
+                  </div>
+                  <div>
+                    <label class="block text-xs text-gray-500 mb-1">القراءة الحالية (لتر)</label>
+                    <input v-model="rowEdit.end" data-testid="reading-edit-end" type="number" min="0" step="0.001"
+                      class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm tabular-nums" />
+                  </div>
+                </div>
+                <div v-if="editBackwards()" class="mt-3 rounded-lg bg-amber-50 border border-amber-200 p-3">
+                  <div class="text-xs text-amber-800 mb-1">القراءة الحالية أقل من السابقة — اختر نوع الاستثناء وسجّل السبب</div>
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <select v-model="rowEdit.exceptionType" data-testid="reading-edit-exception-type"
+                      class="w-full border border-amber-300 rounded-lg px-3 py-2 text-sm bg-white">
+                      <option value="">لا يوجد</option>
+                      <option value="reset">تصفير العداد</option>
+                      <option value="replacement">استبدال العداد</option>
+                      <option value="other">سبب آخر</option>
+                    </select>
+                    <input v-model="rowEdit.notes" data-testid="reading-edit-exception-notes"
+                      class="w-full border border-amber-300 rounded-lg px-3 py-2 text-sm" placeholder="اكتب السبب هنا" />
+                  </div>
+                </div>
+                <p v-if="rowEditError" data-testid="reading-edit-error" class="text-xs text-red-600 mt-2">{{ rowEditError }}</p>
+                <div class="flex gap-2 mt-3 items-center">
+                  <button data-testid="reading-edit-save" :disabled="rowEditSaving" @click="saveEdit(g.row)"
+                    class="bg-primary text-white px-3 py-1.5 rounded-lg text-xs disabled:opacity-50">
+                    {{ rowEditSaving ? 'جاري الحفظ...' : 'حفظ' }}
+                  </button>
+                  <button data-testid="reading-edit-cancel" @click="closeEdit"
+                    class="text-xs text-gray-500 hover:underline">إلغاء</button>
+                </div>
+              </div>
+              <template v-else>
               <div class="bg-gray-50 rounded-lg p-3" data-testid="gun-previous">
                 <div class="text-xs text-gray-500 mb-1">القراءة السابقة</div>
                 <b class="tabular-nums text-lg">{{ fmtNum(g.row.meter.reading.start_reading ?? prevOf(g.row), 3) }}</b>
+                <template v-if="prevEditActive(g.row, 'fix')">
+                  <input v-model="prevEdit.input" data-testid="prev-edit-input" type="number" min="0" step="0.001"
+                    class="mt-2 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm tabular-nums"
+                    placeholder="أدخل القراءة السابقة الحقيقية" />
+                  <div class="flex gap-2 mt-2 items-center">
+                    <button data-testid="prev-edit-save" :disabled="prevEditSaving" @click="savePrevEdit(g.row)"
+                      class="bg-primary text-white px-3 py-1.5 rounded-lg text-xs disabled:opacity-50">
+                      {{ prevEditSaving ? 'جاري الحفظ...' : 'حفظ' }}
+                    </button>
+                    <button data-testid="prev-edit-cancel" @click="closePrevEdit"
+                      class="text-xs text-gray-500 hover:underline">إلغاء</button>
+                  </div>
+                  <p v-if="prevEditError" data-testid="prev-edit-error" class="text-xs text-red-600 mt-1">{{ prevEditError }}</p>
+                </template>
+                <button v-else-if="showFixPrev(g.row)" data-testid="prev-fix" @click="openFixPrev(g.row)"
+                  class="mt-2 text-xs text-amber-700 border border-amber-300 rounded-lg px-3 py-1.5 hover:bg-amber-50">
+                  تصحيح القراءة السابقة
+                </button>
               </div>
               <div class="bg-emerald-50 border border-emerald-200 rounded-lg p-3" data-testid="gun-saved-current">
                 <div class="text-xs text-emerald-700 mb-1 flex items-center gap-1">
@@ -499,7 +788,14 @@ async function closeDay() {
                 <div v-if="expectedOf(g.row) !== null" class="text-xs text-gray-500 mt-0.5">
                   المبيعات المتوقعة: <span class="tabular-nums">{{ fmtMoney(expectedOf(g.row)) }}</span>
                 </div>
+                <!-- who last touched this record and when: operators correct
+                     readings often, so an unexplained change must be traceable -->
+                <div v-if="g.row.meter.reading.modified_by_name" data-testid="last-edited" class="text-[11px] text-gray-400 mt-1">
+                  آخر تعديل: {{ g.row.meter.reading.modified_by_name }} ·
+                  {{ String(g.row.meter.reading.modified).slice(0, 16) }}
+                </div>
               </div>
+              </template>
             </template>
 
             <!-- not saved yet: the operator fills exactly one field -->
@@ -508,6 +804,24 @@ async function closeDay() {
             <div class="bg-gray-50 rounded-lg p-3" data-testid="gun-previous">
               <div class="text-xs text-gray-500 mb-1">القراءة السابقة (تلقائية)</div>
               <b class="tabular-nums text-lg">{{ fmtNum(prevOf(g.row), 3) }}</b>
+              <template v-if="prevEditActive(g.row, 'add')">
+                <input v-model="prevEdit.input" data-testid="prev-edit-input" type="number" min="0" step="0.001"
+                  class="mt-2 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm tabular-nums"
+                  placeholder="أدخل القراءة السابقة الحقيقية" />
+                <div class="flex gap-2 mt-2 items-center">
+                  <button data-testid="prev-edit-save" :disabled="prevEditSaving" @click="savePrevEdit(g.row)"
+                    class="bg-primary text-white px-3 py-1.5 rounded-lg text-xs disabled:opacity-50">
+                    {{ prevEditSaving ? 'جاري الحفظ...' : 'حفظ' }}
+                  </button>
+                  <button data-testid="prev-edit-cancel" @click="closePrevEdit"
+                    class="text-xs text-gray-500 hover:underline">إلغاء</button>
+                </div>
+                <p v-if="prevEditError" data-testid="prev-edit-error" class="text-xs text-red-600 mt-1">{{ prevEditError }}</p>
+              </template>
+              <button v-else-if="showAddPrev(g.row)" data-testid="prev-add" @click="openAddPrev(g.row)"
+                class="mt-2 text-xs text-amber-700 border border-amber-300 rounded-lg px-3 py-1.5 hover:bg-amber-50">
+                إضافة القراءة السابقة
+              </button>
             </div>
             <!-- current reading: the only input the operator fills (§10) -->
             <div>
