@@ -1,7 +1,10 @@
 // Shared helpers for Sejel UI E2E tests
 const { chromium } = require('playwright')
 
-const BASE = 'http://localhost:8004'
+// Default: the customer's site. Override with QA_BASE=http://localhost:8007 to run
+// the suites against a disposable site instead — fixture writes must never reach
+// a site someone is using for real.
+const BASE = process.env.QA_BASE || 'http://localhost:8004'
 const SHOT_DIR = __dirname + '/shots'
 
 const results = []
