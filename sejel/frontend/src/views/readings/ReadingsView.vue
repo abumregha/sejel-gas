@@ -729,18 +729,23 @@ async function closeDay() {
                       class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm tabular-nums" />
                   </div>
                 </div>
-                <div v-if="editBackwards()" class="mt-3 rounded-lg bg-amber-50 border border-amber-200 p-3">
-                  <div class="text-xs text-amber-800 mb-1">القراءة الحالية أقل من السابقة — اختر نوع الاستثناء وسجّل السبب</div>
+                <div class="mt-3 rounded-lg p-3" :class="editBackwards() ? 'bg-amber-50 border border-amber-200' : 'bg-gray-50 border border-gray-200'">
+                  <div class="text-xs mb-1" :class="editBackwards() ? 'text-amber-800' : 'text-gray-500'">
+                    <template v-if="editBackwards()">القراءة الحالية أقل من السابقة — اختر نوع الاستثناء وسجّل السبب</template>
+                    <template v-else>سبب الاستثناء (اختياري — يطلبه النظام إذا كان التعديل يؤثر على قراءات أخرى)</template>
+                  </div>
                   <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <select v-model="rowEdit.exceptionType" data-testid="reading-edit-exception-type"
-                      class="w-full border border-amber-300 rounded-lg px-3 py-2 text-sm bg-white">
+                      class="w-full border rounded-lg px-3 py-2 text-sm bg-white"
+                      :class="editBackwards() ? 'border-amber-300' : 'border-gray-300'">
                       <option value="">لا يوجد</option>
                       <option value="reset">تصفير العداد</option>
                       <option value="replacement">استبدال العداد</option>
                       <option value="other">سبب آخر</option>
                     </select>
                     <input v-model="rowEdit.notes" data-testid="reading-edit-exception-notes"
-                      class="w-full border border-amber-300 rounded-lg px-3 py-2 text-sm" placeholder="اكتب السبب هنا" />
+                      class="w-full border rounded-lg px-3 py-2 text-sm"
+                      :class="editBackwards() ? 'border-amber-300' : 'border-gray-300'" placeholder="اكتب السبب هنا" />
                   </div>
                 </div>
                 <p v-if="rowEditError" data-testid="reading-edit-error" class="text-xs text-red-600 mt-2">{{ rowEditError }}</p>
