@@ -215,6 +215,7 @@ const navGroups = computed(() => {
       title: 'الإعدادات',
       items: [
         { to: '/settings/users', icon: '👤', label: 'إدارة المستخدمين', roles: ['admin'] },
+        { to: '/settings/reference-data', icon: '🗂️', label: 'البيانات المرجعية', roles: ['admin', 'manager'] },
         { to: '/guide', icon: '📖', label: 'دليل الاستخدام' },
       ],
     },

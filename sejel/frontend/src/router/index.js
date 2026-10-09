@@ -98,6 +98,7 @@ const routes = [
 
       // Settings
       { path: 'settings/users', name: 'users', component: () => import('../views/settings/UsersList.vue') },
+      { path: 'settings/reference-data', name: 'reference-data', component: () => import('../views/settings/ReferenceData.vue') },
       { path: 'settings/users/create', name: 'user-create', component: () => import('../views/settings/UserForm.vue') },
       { path: 'settings/users/:id/edit', name: 'user-edit', component: () => import('../views/settings/UserForm.vue') },
       { path: 'guide', name: 'guide', component: () => import('../views/guide/GuideView.vue') },
