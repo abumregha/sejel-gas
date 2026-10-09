@@ -1588,6 +1588,13 @@ Excel sheet with daily expense entries. Maps to **Expense** DocType.
   live liters, exception reasons, إقفال اليوم); reading-period chip shows the
   station's configured cycle; sidebar is non-collapsible (labels always
   visible); phase9 journey is browser-only incl. a 390×844 mobile pass.
+- **تصحيح القراءات (2026-10-09)**: `تعديل` على المسدس يصحّح القراءة السابقة
+  والحالية لكل الأدوار (حتى بعد الإقفال)، ويعرض التحذير أي يوم تالٍ وتسويته
+  المتأثرة، ويطلب سبب استثناء؛ اليوم التالي لا يُعدَّل تلقائياً. `الحذف`
+  لمدير النظام فقط ويسجّل أثراً دائماً في «سجل حذف القراءات». سلسلة القراءات
+  تُرتَّب بـ**تاريخ اليوم** (لا بوقت الإدخال)، وسبب التصحيح لا يُعاد استخدامه
+  تلقائياً لتعديل لاحق. الإيراد يُحفظ بطلب واحد idempotent (إعادة الحفظ لا
+  تكرّر القيود)، والمصروف يرتبط بيومه لا بتاريخ إنشائه.
 - **Tests**: 12 suites / 209 checks green (phase8 proves 3 employee shifts
   inside one 24h cycle with zero per-shift readings; phase9 = full user
   journey). `pilot-assert.js` read-only guard (9 checks) asserts the live
