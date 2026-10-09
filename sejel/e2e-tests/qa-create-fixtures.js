@@ -6,7 +6,7 @@
 // rebuilt exactly as it was before the wipe.
 const { launch, uiLogin, step, summary, apiGet } = require('./qa')
 
-const BASE = 'http://localhost:8004'
+const BASE = process.env.QA_BASE || 'http://localhost:8004'
 const PILOT = 'محطة تجريبية — سجل'
 
 // original opening counters (litre) — these drive every readings assertion

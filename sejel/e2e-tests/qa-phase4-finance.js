@@ -8,7 +8,7 @@
 // net_cash is the CASH position (invariant §1.6) = 2,000 — cash only, no cash expenses.
 const { appendRun, capture, uiLogin, bodyText, defect, shot, step, summary, launch, apiGet, apiPost, qaStationId, qaReopenStationDay, qaEnsureShift, qaEnsureDayClose, PILOT_COUNTERS } = require('./qa')
 
-const BASE2 = 'http://localhost:8004'
+const BASE2 = process.env.QA_BASE || 'http://localhost:8004'
 const PILOT = 'محطة تجريبية — سجل'
 const CASH = 2000
 const COUPON_5 = 10   // 50 د.ل

@@ -133,7 +133,7 @@ appendRun('Infrastructure', '- islands: ' + islands.length + ', pumps: ' + machi
     '\n- Pump≠Gun preserved: ' + (metersAll.length >= machines.length))
 
   // ---------- STATION UPDATE via UI ----------
-  await page.goto('http://localhost:8004/app/stations/' + qa.name, { waitUntil: 'networkidle' })
+  await page.goto((process.env.QA_BASE || 'http://localhost:8004') + '/app/stations/' + qa.name, { waitUntil: 'networkidle' })
   await page.waitForTimeout(700)
   step('Station detail shows name', (await bodyText(page)).includes(QA_STATION))
   const editLink = page.locator('a', { hasText: 'تعديل' }).first()
@@ -144,7 +144,7 @@ appendRun('Infrastructure', '- islands: ' + islands.length + ', pumps: ' + machi
     await addr.fill('Tripoli QA Test Updated')
     await page.locator('button[type="submit"]').first().click()
     await page.waitForTimeout(1500)
-    await page.goto('http://localhost:8004/app/stations/' + qa.name, { waitUntil: 'networkidle' })
+    await page.goto((process.env.QA_BASE || 'http://localhost:8004') + '/app/stations/' + qa.name, { waitUntil: 'networkidle' })
     const persisted = (await bodyText(page)).includes('Tripoli QA Test Updated')
     step('Station UPDATE persists after reload', persisted)
     if (!persisted) defect({ id: 'QA-3', severity: 'P2', area: 'Station update', repro: 'Edit address → save → reload detail', expected: 'Address persists', actual: 'Reverted', evidence: 'run log' })
@@ -153,7 +153,7 @@ appendRun('Infrastructure', '- islands: ' + islands.length + ', pumps: ' + machi
   }
 
   // ---------- EMPLOYEE CRUD ----------
-  await page.goto('http://localhost:8004/app/employees', { waitUntil: 'networkidle' })
+  await page.goto((process.env.QA_BASE || 'http://localhost:8004') + '/app/employees', { waitUntil: 'networkidle' })
   await page.waitForTimeout(700)
   await page.locator('a,button', { hasText: 'إضافة' }).first().click()
   await page.waitForTimeout(700)
@@ -178,10 +178,10 @@ appendRun('Infrastructure', '- islands: ' + islands.length + ', pumps: ' + machi
   const negEmp = await bodyText(page)
   step('Empty employee name rejected with Arabic message', /يرجى|مطلوب|الاسم/.test(negEmp), '')
   await shot(page, 'qa-15-employee-negative')
-  await page.goto('http://localhost:8004/app/employees', { waitUntil: 'networkidle' })
+  await page.goto((process.env.QA_BASE || 'http://localhost:8004') + '/app/employees', { waitUntil: 'networkidle' })
 
   // ---------- SHIFT DEFINITIONS (employee shifts, NOT reading periods) ----------
-  await page.goto('http://localhost:8004/app/shifts/definitions', { waitUntil: 'networkidle' })
+  await page.goto((process.env.QA_BASE || 'http://localhost:8004') + '/app/shifts/definitions', { waitUntil: 'networkidle' })
   await page.waitForTimeout(700)
   const addDef = page.locator('a,button', { hasText: 'إضافة' }).first()
   const defsMade = []
@@ -204,7 +204,7 @@ appendRun('Infrastructure', '- islands: ' + islands.length + ', pumps: ' + machi
 
   // ---------- DELETE: throwaway station with children (cascade) ----------
   // Build a minimal second station, then delete it through the UI.
-  await page.goto('http://localhost:8004/app/stations/setup-wizard', { waitUntil: 'networkidle' })
+  await page.goto((process.env.QA_BASE || 'http://localhost:8004') + '/app/stations/setup-wizard', { waitUntil: 'networkidle' })
   await page.waitForTimeout(800)
   await qaFill(page, 'اسم المحطة *', 'QA Delete Me', 'div')
   await page.locator('button', { hasText: 'التالي' }).first().click()
@@ -219,7 +219,7 @@ appendRun('Infrastructure', '- islands: ' + islands.length + ', pumps: ' + machi
   page.once('dialog', (d) => d.accept())
   // as OWNER first: Sejel Manager has no delete permission on Station —
   // expect a clear in-page denial (NOT a redirect to login, that was the old bug)
-  await page.goto('http://localhost:8004/app/stations', { waitUntil: 'networkidle' })
+  await page.goto((process.env.QA_BASE || 'http://localhost:8004') + '/app/stations', { waitUntil: 'networkidle' })
   await page.waitForTimeout(800)
   // INCIDENT NOTE: an earlier run used .last() here and deleted the PILOT
   // station (restored via pilot_bootstrap). Target the QA card BY NAME now.
@@ -235,7 +235,7 @@ appendRun('Infrastructure', '- islands: ' + islands.length + ', pumps: ' + machi
 
   // as ADMIN: cascade delete through the UI — name-targeted card (never .last())
   await uiLogin(page, 'admin@sejel.ly', 'admin123')
-  await page.goto('http://localhost:8004/app/stations', { waitUntil: 'networkidle' })
+  await page.goto((process.env.QA_BASE || 'http://localhost:8004') + '/app/stations', { waitUntil: 'networkidle' })
   await page.waitForTimeout(800)
   const delCard = page.locator('div.bg-white.rounded-xl', { hasText: 'QA Delete Me' }).first()
   await delCard.locator('button', { hasText: 'حذف' }).click()
@@ -252,7 +252,7 @@ appendRun('Infrastructure', '- islands: ' + islands.length + ', pumps: ' + machi
   // Earlier partial runs observed: creating a station whose name already
   // exists answers 417 on /api/setup-station/ and the wizard shows neither
   // success nor an actionable error. Reproduce deliberately.
-  await page.goto('http://localhost:8004/app/stations/setup-wizard', { waitUntil: 'networkidle' })
+  await page.goto((process.env.QA_BASE || 'http://localhost:8004') + '/app/stations/setup-wizard', { waitUntil: 'networkidle' })
   await page.waitForTimeout(800)
   await qaFill(page, 'اسم المحطة *', QA_STATION, 'div')
   await page.locator('button', { hasText: 'التالي' }).first().click()

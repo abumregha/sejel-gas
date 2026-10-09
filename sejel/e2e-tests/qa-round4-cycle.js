@@ -5,7 +5,7 @@
 // readings screen, one after the other, in a real browser.
 const { launch, uiLogin, step, summary, appendRun, apiGet, shot } = require('./qa')
 
-const BASE = 'http://localhost:8004'
+const BASE = process.env.QA_BASE || 'http://localhost:8004'
 const CASES = [
   { station: 'QA R4 أ', cycle: '11:00' },
   { station: 'QA R4 ب', cycle: '10:30' },

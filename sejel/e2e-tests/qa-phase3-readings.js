@@ -16,7 +16,7 @@
 const fs = require('fs')
 const { appendRun, capture, uiLogin, bodyText, defect, shot, step, summary, launch, apiGet, qaDelete, qaResetStationDay, qaStationId, qaSeedCounters, PILOT_COUNTERS } = require('./qa')
 
-const BASE2 = 'http://localhost:8004'
+const BASE2 = process.env.QA_BASE || 'http://localhost:8004'
 const PILOT = 'محطة تجريبية — سجل'
 const EDGE = 'QA Edge Station'
 
@@ -388,7 +388,7 @@ async function meterCounter(page, code) {
       // Was only ever a constant `true` (round 4 audit). Drive the actual
       // button and read what the operator is told.
       if (!del2.ok) {
-        await tAdmin.goto('http://localhost:8004/stations', { waitUntil: 'networkidle' })
+        await tAdmin.goto((process.env.QA_BASE || 'http://localhost:8004') + '/stations', { waitUntil: 'networkidle' })
         await tAdmin.waitForTimeout(1200)
         const card = tAdmin.locator('div.grid > div').filter({ hasText: EDGE }).first()
         let spaMsg = '(no card for this station)'

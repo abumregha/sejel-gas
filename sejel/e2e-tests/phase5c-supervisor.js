@@ -8,7 +8,7 @@ const { launch, apiPost, shot, step, summary } = require('./helpers')
 
 ;(async () => {
   const { browser, page } = await launch()
-  await page.goto('http://localhost:8004/login/', { waitUntil: 'domcontentloaded' })
+  await page.goto((process.env.QA_BASE || 'http://localhost:8004') + '/login/', { waitUntil: 'domcontentloaded' })
   await page.waitForTimeout(400)
   await page.locator('input').nth(0).fill('admin@sejel.ly')
   await page.locator('input').nth(1).fill('admin123')
@@ -41,7 +41,7 @@ const { launch, apiPost, shot, step, summary } = require('./helpers')
 
   // --- supervisor logs in -------------------------------------------------------
   const s = await launch()
-  await s.page.goto('http://localhost:8004/login/', { waitUntil: 'domcontentloaded' })
+  await s.page.goto((process.env.QA_BASE || 'http://localhost:8004') + '/login/', { waitUntil: 'domcontentloaded' })
   await s.page.waitForTimeout(400)
   await s.page.locator('input').nth(0).fill(username)
   await s.page.locator('input').nth(1).fill(password)

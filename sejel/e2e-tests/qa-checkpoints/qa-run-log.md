@@ -6848,3 +6848,619 @@ qa-r4-sup@sejel.ly=supervisor@qgdsq7cd7b, qa-r4-fin@sejel.ly=finance@qgdsq7cd7b
 ## Isolation — reports
 
 {"adminExpenses":777778,"supervisorExpenses":1,"dailyStations":["qgdsq7cd7b"],"exportForeign":403,"exportOwn":200,"guest":[403,403,403,403]}
+
+## QA-2 complement
+
+readings screen period chip: ""
+
+## Pilot guns (auto previous readings)
+
+0 guns: {}
+
+## Baseline counters read from the screen
+
+{}
+
+## ## Phase 5 — inventory screen sweep (as station owner)
+
+
+
+## ### /inventory/deliveries (التموين)
+
+- rendered chars: 59
+- console errors: Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)
+- network ≥400: 401 http://localhost:8004/api/auth/me/
+- visible text: "سجل نظام إدارة محطات الوقود اسم المستخدم كلمة المرور دخول"
+
+## ### /inventory/deliveries/create (نموذج تموين)
+
+- rendered chars: 59
+- console errors: Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)
+- network ≥400: 401 http://localhost:8004/api/auth/me/
+- visible text: "سجل نظام إدارة محطات الوقود اسم المستخدم كلمة المرور دخول"
+
+## ### /inventory/tank-readings (قراءات الخزانات)
+
+- rendered chars: 59
+- console errors: Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)
+- network ≥400: 401 http://localhost:8004/api/auth/me/
+- visible text: "سجل نظام إدارة محطات الوقود اسم المستخدم كلمة المرور دخول"
+
+## ### /inventory/transfers (التحويلات)
+
+- rendered chars: 59
+- console errors: Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)
+- network ≥400: 401 http://localhost:8004/api/auth/me/
+- visible text: "سجل نظام إدارة محطات الوقود اسم المستخدم كلمة المرور دخول"
+
+## ### /inventory/transfers/create (نموذج تحويل)
+
+- rendered chars: 59
+- console errors: Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)
+- network ≥400: 401 http://localhost:8004/api/auth/me/
+- visible text: "سجل نظام إدارة محطات الوقود اسم المستخدم كلمة المرور دخول"
+
+## ### /inventory/shortages (العجز)
+
+- rendered chars: 59
+- console errors: Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)
+- network ≥400: 401 http://localhost:8004/api/auth/me/
+- visible text: "سجل نظام إدارة محطات الوقود اسم المستخدم كلمة المرور دخول"
+
+## ### /inventory/fuel-reconciliation (مطابقة الوقود)
+
+- rendered chars: 59
+- console errors: Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)
+- network ≥400: 401 http://localhost:8004/api/auth/me/
+- visible text: "سجل نظام إدارة محطات الوقود اسم المستخدم كلمة المرور دخول"
+
+## ### /inventory/requests (طلبات التموين)
+
+- rendered chars: 59
+- console errors: Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)
+- network ≥400: 401 http://localhost:8004/api/auth/me/
+- visible text: "سجل نظام إدارة محطات الوقود اسم المستخدم كلمة المرور دخول"
+
+## ### /inventory/requests/create (طلب تموين)
+
+- rendered chars: 59
+- console errors: Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)
+- network ≥400: 401 http://localhost:8004/api/auth/me/
+- visible text: "سجل نظام إدارة محطات الوقود اسم المستخدم كلمة المرور دخول"
+
+## ## Phase 5 — delivery create FAILED
+
+
+- locator.waitFor: Timeout 8000ms exceeded.
+Call log:
+[2m  - waiting for locator('//label[normalize-space(.)=\'المحطة\']').first() to be visible[22m
+
+
+## ## Phase 5 — /inventory/shortages
+
+- text: "سجل نظام إدارة محطات الوقود اسم المستخدم كلمة المرور دخول"
+
+## ## Phase 5 — /inventory/fuel-reconciliation
+
+- text: "سجل نظام إدارة محطات الوقود اسم المستخدم كلمة المرور دخول"
+
+## ## Phase 5 — /finance/reconciliations
+
+- text: "سجل نظام إدارة محطات الوقود اسم المستخدم كلمة المرور دخول"
+
+## ## Phase 5 — network ≥400 (all)
+
+- 401 /api/auth/me/
+- 401 /api/auth/login/
+- 401 http://localhost:8004/api/auth/me/
+- 401 http://localhost:8004/api/auth/me/
+- 401 http://localhost:8004/api/auth/me/
+- 401 http://localhost:8004/api/auth/me/
+- 401 http://localhost:8004/api/auth/me/
+- 401 http://localhost:8004/api/auth/me/
+- 401 http://localhost:8004/api/auth/me/
+- 401 http://localhost:8004/api/auth/me/
+- 401 http://localhost:8004/api/auth/me/
+- 401 http://localhost:8004/api/auth/me/
+- 403 http://localhost:8004/api/deliveries/
+- 401 http://localhost:8004/api/auth/me/
+- 401 http://localhost:8004/api/auth/me/
+- 401 http://localhost:8004/api/auth/me/
+
+## ## Phase 5 — console errors (all)
+
+- Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)
+- Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)
+- Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)
+- Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)
+- Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)
+- Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)
+- Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)
+- Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)
+- Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)
+- Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)
+- Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)
+- Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)
+- Failed to load resource: the server responded with a status of 403 (FORBIDDEN)
+- Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)
+- Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)
+- Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)
+
+## ## Phase 6 — reports (as station owner)
+
+
+
+## ### /reports/daily
+
+- text: "ل"
+- network ≥400: 401 http://localhost:8004/api/auth/me/
+
+## ### /reports/monthly
+
+- text: "ل"
+- network ≥400: 401 http://localhost:8004/api/auth/me/
+
+## ### /reports/inventory
+
+- text: "ل"
+- network ≥400: 401 http://localhost:8004/api/auth/me/
+
+## ### /shifts/gaps
+
+- text: "ل"
+- network ≥400: 401 http://localhost:8004/api/auth/me/
+
+## ### /shifts/day
+
+- text: "ل"
+- network ≥400: 401 http://localhost:8004/api/auth/me/
+
+## ## Phase 6 — export endpoint probe
+
+
+```
+[
+ {
+  "url": "/api/export/?view=station&name=null",
+  "status": 403,
+  "contentType": "application/json",
+  "length": 0,
+  "head": ""
+ },
+ {
+  "url": "/api/export/?view=station",
+  "status": 403,
+  "contentType": "application/json",
+  "length": 0,
+  "head": ""
+ },
+ {
+  "url": "/api/export/",
+  "status": 403,
+  "contentType": "application/json",
+  "length": 0,
+  "head": ""
+ }
+]
+```
+
+## ## Phase 6 — finance screens (as station owner)
+
+
+
+## ### /finance
+
+- text: "ل"
+- network ≥400: 401 http://localhost:8004/api/auth/me/
+
+## ### /finance/daily-sales
+
+- text: "ل"
+- network ≥400: 401 http://localhost:8004/api/auth/me/
+
+## ### /finance/fuel-prices
+
+- text: "ل"
+- network ≥400: 401 http://localhost:8004/api/auth/me/
+
+## ### /finance/cash
+
+- text: "ل"
+- network ≥400: 401 http://localhost:8004/api/auth/me/
+
+## ### /finance/vouchers
+
+- text: "ل"
+- network ≥400: 401 http://localhost:8004/api/auth/me/
+
+## ### /finance/pos
+
+- text: "ل"
+- network ≥400: 401 http://localhost:8004/api/auth/me/
+
+## ### /finance/expenses
+
+- text: "ل"
+- network ≥400: 401 http://localhost:8004/api/auth/me/
+
+## ### /finance/settlements
+
+- text: "ل"
+- network ≥400: 401 http://localhost:8004/api/auth/me/
+
+## ### /finance/reconciliations
+
+- text: "ل"
+- network ≥400: 401 http://localhost:8004/api/auth/me/
+
+## ## Phase 6 — sidebar links offered to the owner
+
+
+
+## - «إدخال إيرادات» → /finance/income: 401 http://localhost:8004/api/auth/me/
+
+undefined
+
+## - «المبيعات» → /finance/daily-sales: 401 http://localhost:8004/api/auth/me/
+
+undefined
+
+## - «أسعار الوقود» → /finance/fuel-prices: 401 http://localhost:8004/api/auth/me/
+
+undefined
+
+## - «النقدية» → /finance/cash: 401 http://localhost:8004/api/auth/me/
+
+undefined
+
+## - «القسائم» → /finance/vouchers: 401 http://localhost:8004/api/auth/me/
+
+undefined
+
+## - «الدفع الإلكتروني» → /finance/pos: 401 http://localhost:8004/api/auth/me/
+
+undefined
+
+## - «المصروفات» → /finance/expenses: 401 http://localhost:8004/api/auth/me/
+
+undefined
+
+## - «تسوية القسائم» → /finance/settlements: 401 http://localhost:8004/api/auth/me/
+
+undefined
+
+## - «الفجوات» → /shifts/gaps: 401 http://localhost:8004/api/auth/me/
+
+undefined
+
+## ## Phase 6 — transfer create FAILED
+
+
+- locator.waitFor: Timeout 8000ms exceeded.
+Call log:
+[2m  - waiting for locator('//label[normalize-space(.)=\'المحطة\']').first() to be visible[22m
+
+
+## ## Phase 6 — network ≥400 (all)
+
+- 401 /api/auth/me/
+- 401 /api/auth/login/
+- 401 http://localhost:8004/api/auth/me/
+- 401 http://localhost:8004/api/auth/me/
+- 401 http://localhost:8004/api/auth/me/
+- 401 http://localhost:8004/api/auth/me/
+- 401 http://localhost:8004/api/auth/me/
+- 401 http://localhost:8004/api/auth/me/
+- 403 http://localhost:8004/api/stations/?limit_page_length=0
+- 403 http://localhost:8004/api/export/?view=station&name=null
+- 403 http://localhost:8004/api/export/?view=station
+- 403 http://localhost:8004/api/export/
+- 401 http://localhost:8004/api/auth/me/
+- 401 http://localhost:8004/api/auth/me/
+- 401 http://localhost:8004/api/auth/me/
+- 401 http://localhost:8004/api/auth/me/
+- 401 http://localhost:8004/api/auth/me/
+- 401 http://localhost:8004/api/auth/me/
+- 401 http://localhost:8004/api/auth/me/
+- 401 http://localhost:8004/api/auth/me/
+- 401 http://localhost:8004/api/auth/me/
+- 401 http://localhost:8004/api/auth/me/
+- 401 http://localhost:8004/api/auth/me/
+- 401 http://localhost:8004/api/auth/me/
+- 401 http://localhost:8004/api/auth/me/
+- 401 http://localhost:8004/api/auth/me/
+- 401 http://localhost:8004/api/auth/me/
+- 401 http://localhost:8004/api/auth/me/
+- 401 http://localhost:8004/api/auth/me/
+- 401 http://localhost:8004/api/auth/me/
+- 401 http://localhost:8004/api/auth/me/
+- 401 http://localhost:8004/api/auth/me/
+- 401 http://localhost:8004/api/auth/me/
+
+## ## Phase 7 — viewport 390x844 (phone)
+
+
+
+## ### 390x844 /
+
+- document scrollWidth 390 vs viewport 390 → fits
+- unreachable (clipped) blocks: (none)
+- controls under 40px tall: 0
+
+## ### 390x844 /readings
+
+- document scrollWidth 390 vs viewport 390 → fits
+- unreachable (clipped) blocks: (none)
+- controls under 40px tall: 0
+
+## ### 390x844 /stations
+
+- document scrollWidth 390 vs viewport 390 → fits
+- unreachable (clipped) blocks: (none)
+- controls under 40px tall: 0
+
+## ### 390x844 /shifts
+
+- document scrollWidth 390 vs viewport 390 → fits
+- unreachable (clipped) blocks: (none)
+- controls under 40px tall: 0
+
+## ### 390x844 /shifts/day
+
+- document scrollWidth 390 vs viewport 390 → fits
+- unreachable (clipped) blocks: (none)
+- controls under 40px tall: 0
+
+## ### 390x844 /finance/income
+
+- document scrollWidth 390 vs viewport 390 → fits
+- unreachable (clipped) blocks: (none)
+- controls under 40px tall: 0
+
+## ### 390x844 /finance/reconciliations
+
+- document scrollWidth 390 vs viewport 390 → fits
+- unreachable (clipped) blocks: (none)
+- controls under 40px tall: 0
+
+## ### 390x844 /reports/daily
+
+- document scrollWidth 390 vs viewport 390 → fits
+- unreachable (clipped) blocks: (none)
+- controls under 40px tall: 0
+
+## ### 390x844 /inventory/deliveries
+
+- document scrollWidth 390 vs viewport 390 → fits
+- unreachable (clipped) blocks: (none)
+- controls under 40px tall: 0
+
+## ### 390x844 /inventory/shortages
+
+- document scrollWidth 390 vs viewport 390 → fits
+- unreachable (clipped) blocks: (none)
+- controls under 40px tall: 0
+
+## ### 390x844 /settings/users
+
+- document scrollWidth 390 vs viewport 390 → fits
+- unreachable (clipped) blocks: (none)
+- controls under 40px tall: 0
+
+## ## Phase 7 — viewport 1366x768 (laptop)
+
+
+
+## ### 1366x768 /
+
+- document scrollWidth 1366 vs viewport 1366 → fits
+- unreachable (clipped) blocks: (none)
+- controls under 40px tall: 0
+
+## ### 1366x768 /readings
+
+- document scrollWidth 1366 vs viewport 1366 → fits
+- unreachable (clipped) blocks: (none)
+- controls under 40px tall: 0
+
+## ### 1366x768 /stations
+
+- document scrollWidth 1366 vs viewport 1366 → fits
+- unreachable (clipped) blocks: (none)
+- controls under 40px tall: 0
+
+## ### 1366x768 /shifts
+
+- document scrollWidth 1366 vs viewport 1366 → fits
+- unreachable (clipped) blocks: (none)
+- controls under 40px tall: 0
+
+## ### 1366x768 /shifts/day
+
+- document scrollWidth 1366 vs viewport 1366 → fits
+- unreachable (clipped) blocks: (none)
+- controls under 40px tall: 0
+
+## ### 1366x768 /finance/income
+
+- document scrollWidth 1366 vs viewport 1366 → fits
+- unreachable (clipped) blocks: (none)
+- controls under 40px tall: 0
+
+## ### 1366x768 /finance/reconciliations
+
+- document scrollWidth 1366 vs viewport 1366 → fits
+- unreachable (clipped) blocks: (none)
+- controls under 40px tall: 0
+
+## ### 1366x768 /reports/daily
+
+- document scrollWidth 1366 vs viewport 1366 → fits
+- unreachable (clipped) blocks: (none)
+- controls under 40px tall: 0
+
+## ### 1366x768 /inventory/deliveries
+
+- document scrollWidth 1366 vs viewport 1366 → fits
+- unreachable (clipped) blocks: (none)
+- controls under 40px tall: 0
+
+## ### 1366x768 /inventory/shortages
+
+- document scrollWidth 1366 vs viewport 1366 → fits
+- unreachable (clipped) blocks: (none)
+- controls under 40px tall: 0
+
+## ### 1366x768 /settings/users
+
+- document scrollWidth 1366 vs viewport 1366 → fits
+- unreachable (clipped) blocks: (none)
+- controls under 40px tall: 0
+
+## ## Phase 7 — viewport 1920x1080 (desktop)
+
+
+
+## ### 1920x1080 /
+
+- document scrollWidth 1920 vs viewport 1920 → fits
+- unreachable (clipped) blocks: (none)
+- controls under 40px tall: 0
+
+## ### 1920x1080 /readings
+
+- document scrollWidth 1920 vs viewport 1920 → fits
+- unreachable (clipped) blocks: (none)
+- controls under 40px tall: 0
+
+## ### 1920x1080 /stations
+
+- document scrollWidth 1920 vs viewport 1920 → fits
+- unreachable (clipped) blocks: (none)
+- controls under 40px tall: 0
+
+## ### 1920x1080 /shifts
+
+- document scrollWidth 1920 vs viewport 1920 → fits
+- unreachable (clipped) blocks: (none)
+- controls under 40px tall: 0
+
+## ### 1920x1080 /shifts/day
+
+- document scrollWidth 1920 vs viewport 1920 → fits
+- unreachable (clipped) blocks: (none)
+- controls under 40px tall: 0
+
+## ### 1920x1080 /finance/income
+
+- document scrollWidth 1920 vs viewport 1920 → fits
+- unreachable (clipped) blocks: (none)
+- controls under 40px tall: 0
+
+## ### 1920x1080 /finance/reconciliations
+
+- document scrollWidth 1920 vs viewport 1920 → fits
+- unreachable (clipped) blocks: (none)
+- controls under 40px tall: 0
+
+## ### 1920x1080 /reports/daily
+
+- document scrollWidth 1920 vs viewport 1920 → fits
+- unreachable (clipped) blocks: (none)
+- controls under 40px tall: 0
+
+## ### 1920x1080 /inventory/deliveries
+
+- document scrollWidth 1920 vs viewport 1920 → fits
+- unreachable (clipped) blocks: (none)
+- controls under 40px tall: 0
+
+## ### 1920x1080 /inventory/shortages
+
+- document scrollWidth 1920 vs viewport 1920 → fits
+- unreachable (clipped) blocks: (none)
+- controls under 40px tall: 0
+
+## ### 1920x1080 /settings/users
+
+- document scrollWidth 1920 vs viewport 1920 → fits
+- unreachable (clipped) blocks: (none)
+- controls under 40px tall: 0
+
+## ## Phase 8 — station setup
+
+
+- QA Edge Station id: undefined
+- day_close_time before: undefined
+
+## Transfer — fixture reset
+
+0 own transfer row(s) removed, opening levels restored
+
+## Transfer — opening levels
+
+خزان أ بنزين 1: 20000/30000 · خزان أ بنزين 2: 0/20000
+
+## Isolation — fixture users
+
+qa-r4-sup@sejel.ly=supervisor@qf1pes3hhl, qa-r4-fin@sejel.ly=finance@qf1pes3hhl
+
+## Isolation — supervisor
+
+{"listOnlyOwn":true,"widen":true,"readForeign":403,"writeForeign":403,"createTransfer":403,"picker":"(none)"}
+
+## Isolation — finance
+
+{"createForeignExpense":403,"createOwnExpense":200}
+
+## Isolation — reports
+
+{"adminExpenses":777778,"supervisorExpenses":1,"dailyStations":["qf1pes3hhl"],"exportForeign":403,"exportOwn":200,"guest":[403,403,403,403]}
+
+## Cycle — QA R4 أ
+
+(no cycle line)
+
+## Cycle — QA R4 ب
+
+(no cycle line)
+
+## Mobile الرئيسية
+
+{"overflow":false,"small":[],"scrollW":390,"clientW":390}
+
+## Mobile القراءات
+
+{"overflow":false,"small":[],"scrollW":390,"clientW":390}
+
+## Mobile المالية
+
+{"overflow":false,"small":[],"scrollW":390,"clientW":390}
+
+## Mobile المخزون
+
+{"overflow":false,"small":[],"scrollW":390,"clientW":390}
+
+## QA-2 complement
+
+readings screen period chip: ""
+
+## Pilot guns (auto previous readings)
+
+0 guns: {}
+
+## Baseline counters read from the screen
+
+{}
+
+## QA-2 complement
+
+readings screen period chip: ""
+
+## Pilot guns (auto previous readings)
+
+0 guns: {}
+
+## Baseline counters read from the screen
+
+{}

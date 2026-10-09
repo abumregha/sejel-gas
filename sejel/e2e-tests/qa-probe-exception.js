@@ -4,7 +4,7 @@
 // so the defect report can quote the real server message.
 const { appendRun, uiLogin, step, summary, launch } = require('./qa')
 
-const BASE2 = 'http://localhost:8004'
+const BASE2 = process.env.QA_BASE || 'http://localhost:8004'
 const EDGE = 'QA Edge Station'
 
 async function raw(page, url, body) {

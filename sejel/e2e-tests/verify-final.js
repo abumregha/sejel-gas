@@ -11,12 +11,12 @@ const { launch, login, nav, apiGet, apiPost, fillByLabel, shot, step, summary } 
   step('UI: login', await login(page))
 
   // ---------- 1. SESSION RESTORE (hard load of protected pages) ----------
-  await page.goto('http://localhost:8004/app/stations', { waitUntil: 'domcontentloaded' })
+  await page.goto((process.env.QA_BASE || 'http://localhost:8004') + '/app/stations', { waitUntil: 'domcontentloaded' })
   await page.waitForTimeout(2500)
   step('1a. session restored on hard load (no login redirect)', !page.url().includes('login'), page.url())
   const b1 = await page.evaluate(() => document.body.innerText)
   step('1b. protected page renders data after refresh', /محطة/.test(b1) && !/تسجيل الدخول/.test(b1))
-  await page.goto('http://localhost:8004/app/', { waitUntil: 'domcontentloaded' })
+  await page.goto((process.env.QA_BASE || 'http://localhost:8004') + '/app/', { waitUntil: 'domcontentloaded' })
   await page.waitForTimeout(1800)
   step('1c. dashboard renders after refresh', /لوحة التحكم/.test(await page.evaluate(() => document.body.innerText)))
 

@@ -12,7 +12,7 @@
 // The station's ORIGINAL cycle time is restored at the end.
 const { launch, uiLogin, step, summary } = require('./qa')
 
-const BASE = 'http://localhost:8004'
+const BASE = process.env.QA_BASE || 'http://localhost:8004'
 const STATION = 'QA موظف جديد'
 
 async function setCycle(page, station, value) {

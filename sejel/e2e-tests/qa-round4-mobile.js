@@ -4,7 +4,7 @@
 // targets under 44 px, and a fixed nav covering the last row.
 const { launch, uiLogin, step, summary, appendRun, shot, apiGet } = require('./qa')
 
-const BASE = 'http://localhost:8004'
+const BASE = process.env.QA_BASE || 'http://localhost:8004'
 const VIEW = { width: 390, height: 844 }
 const TAPS = [
   { label: 'الرئيسية', path: '/app' },

@@ -9,7 +9,7 @@
 //   D. a tank reading + tank transfer (the pilot station has two tanks)
 const { appendRun, capture, uiLogin, bodyText, defect, shot, step, summary, launch, apiGet, qaFillField, qaStationId } = require('./qa')
 
-const BASE = 'http://localhost:8004'
+const BASE = process.env.QA_BASE || 'http://localhost:8004'
 const PILOT = 'محطة تجريبية — سجل'   // the only station with real data
 const REPORTS = ['/reports/daily', '/reports/monthly', '/reports/inventory', '/shifts/gaps', '/shifts/day']
 const FINANCE = [

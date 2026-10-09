@@ -13,7 +13,7 @@
 //   - RTL sanity: Arabic content must not be clipped
 const { appendRun, capture, uiLogin, shot, step, summary, launch } = require('./qa')
 
-const BASE = 'http://localhost:8004'
+const BASE = process.env.QA_BASE || 'http://localhost:8004'
 const VIEWPORTS = [
   ['390x844', { width: 390, height: 844 }, 'phone'],
   ['1366x768', { width: 1366, height: 768 }, 'laptop'],

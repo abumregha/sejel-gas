@@ -13,7 +13,7 @@ const { initRunLog, appendRun, capture, uiLogin, clickNav, bodyText, defect, sho
 
   // 0. baseline
   const t0 = Date.now()
-  await page.goto('http://localhost:8004/', { waitUntil: 'domcontentloaded' })
+  await page.goto((process.env.QA_BASE || 'http://localhost:8004') + '/', { waitUntil: 'domcontentloaded' })
   await page.waitForTimeout(1200)
   step('App loads (redirects to login)', page.url().includes('login'), page.url())
   step('HTTP/UI responds', (await page.locator('body').count()) > 0)
@@ -129,7 +129,7 @@ const { initRunLog, appendRun, capture, uiLogin, clickNav, bodyText, defect, sho
   step('Back-button after logout stays protected', !revived, page.url())
 
   // guest access to a protected URL
-  await page.goto('http://localhost:8004/app/readings', { waitUntil: 'domcontentloaded' })
+  await page.goto((process.env.QA_BASE || 'http://localhost:8004') + '/app/readings', { waitUntil: 'domcontentloaded' })
   await page.waitForTimeout(1500)
   step('Protected URL as guest → redirected to login', page.url().includes('login'), page.url())
 

@@ -7,7 +7,7 @@
 //                       reconciliation must report exactly 9,000 L / 1,350 د.ل.
 const { appendRun, capture, uiLogin, bodyText, shot, step, summary, launch, apiGet } = require('./qa')
 
-const BASE = 'http://localhost:8004'
+const BASE = process.env.QA_BASE || 'http://localhost:8004'
 const EDGE = process.env.QA_STATION || 'QA Cycle Station'
 const PRICE = 0.15
 const PER_GUN = 1000

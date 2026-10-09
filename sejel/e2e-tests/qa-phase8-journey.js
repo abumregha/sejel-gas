@@ -14,7 +14,7 @@
 // Every step is checked against the backend so a green UI cannot hide a lost write.
 const { appendRun, capture, uiLogin, bodyText, defect, shot, step, summary, launch, apiGet, apiPost, qaFillField, qaResetStationDay, qaSeedCounters, qaStationMeterCodes } = require('./qa')
 
-const BASE = 'http://localhost:8004'
+const BASE = process.env.QA_BASE || 'http://localhost:8004'
 const EDGE = 'QA Edge Station'
 // The readings screen works on the CURRENT cycle, not on "today": after the
 // station's 11:00 close the running cycle belongs to the next day. Derive it the

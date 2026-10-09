@@ -8,7 +8,7 @@
 // already exists).
 const { launch, uiLogin, step, summary, apiGet } = require('./qa')
 
-const BASE = 'http://localhost:8004'
+const BASE = process.env.QA_BASE || 'http://localhost:8004'
 const STATION = 'QA موظف جديد'
 const GUNS = [
   { code: 'QA01A', counter: 500000 },

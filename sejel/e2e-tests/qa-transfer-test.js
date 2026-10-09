@@ -7,7 +7,7 @@
 // that silently succeeds cannot make the next one look like a pass.
 const { appendRun, capture, uiLogin, bodyText, shot, step, summary, launch, apiGet, apiPut, qaStationId, qaFillField } = require('./qa')
 
-const BASE = 'http://localhost:8004'
+const BASE = process.env.QA_BASE || 'http://localhost:8004'
 const STATION = 'QA R4 أ'
 const CROSS = 'QA R4 ب'
 const QTY = 5000

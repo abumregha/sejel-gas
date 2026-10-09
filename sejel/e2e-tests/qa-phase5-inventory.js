@@ -38,7 +38,7 @@ const INVENTORY_ROUTES = [
   for (const [route, label] of INVENTORY_ROUTES) {
     consoleAt.length = 0
     const before = page.netFails.length
-    await page.goto('http://localhost:8004' + route, { waitUntil: 'domcontentloaded' })
+    await page.goto((process.env.QA_BASE || 'http://localhost:8004') + route, { waitUntil: 'domcontentloaded' })
     await page.waitForTimeout(1600)
     const txt = await bodyText(page)
     const blank = txt.trim().length < 40
@@ -58,7 +58,7 @@ const INVENTORY_ROUTES = [
   }
 
   // ---------- Part B: delivery CRUD ----------
-  await page.goto('http://localhost:8004/inventory/deliveries/create', { waitUntil: 'domcontentloaded' })
+  await page.goto((process.env.QA_BASE || 'http://localhost:8004') + '/inventory/deliveries/create', { waitUntil: 'domcontentloaded' })
   await page.waitForTimeout(1500)
 
   // negative: submit empty — should be blocked with an Arabic message, not a crash
@@ -133,7 +133,7 @@ const INVENTORY_ROUTES = [
 
   // ---------- Part C: shortages / fuel reconciliation data ----------
   for (const r of ['/inventory/shortages', '/inventory/fuel-reconciliation', '/finance/reconciliations']) {
-    await page.goto('http://localhost:8004' + r, { waitUntil: 'domcontentloaded' })
+    await page.goto((process.env.QA_BASE || 'http://localhost:8004') + r, { waitUntil: 'domcontentloaded' })
     await page.waitForTimeout(1500)
     const t = (await bodyText(page)).replace(/\s+/g, ' ')
     appendRun('## Phase 5 — ' + r,

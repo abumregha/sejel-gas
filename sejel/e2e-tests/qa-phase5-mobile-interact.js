@@ -4,7 +4,7 @@
 // what the finger would hit.
 const { shot, uiLogin } = require('./qa')
 
-const BASE = 'http://localhost:8004'
+const BASE = process.env.QA_BASE || 'http://localhost:8004'
 const VIEW = { width: 390, height: 844 }
 
 const rect = (page, sel) => page.evaluate((s) => {

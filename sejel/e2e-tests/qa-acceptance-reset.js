@@ -17,7 +17,7 @@
 // which made the reset unusable on any database holding more than one station).
 const { launch, uiLogin, step, summary, apiGet } = require('./qa')
 
-const BASE = 'http://localhost:8004'
+const BASE = process.env.QA_BASE || 'http://localhost:8004'
 const STATION = 'QA موظف جديد'
 // Must match qa-create-acceptance-station.js. Deleting the readings rolls
 // Meter.current_reading back to 0 (correctly — the counters that produced

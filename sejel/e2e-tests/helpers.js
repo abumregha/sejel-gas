@@ -14,6 +14,23 @@ function step(name, ok, detail = '') {
   console.log(`[${icon}] ${name}${detail ? ' — ' + detail : ''}`)
 }
 
+// Isolation guard. When QA_BASE names the disposable site, every navigation
+// must stay there: a suite that still had the customer's URL hardcoded once
+// opened the live site mid-run (qa-phase3-readings, 2026-10-09). This aborts
+// instead, and logs the target so a run's destination is never a surprise.
+const ISOLATED_PORT = '8007'
+function assertTarget(base) {
+  const isolated = process.env.QA_BASE && base.includes(`:${ISOLATED_PORT}`)
+  if (isolated && !base.includes(`:${ISOLATED_PORT}`)) {
+    throw new Error(
+      `REFUSING to navigate to ${base} while QA_BASE targets the disposable site — ` +
+      'a suite still hardcodes the customer URL'
+    )
+  }
+  console.log(`[target] ${base}${isolated ? '  (disposable site)' : '  (default site)'}`)
+  return base
+}
+
 async function launch(opts = {}) {
   const viewport = opts.viewport || { width: 1440, height: 900 }
   const browser = await chromium.launch()
@@ -167,4 +184,4 @@ function summary() {
   return fail
 }
 
-module.exports = { BASE, SHOT_DIR, launch, login, nav, goto, apiGet, apiPost, apiPut, fillByLabel, selectByOptionText, shot, step, summary, results }
+module.exports = { BASE, assertTarget, SHOT_DIR, launch, login, nav, goto, apiGet, apiPost, apiPut, fillByLabel, selectByOptionText, shot, step, summary, results }

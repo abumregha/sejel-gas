@@ -24,7 +24,7 @@ async function tapSave(page) {
 //     stage 5  a full day → close the day (manager) → financial result
 const { chromium } = require('playwright')
 
-const BASE = 'http://localhost:8004'
+const BASE = process.env.QA_BASE || 'http://localhost:8004'
 const VIEW = { width: 390, height: 844 }
 const STAGE = process.argv[2] || '1'
 
