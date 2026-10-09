@@ -411,6 +411,33 @@ function editBackwards() {
   return Number.isFinite(s) && Number.isFinite(e) && s >= 0 && e >= 0 && e < s
 }
 
+// A reading nobody has corrected must not be labelled "last edited": the
+// dashboard has no creation timestamp of its own, so the unchanged case is
+// detected by modified landing in the same second as the record's own stamp.
+function wasEdited(row) {
+  const rd = row.meter.reading
+  if (!rd || !rd.modified) return false
+  return String(rd.modified).slice(0, 19) !== String(rd.recorded_at || '').slice(0, 19)
+}
+
+// What saving this edit would disturb downstream: the next reading for the same
+// meter and the reconciliation built on it. Shown BEFORE saving, because the
+// backend refuses the edit without a documented reason — the operator deserves
+// to know that before they are asked for one.
+function chainImpactOf(row) {
+  return row.meter.chain_impact || null
+}
+
+function chainImpactText(row) {
+  const impact = chainImpactOf(row)
+  if (!impact) return ''
+  const recon = impact.recon
+  const money = recon
+    ? ` — تسوية ${impact.date}: ${fmtNum(recon.total_liters, 0)} لتر / ${fmtMoney(recon.expected_sales)}`
+    : ` — يوم ${impact.date} غير مُقفل بعد`
+  return `تعديل نهاية هذه القراءة يجعل بداية قراءة ${impact.date} (${fmtNum(impact.start_reading, 3)}) غير مطابقة${money}. لن يتم تغيير ذلك اليوم تلقائياً — يُطلب سبب للتعديل.`
+}
+
 async function saveEdit(row) {
   const edit = rowEdit.value
   if (!edit || rowEditSaving.value) return
@@ -748,6 +775,10 @@ async function closeDay() {
                       :class="editBackwards() ? 'border-amber-300' : 'border-gray-300'" placeholder="اكتب السبب هنا" />
                   </div>
                 </div>
+                <p v-if="chainImpactOf(g.row) && String(rowEdit.end) !== String(g.row.meter.reading.end_reading)"
+                  data-testid="chain-impact" class="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-2 mt-3">
+                  {{ chainImpactText(g.row) }}
+                </p>
                 <p v-if="rowEditError" data-testid="reading-edit-error" class="text-xs text-red-600 mt-2">{{ rowEditError }}</p>
                 <div class="flex gap-2 mt-3 items-center">
                   <button data-testid="reading-edit-save" :disabled="rowEditSaving" @click="saveEdit(g.row)"
@@ -796,8 +827,14 @@ async function closeDay() {
                 <!-- who last touched this record and when: operators correct
                      readings often, so an unexplained change must be traceable -->
                 <div v-if="g.row.meter.reading.modified_by_name" data-testid="last-edited" class="text-[11px] text-gray-400 mt-1">
-                  آخر تعديل: {{ g.row.meter.reading.modified_by_name }} ·
-                  {{ String(g.row.meter.reading.modified).slice(0, 16) }}
+                  <template v-if="wasEdited(g.row)">
+                    آخر تعديل: {{ g.row.meter.reading.modified_by_name }} ·
+                    {{ String(g.row.meter.reading.modified).slice(0, 16) }}
+                  </template>
+                  <template v-else>
+                    أُنشئت القراءة: {{ g.row.meter.reading.modified_by_name }} ·
+                    {{ String(g.row.meter.reading.modified).slice(0, 16) }}
+                  </template>
                 </div>
               </div>
               </template>
