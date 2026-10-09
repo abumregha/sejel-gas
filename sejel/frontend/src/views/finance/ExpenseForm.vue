@@ -26,6 +26,11 @@
         <input v-model="form.description" class="w-full border border-gray-300 rounded-lg px-4 py-2.5" />
       </div>
       <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">يوم المصروف *</label>
+        <input v-model="form.expense_date" data-testid="expense-date" type="date" required class="w-full border border-gray-300 rounded-lg px-4 py-2.5" />
+        <p class="text-xs text-gray-500 mt-1">اليوم الذي ينتمي إليه المصروف — يبقى صحيحاً إذا سجّلته بعد إقفال ذلك اليوم</p>
+      </div>
+      <div>
         <label class="block text-sm font-medium text-gray-700 mb-1">طريقة الدفع</label>
         <select v-model="form.payment_method" class="w-full border border-gray-300 rounded-lg px-4 py-2.5">
           <option value="cash">نقدي</option>
@@ -51,7 +56,8 @@ const router = useRouter(), route = useRoute()
 const isEdit = computed(() => !!route.params.id)
 const error = ref('')
 const saving = ref(false)
-const form = ref({ station: '', category: '', amount: '', description: '', payment_method: 'cash' })
+const today = new Date().toISOString().slice(0, 10)
+const form = ref({ station: '', category: '', amount: '', description: '', payment_method: 'cash', expense_date: today })
 const stations = ref([])
 const categories = ref([])
 
@@ -61,7 +67,7 @@ onMounted(async () => {
   categories.value = cRes.data.results || cRes.data
   if (isEdit.value) {
     const { data } = await api.get(`/expenses/${route.params.id}/`)
-    form.value = { station: data.station, category: data.category, amount: data.amount, description: data.description || '', payment_method: data.payment_method || 'cash' }
+    form.value = { station: data.station, category: data.category, amount: data.amount, description: data.description || '', payment_method: data.payment_method || 'cash', expense_date: data.expense_date || today }
   }
 })
 
