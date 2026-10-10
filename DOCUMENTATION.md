@@ -420,7 +420,7 @@ Fuel Type ───────────────────────�
 | `end_reading` | Float | No | | |
 | `liters_sold` | Float | No | `0` | Auto-calculated: `end_reading - start_reading` |
 | `photo` | Attach Image | No | | |
-| `exception_type` | Select | No | | (blank)/reset/replacement/other |
+| `exception_type` | Select | No | | (blank)/correction/reset/replacement/other — `correction` is an ordinary fix of a recorded value, distinct from a meter reset/replacement |
 | `exception_authorized_by` | Link (User) | No | | |
 | `recorded_at` | Datetime | No | | |
 
@@ -1595,6 +1595,12 @@ Excel sheet with daily expense entries. Maps to **Expense** DocType.
   تُرتَّب بـ**تاريخ اليوم** (لا بوقت الإدخال)، وسبب التصحيح لا يُعاد استخدامه
   تلقائياً لتعديل لاحق. الإيراد يُحفظ بطلب واحد idempotent (إعادة الحفظ لا
   تكرّر القيود)، والمصروف يرتبط بيومه لا بتاريخ إنشائه.
+- **القراءة السابقة في الإدخال اليومي (2026-10-10)**: كانت القراءة السابقة
+  قيمة للقراءة فقط؛ أصبحت حقلاً قابلاً للتعديل يُعبّأ بآخر قراءة لنفس المسدس.
+  تغييرها يصحّح قراءة اليوم السابق (بنوع `correction` وسبب مطلوب) ثم يحفظ
+  قراءة اليوم على القيمة المصححة — فالسلسلة تُغلق دون فجوة، والعداد ينتهي
+  بآخر يوم، ولا يُعاد كتابة أي يوم تالٍ تلقائياً. الحقل مطلوب (لا صفر صامت)،
+  والتحذير يسمّي اليوم المتأثر قبل الحفظ.
 - **Tests**: 12 suites / 209 checks green (phase8 proves 3 employee shifts
   inside one 24h cycle with zero per-shift readings; phase9 = full user
   journey). `pilot-assert.js` read-only guard (9 checks) asserts the live
