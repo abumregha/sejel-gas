@@ -56,6 +56,9 @@ function buildRows(payload, prevRows = {}) {
         map[m.id] = {
           meter: m, island: isl, mach, gunLetter: String.fromCharCode(65 + letter),
           current: '', exception_type: '', notes: '', showException: false, savedNow: false,
+          // the daily-entry previous correction defaults to a correction, never
+          // a reset — the two stay distinct (requirement: no pretending)
+          prev_exception_type: 'correction', prev_notes: '',
         }
         letter++
       }
@@ -70,6 +73,8 @@ function buildRows(payload, prevRows = {}) {
       row.exception_type = old.exception_type
       row.notes = old.notes
       row.showException = old.showException
+      row.prev_exception_type = old.prev_exception_type
+      row.prev_notes = old.prev_notes
     }
   }
   return map
@@ -110,7 +115,9 @@ function liveLiters(row) {
   // An unsaved opening reading has nothing to sell yet — showing
   // current − 0 would display the meter's entire cumulative counter.
   if (isOpening(row)) return null
-  const prev = prevOf(row)
+  // The previous value the operator is entering against — the corrected one
+  // when they changed it, the auto-retrieved one otherwise.
+  const prev = prevInputValue(row)
   if (prev === null || prev === undefined) return null
   const p = Number(prev)
   if (!Number.isFinite(p)) return null
@@ -199,6 +206,7 @@ async function load({ keepMessage = false } = {}) {
     const { data: d } = await api.get('/dashboard-station/', { params })
     data.value = d
     rows.value = buildRows(d, rows.value)
+    prevAdjustInit()
   } catch (e) {
     error.value = error.value ? `${error.value} · ${friendlyError(e)}` : friendlyError(e)
   } finally {
@@ -249,23 +257,33 @@ const stationCycle = computed(() => {
 const dayCloseTime = computed(() => stationCycle.value || '23:00')
 const cycleNotConfigured = computed(() => !stationCycle.value)
 
-// ---- previous-reading correction («القراءة السابقة» = 0) --------------------
-// Gate: same sessions that may close the day (admin/manager/finance) and only
-// while the day is still open — the correction rewrites today's litres.
+// ---- previous-reading correction («القراءة السابقة») -----------------------
+// Two different flows, and they are not the same privilege:
+//   · correcting the previous value of a SAVED reading — every role may
+//     correct a reading (all four hold Meter Reading write) and a closed day
+//     stays correctable; the backend refreshes that day's reconciliation.
+//   · establishing a gun's baseline when it has no reading at all — that
+//     writes Meter.current_reading, so it stays with the day-closing roles and
+//     only while the day is still open.
 const prevEdit = ref(null)
 const prevEditError = ref('')
 const prevEditSaving = ref(false)
 
-const canFixPrev = computed(() => auth.canCloseDay && !dayClosed.value)
+const canEstablishBaseline = computed(() => auth.canCloseDay && !dayClosed.value)
+// The previous value used to be offered only to the day-closing roles, only on
+// an open day, and only while it was still 0. A supervisor who inherited a
+// mistyped previous value had no way back except booking a 0-litre exception
+// over it (reported on the live site 2026-10-10).
+const canCorrectPrevious = computed(() => auth.isLoggedIn)
 
 function showFixPrev(row) {
-  if (!canFixPrev.value || !row.meter.reading) return false
+  if (!canCorrectPrevious.value || !row.meter.reading) return false
   if (prevEdit.value && prevEdit.value.id === row.meter.id) return false
-  return Number(row.meter.reading.start_reading ?? 0) === 0
+  return true
 }
 
 function showAddPrev(row) {
-  if (!canFixPrev.value || row.meter.reading) return false
+  if (!canEstablishBaseline.value || row.meter.reading) return false
   if (prevEdit.value && prevEdit.value.id === row.meter.id) return false
   return Number(prevOf(row) || 0) === 0
 }
@@ -282,10 +300,21 @@ function closePrevEdit() {
 // The dashboard payload carries today's reading values but not the row's
 // docname — resolve it with one read-only list call before the PUT.
 async function openFixPrev(row) {
-  const ok = window.confirm('سيتم استبدال القراءة السابقة (0) بقيمة جديدة وستُعاد حساب لترات اليوم المباعة. هل أنت متأكد؟')
+  const ok = window.confirm('سيتم استبدال القراءة السابقة بقيمة جديدة وستُعاد حساب لترات اليوم المباعة. هل أنت متأكد؟')
   if (!ok) return
   prevEditError.value = ''
-  prevEdit.value = { id: row.meter.id, mode: 'fix', input: '', readingName: '' }
+  prevEdit.value = {
+    id: row.meter.id,
+    mode: 'fix',
+    // Pre-filled with the stored value: the operator edits what is wrong
+    // instead of retyping the whole number.
+    input: row.meter.reading?.start_reading == null
+      ? ''
+      : String(row.meter.reading.start_reading),
+    readingName: '',
+    exceptionType: '',
+    notes: '',
+  }
   try {
     const res = await api.get('/meter-readings/', { params: { meter: row.meter.id, limit_page_length: 0 } })
     const list = res.data.results || res.data || []
@@ -342,7 +371,16 @@ async function savePrevEdit(row) {
   prevEditError.value = ''
   try {
     if (edit.mode === 'fix') {
-      await api.put(`/meter-readings/${edit.readingName}/`, { start_reading: x, is_opening: 0 })
+      const body = { start_reading: x, is_opening: 0 }
+      // The backend demands a documented reason whenever the corrected value
+      // no longer meets a neighbouring day, so the reason it asks for is the
+      // one the reading editor asks for — collected here instead of leaving
+      // the operator stuck on an error they cannot answer.
+      if (edit.exceptionType) {
+        body.exception_type = edit.exceptionType
+        body.notes = edit.notes || ''
+      }
+      await api.put(`/meter-readings/${edit.readingName}/`, body)
       notice.value = 'تم تصحيح القراءة السابقة وإعادة حساب لترات اليوم'
     } else {
       await api.put(`/meters/${row.meter.id}/`, { current_reading: x })
@@ -356,6 +394,88 @@ async function savePrevEdit(row) {
     prevEditSaving.value = false
   }
 }
+
+// ---- daily-entry previous-value correction ---------------------------------
+// The previous reading the card auto-retrieves is an editable input, not a
+// label: a wrong value recorded on an earlier day otherwise flows straight
+// into today's start, and the only escape was booking an exception over it.
+//
+// Changing it rewrites the value the previous day ended with — with a reason
+// and an audit trail — and then books today's reading against the corrected
+// value. The backend's own rules do the rest: it refuses a silent gap, and
+// on_update recomputes the meter counter from the latest day (never from the
+// row being edited) and refreshes that day's reconciliation.
+const prevAdjust = ref({})     // meterId -> raw string in the input
+const prevAdjustAuto = ref({})  // meterId -> the auto value it started from
+const prevCorrection = ref({})  // meterId -> the previous reading being corrected
+
+function prevAdjustInit() {
+  const adjust = {}
+  const auto = {}
+  for (const row of Object.values(rows.value)) {
+    const p = prevOf(row)
+    auto[row.meter.id] = p
+    // Keep what the operator typed for this gun; pre-fill only a gun that has
+    // no typed value yet. A typed value that already equals the (corrected)
+    // auto one reads as unchanged, so a half-finished correction is not repeated.
+    const typed = prevAdjust.value[row.meter.id]
+    adjust[row.meter.id] = typed !== undefined && typed !== '' ? typed : (p == null ? '' : String(p))
+  }
+  prevAdjust.value = adjust
+  prevAdjustAuto.value = auto
+  prevCorrection.value = {}
+}
+
+function prevChanged(row) {
+  const raw = String(prevAdjust.value[row.meter.id] ?? '').trim()
+  const auto = prevAdjustAuto.value[row.meter.id]
+  if (raw === '' || auto == null) return false
+  return Number(raw) !== Number(auto)
+}
+
+// The previous value the save will book against: the typed one when it is a
+// usable number, otherwise the auto value. null when there is none at all.
+function prevInputValue(row) {
+  const raw = String(prevAdjust.value[row.meter.id] ?? '').trim()
+  if (raw !== '' && Number.isFinite(Number(raw))) return Number(raw)
+  return prevAdjustAuto.value[row.meter.id] ?? null
+}
+
+// The previous reading of this gun, resolved lazily the moment the operator
+// changes the value — the warning has to name the day it will rewrite.
+async function resolvePrevCorrection(row) {
+  const id = row.meter.id
+  const auto = prevAdjustAuto.value[id]
+  const res = await api.get('/meter-readings/', { params: { meter: id, limit_page_length: 0 } })
+  const list = res.data.results || res.data || []
+  const shifts = await api.get('/shifts/', { params: { station: stationSel.value, limit_page_length: 0 } })
+  const shiftById = new Map((shifts.data.results || shifts.data || []).map((s) => [s.name, s]))
+  const dated = list
+    .map((r) => {
+      const sh = shiftById.get(r.shift) || {}
+      return { name: r.name, date: String(sh.date || ''), closed: sh.status === 'closed', end: r.end_reading, recorded_at: r.recorded_at }
+    })
+    .filter((r) => r.date)
+  dated.sort((a, b) => b.date.localeCompare(a.date) || String(b.recorded_at).localeCompare(String(a.recorded_at)))
+  const hit = dated.find((r) => Number(r.end) === Number(auto)) || dated[0]
+  if (!hit) return null
+  return { name: hit.name, date: hit.date, closed: hit.closed, old: Number(auto) }
+}
+
+// Resolve as soon as a gun's previous value is changed, so the warning can
+// name the affected day before the operator presses save.
+watch(prevAdjust, () => {
+  for (const row of Object.values(rows.value)) {
+    if (!row || prevCorrection.value[row.meter.id] || !prevChanged(row)) continue
+    resolvePrevCorrection(row).then((info) => {
+      prevCorrection.value = { ...prevCorrection.value, [row.meter.id]: info }
+    })
+  }
+}, { deep: true })
+
+// A correction belongs to the day it was made for: moving to another day
+// discards an unsaved typed value instead of applying it to a different day.
+watch(date, () => { prevAdjust.value = {} })
 
 // ---- edit / delete a SAVED reading ------------------------------------------
 // Any role may correct a reading (all four hold Meter Reading write); only
@@ -526,13 +646,59 @@ async function save() {
     const saved = []
     const failed = []
     for (const r of pending) {
-      const prev = prevOf(r)
+      const label = `المسدس ${r.gunLetter || '—'}${r.mach?.name ? ' — ' + r.mach.name : ''}`
+      const prevRaw = String(prevAdjust.value[r.meter.id] ?? '').trim()
+      const autoPrev = prevAdjustAuto.value[r.meter.id]
+      // A blank or invalid previous must never be coerced into 0 — the field is
+      // mandatory, and a silent zero would book the whole counter as one day.
+      let prevValue = autoPrev ?? null
+      if (prevRaw !== '') {
+        const n = Number(prevRaw)
+        if (!Number.isFinite(n) || n < 0) {
+          failed.push({ label, message: 'القراءة السابقة يجب أن تكون رقمًا صحيحًا غير سالب' })
+          continue
+        }
+        prevValue = n
+      }
+      if (prevValue == null) {
+        failed.push({ label, message: 'أدخل القراءة السابقة' })
+        continue
+      }
+      const changedPrev = prevRaw !== '' && autoPrev != null && prevValue !== Number(autoPrev)
+      if (changedPrev) {
+        // Correct the previous day's reading FIRST, so the day being entered
+        // chains onto the corrected value. The reason travels with it, and the
+        // backend refuses the correction if it would leave a silent gap.
+        const info = await resolvePrevCorrection(r)
+        if (info) {
+          const reasonType = r.prev_exception_type || 'correction'
+          const reasonNotes = String(r.prev_notes || '').trim()
+          if (!reasonNotes) {
+            failed.push({ label, message: 'أدخل سبب تصحيح القراءة السابقة قبل الحفظ' })
+            continue
+          }
+          try {
+            await api.put(`/meter-readings/${info.name}/`, {
+              end_reading: prevValue,
+              exception_type: reasonType,
+              notes: reasonNotes,
+            })
+          } catch (e) {
+            failed.push({ label, message: friendlyError(e) })
+            continue
+          }
+        } else {
+          // No previous reading exists yet: the typed value establishes the
+          // meter's counter (the baseline), it does not rewrite a recording.
+          await api.put(`/meters/${r.meter.id}/`, { current_reading: prevValue })
+        }
+      }
       const body = {
         shift: shiftId,
         meter: r.meter.id,
-        // start = the auto-retrieved previous reading (§10); the backend still
-        // validates continuity against real history and rejects silent gaps
-        start_reading: prev,
+        // start = the previous value the operator entered against — corrected or
+        // auto; the backend still validates continuity against real history.
+        start_reading: prevValue,
         end_reading: Number(r.current),
         source: 'manual',
       }
@@ -553,7 +719,7 @@ async function save() {
         // operator can match the message to the physical pump without
         // translating the database's island/pump hierarchy.
         failed.push({
-          label: `المسدس ${r.gunLetter || '—'}${r.mach?.name ? ' — ' + r.mach.name : ''}`,
+          label,
           message: friendlyError(e),
         })
       }
@@ -766,6 +932,7 @@ async function closeDay() {
                       class="w-full border rounded-lg px-3 py-2 text-sm bg-white"
                       :class="editBackwards() ? 'border-amber-300' : 'border-gray-300'">
                       <option value="">لا يوجد</option>
+                      <option value="correction">تصحيح قراءة مسجلة</option>
                       <option value="reset">تصفير العداد</option>
                       <option value="replacement">استبدال العداد</option>
                       <option value="other">سبب آخر</option>
@@ -792,14 +959,26 @@ async function closeDay() {
               <template v-else>
               <div class="bg-gray-50 rounded-lg p-3" data-testid="gun-previous">
                 <div class="text-xs text-gray-500 mb-1">القراءة السابقة</div>
-                <b class="tabular-nums text-lg">{{ fmtNum(g.row.meter.reading.start_reading ?? prevOf(g.row), 3) }}</b>
+                <b class="tabular-nums text-lg" data-testid="previous-reading-value">{{ fmtNum(g.row.meter.reading.start_reading ?? prevOf(g.row), 3) }}</b>
                 <template v-if="prevEditActive(g.row, 'fix')">
                   <input v-model="prevEdit.input" data-testid="prev-edit-input" type="number" min="0" step="0.001"
                     class="mt-2 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm tabular-nums"
-                    placeholder="أدخل القراءة السابقة الحقيقية" />
+                    placeholder="أدخل القراءة السابقة الصحيحة" />
+                  <!-- A corrected previous value can detach the day before it, and
+                       the backend refuses a silent gap — so the reason the reading
+                       editor asks for travels with this one too. -->
+                  <select v-model="prevEdit.exceptionType" data-testid="prev-edit-exception-type"
+                    class="mt-2 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white">
+                    <option value="">لا يوجد سبب</option>
+                    <option value="reset">تصفير العداد</option>
+                    <option value="replacement">استبدال العداد</option>
+                    <option value="other">سبب آخر</option>
+                  </select>
+                  <input v-model="prevEdit.notes" data-testid="prev-edit-exception-notes"
+                    class="mt-2 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="اكتب السبب هنا" />
                   <div class="flex gap-2 mt-2 items-center">
                     <button data-testid="prev-edit-save" :disabled="prevEditSaving" @click="savePrevEdit(g.row)"
-                      class="bg-primary text-white px-3 py-1.5 rounded-lg text-xs disabled:opacity-50">
+                      class="bg-primary text-white px-3 py-1.5 rounded-lg text-xs">
                       {{ prevEditSaving ? 'جاري الحفظ...' : 'حفظ' }}
                     </button>
                     <button data-testid="prev-edit-cancel" @click="closePrevEdit"
@@ -840,26 +1019,63 @@ async function closeDay() {
               </template>
             </template>
 
-            <!-- not saved yet: the operator fills exactly one field -->
+            <!-- not saved yet: the operator fills the previous and current readings -->
             <template v-else>
-            <!-- previous reading (auto, read-only) -->
+            <!-- previous reading: auto-retrieved, but editable — a wrong value
+                 recorded on an earlier day is corrected here, before the day's
+                 reading is booked against it -->
             <div class="bg-gray-50 rounded-lg p-3" data-testid="gun-previous">
-              <div class="text-xs text-gray-500 mb-1">القراءة السابقة (تلقائية)</div>
-              <b class="tabular-nums text-lg">{{ fmtNum(prevOf(g.row), 3) }}</b>
-              <template v-if="prevEditActive(g.row, 'add')">
-                <input v-model="prevEdit.input" data-testid="prev-edit-input" type="number" min="0" step="0.001"
-                  class="mt-2 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm tabular-nums"
-                  placeholder="أدخل القراءة السابقة الحقيقية" />
-                <div class="flex gap-2 mt-2 items-center">
-                  <button data-testid="prev-edit-save" :disabled="prevEditSaving" @click="savePrevEdit(g.row)"
-                    class="bg-primary text-white px-3 py-1.5 rounded-lg text-xs disabled:opacity-50">
-                    {{ prevEditSaving ? 'جاري الحفظ...' : 'حفظ' }}
-                  </button>
-                  <button data-testid="prev-edit-cancel" @click="closePrevEdit"
-                    class="text-xs text-gray-500 hover:underline">إلغاء</button>
+              <div class="text-xs text-gray-500 mb-1 flex items-center gap-1">
+                القراءة السابقة
+                <span v-if="prevChanged(g.row)" data-testid="previous-adjusted"
+                  class="bg-amber-100 text-amber-800 border border-amber-200 rounded-full px-1.5 py-0.5 text-[10px]">
+                  معدّلة
+                </span>
+                <span v-else class="text-gray-400">(تلقائية)</span>
+              </div>
+              <input v-model="prevAdjust[g.row.meter.id]" data-testid="prev-reading-input"
+                type="number" min="0" step="0.001" inputmode="decimal"
+                class="w-full border rounded-lg px-3 py-2 text-sm tabular-nums bg-white"
+                :class="prevChanged(g.row) ? 'border-amber-400 ring-1 ring-amber-200' : 'border-gray-300'"
+                placeholder="أدخل القراءة السابقة" />
+              <p v-if="prevChanged(g.row)" class="text-[11px] mt-1 leading-snug"
+                :class="prevCorrection[g.row.meter.id] ? 'text-amber-700' : 'text-gray-400'">
+                <template v-if="prevCorrection[g.row.meter.id]">
+                  سيُعدّل قراءة يوم {{ prevCorrection[g.row.meter.id].date }} من
+                  {{ fmtNum(prevCorrection[g.row.meter.id].old, 3) }} إلى
+                  {{ fmtNum(prevAdjust[g.row.meter.id], 3) }}
+                  <template v-if="prevCorrection[g.row.meter.id].closed">
+                    — هذا اليوم مقفل، ستُعاد حساب تسويته المالية
+                  </template>
+                  <template v-if="chainImpactOf(g.row)
+                    && Number(prevAdjust[g.row.meter.id]) !== chainImpactOf(g.row).start_reading">
+                    — قراءة يوم {{ chainImpactOf(g.row).date }} بدأت بالقيمة القديمة وستحتاج إلى تصحيح أيضًا
+                  </template>
+                </template>
+                <template v-else-if="prevCorrection[g.row.meter.id] === null">
+                  لا توجد قراءة سابقة مسجلة لهذا المسدس — سيُضبط عدّاده بهذه القيمة
+                </template>
+                <template v-else>جارٍ تحديد القراءة السابقة…</template>
+              </p>
+              <!-- the reason the backend demands, collected here so the correction
+                   can actually save; a correction is not a reset, so the type
+                   defaults to the distinct "correction" one -->
+              <div v-if="prevChanged(g.row) && prevCorrection[g.row.meter.id]"
+                class="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-3 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                <div>
+                  <label class="block text-xs text-amber-800 mb-1">نوع التصحيح</label>
+                  <select v-model="g.row.prev_exception_type" data-testid="prev-correction-type"
+                    class="w-full border border-amber-300 rounded-lg px-3 py-2 text-sm bg-white">
+                    <option value="correction">تصحيح قراءة مسجلة</option>
+                    <option value="other">سبب آخر</option>
+                  </select>
                 </div>
-                <p v-if="prevEditError" data-testid="prev-edit-error" class="text-xs text-red-600 mt-1">{{ prevEditError }}</p>
-              </template>
+                <div>
+                  <label class="block text-xs text-amber-800 mb-1">سبب التصحيح (مطلوب)</label>
+                  <input v-model="g.row.prev_notes" data-testid="prev-correction-notes"
+                    class="w-full border border-amber-300 rounded-lg px-3 py-2 text-sm" placeholder="اكتب السبب هنا" />
+                </div>
+              </div>
               <button v-else-if="showAddPrev(g.row)" data-testid="prev-add" @click="openAddPrev(g.row)"
                 class="mt-2 text-xs text-amber-700 border border-amber-300 rounded-lg px-3 py-1.5 hover:bg-amber-50">
                 إضافة القراءة السابقة
