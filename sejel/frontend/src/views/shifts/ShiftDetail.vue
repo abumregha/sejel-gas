@@ -16,6 +16,8 @@
              used to press this and be refused with a bare permission error. -->
         <button v-if="shift?.status === 'submitted' && auth.canCloseDay" @click="closeShift"
           class="bg-primary text-white px-4 py-2 rounded-xl text-sm">إقفال المناوبة وإنشاء التسوية</button>
+        <button v-if="(shift?.status === 'submitted' || shift?.status === 'closed') && isAdmin" @click="reopenShift"
+          class="bg-orange-600 text-white px-4 py-2 rounded-xl text-sm">↺ إعادة فتح للتصحيح</button>
         <span v-else-if="shift?.status === 'submitted'" data-testid="close-hint"
           class="text-xs bg-gray-50 text-gray-600 border border-gray-200 rounded-lg px-3 py-2 self-center">
           إقفال المناوبة وإنشاء التسوية يتم من حساب المدير أو المالية
@@ -32,6 +34,24 @@
             <span :class="statusClass(shift.status)" class="badge">{{ statusLabel(shift.status) }}</span>
           </div>
         </div>
+      </div>
+
+      <div class="bg-white rounded-xl shadow-sm border p-4">
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+          <div><span class="text-gray-500">التاريخ:</span> {{ shift.date }}
+            <span v-if="shift.status === 'submitted' || shift.status === 'closed'" title="لا يمكن تعديله">🔒</span>
+          </div>
+          <div><span class="text-gray-500">وقت البدء:</span> {{ shift.start_time }}
+            <span v-if="shift.status === 'submitted' || shift.status === 'closed'" title="لا يمكن تعديله">🔒</span>
+          </div>
+          <div><span class="text-gray-500">وقت الانتهاء:</span> {{ shift.end_time }}
+            <span v-if="shift.status === 'submitted' || shift.status === 'closed'" title="لا يمكن تعديله">🔒</span>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="shift?.status === 'closed'" class="bg-orange-50 border border-orange-200 rounded-xl p-4 text-sm text-orange-800">
+        هذه المناوبة مغلقة. فقط ملاحظات يمكن تعديلها. لتصحيح بيانات المناوبة، استخدم زر "إعادة فتح للتصحيح" (للمالك/المدير فقط).
       </div>
 
       <div class="bg-white rounded-xl shadow-sm border p-4">
@@ -80,7 +100,7 @@
   </div>
 </template>
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '../../api'
 import { SHIFT_STATUS_PRIMARY, SHIFT_BADGE } from '../../utils/labels'
@@ -88,6 +108,7 @@ import { friendlyError } from '../../errors'
 import { useAuthStore } from '../../stores/auth'
 const auth = useAuthStore()
 const route = useRoute(), router = useRouter()
+const isAdmin = computed(() => auth.role === 'System Manager' || auth.role === 'Owner')
 const id = route.params.id
 const shift = ref(null)
 const readings = ref([])
@@ -154,5 +175,9 @@ const activateShift = async () => {
 const submitShift = async () => {
   if (!confirm('إنهاء المناوبة وتقديمها للإقفال؟')) return
   try { await api.put(`/shifts/${id}/`, { status: 'submitted' }); await load() } catch (e) { alert(friendlyError(e)) }
+}
+const reopenShift = async () => {
+  if (!confirm('سيتم إعادة فتح المناوبة للتصحيح. عند الإغلاق الجديد سيتم إعادة حساب التسوية المالية. هل تريد المتابعة؟')) return
+  try { await api.post(`/shifts/${id}/reopen/`); await load() } catch (e) { alert(friendlyError(e)) }
 }
 </script>

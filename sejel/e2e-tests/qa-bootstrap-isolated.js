@@ -104,11 +104,12 @@ async function ensurePilotGuns(page, stationName) {
   }
 
   const tanks = {}
-  for (const [fuel, suffix] of [[petrol, 'بنزين'], [diesel, 'ديزل']]) {
+  // «خزان 1» / «خزان 2» are the names the transfer suite selects by
+  for (const [fuel, tankName] of [[petrol, 'خزان 1'], [diesel, 'خزان 2']]) {
     if (!fuel) continue
-    tanks[fuel.name] = await ensureOne(page, 'tanks', (t) => t.station === station.name && t.tank_name === `خزان ${suffix}`,
-      { tank_name: `خزان ${suffix}`, station: station.name, fuel_type: fuel.name, capacity: 20000, current_level: 15000 },
-      `tank ${suffix} at «${stationName}»`)
+    tanks[fuel.name] = await ensureOne(page, 'tanks', (t) => t.station === station.name && t.tank_name === tankName,
+      { tank_name: tankName, station: station.name, fuel_type: fuel.name, capacity: 20000, current_level: 15000 },
+      `tank ${tankName} at «${stationName}»`)
   }
 
   for (const [code, counter] of Object.entries(PILOT_COUNTERS)) {
@@ -205,7 +206,9 @@ async function seedPilotCounters(page, stationName) {
   for (const fuel of ((fuels.results || fuels) || []).filter((f) => ['بنزين', 'ديزل'].includes(f.fuel_name))) {
     const prices = await apiGet(page, `fuel-prices/?fuel_type=${fuel.name}&limit_page_length=0`)
     const rows = prices.results || prices
-    const selling = fuel.fuel_name === 'بنزين' ? 2.0 : 1.8
+    // the legacy suites assert their arithmetic against the pilot's documented
+    // 0.15 د.ل/لتر, so the disposable site uses the same price
+    const selling = 0.15
     if (!Array.isArray(rows) || !rows.length) {
       await ensureOne(page, 'fuel-prices', () => false, {
         fuel_type: fuel.name, selling_price: selling, cost_per_liter: selling - 0.4,
