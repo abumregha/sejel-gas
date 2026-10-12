@@ -95,6 +95,23 @@
           <div><span class="text-gray-500">صافي النقدية:</span> <strong>{{ formatNum(reconciliation.net_cash) }}</strong></div>
         </div>
       </div>
+
+      <div v-if="corrections.length" class="bg-white rounded-xl shadow-sm border p-4">
+        <h3 class="font-bold mb-3">سجل التصحيحات</h3>
+        <table class="data-table">
+          <thead><tr><th>المستخدم</th><th>التاريخ</th><th>الحقل</th><th>القيمة القديمة</th><th>القيمة الجديدة</th><th>السبب</th></tr></thead>
+          <tbody>
+            <tr v-for="c in corrections" :key="c.corrected_at + c.field_changed">
+              <td>{{ c.corrected_by }}</td>
+              <td>{{ new Date(c.corrected_at).toLocaleString('ar-LY') }}</td>
+              <td>{{ c.field_changed }}</td>
+              <td>{{ c.old_value || '—' }}</td>
+              <td>{{ c.new_value || '—' }}</td>
+              <td>{{ c.reason || '—' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
     <div v-else class="text-center py-12 text-gray-400">جاري التحميل...</div>
   </div>
@@ -109,6 +126,7 @@ import { useAuthStore } from '../../stores/auth'
 const auth = useAuthStore()
 const route = useRoute(), router = useRouter()
 const isAdmin = computed(() => auth.role === 'System Manager' || auth.role === 'Owner')
+const corrections = ref([])
 const id = route.params.id
 const shift = ref(null)
 const readings = ref([])
@@ -161,6 +179,9 @@ const load = async () => {
 
   const allRecons = reconRes.data.results || reconRes.data
   reconciliation.value = allRecons.find(r => String(r.shift) === String(id)) || null
+
+  const corrRes = await api.get(`/shifts/${id}/corrections/`)
+  corrections.value = corrRes.data.results || []
 }
 
 onMounted(load)
