@@ -26,28 +26,44 @@
     </div>
     <div v-if="shift" class="space-y-6">
       <div class="bg-white rounded-xl shadow-sm border p-4">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="font-bold">بيانات المناوبة</h3>
+          <button @click="saveShift" class="bg-primary text-white px-4 py-2 rounded-xl text-sm">حفظ التعديلات</button>
+        </div>
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
-          <div><span class="text-gray-500">المحطة:</span> {{ stationMap[shift.station] || shift.station }}</div>
-          <div><span class="text-gray-500">الجزيرة:</span> {{ islandMap[shift.island] || '—' }}</div>
-          <div><span class="text-gray-500">المناوب:</span> {{ employeeMap[shift.employee] || '—' }}</div>
-          <div><span class="text-gray-500">الحالة:</span>
-            <span :class="statusClass(shift.status)" class="badge">{{ statusLabel(shift.status) }}</span>
+          <div><span class="text-gray-500">الاسم:</span> <input v-model="editForm.shift_name" type="text" :disabled="isFieldLocked('shift_name')" class="border rounded px-2 py-1 w-full" /></div>
+          <div><span class="text-gray-500">المحطة:</span>
+            <select v-model="editForm.station" :disabled="isFieldLocked('station')" class="border rounded px-2 py-1 w-full">
+              <option v-for="(name, id) in stationMap" :key="id" :value="id">{{ name }}</option>
+            </select>
+          </div>
+          <div><span class="text-gray-500">الجزيرة:</span>
+            <select v-model="editForm.island" :disabled="isFieldLocked('island')" class="border rounded px-2 py-1 w-full">
+              <option value="">—</option>
+              <option v-for="(name, id) in islandMap" :key="id" :value="id">{{ name }}</option>
+            </select>
+          </div>
+          <div><span class="text-gray-500">المناوب:</span>
+            <select v-model="editForm.employee" :disabled="isFieldLocked('employee')" class="border rounded px-2 py-1 w-full">
+              <option value="">—</option>
+              <option v-for="(name, id) in employeeMap" :key="id" :value="id">{{ name }}</option>
+            </select>
           </div>
         </div>
       </div>
 
       <div class="bg-white rounded-xl shadow-sm border p-4">
+        <h3 class="font-bold mb-3">الوقت</h3>
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
-          <div><span class="text-gray-500">التاريخ:</span> {{ shift.date }}
-            <span v-if="shift.status === 'submitted' || shift.status === 'closed'" title="لا يمكن تعديله">🔒</span>
-          </div>
-          <div><span class="text-gray-500">وقت البدء:</span> {{ shift.start_time }}
-            <span v-if="shift.status === 'submitted' || shift.status === 'closed'" title="لا يمكن تعديله">🔒</span>
-          </div>
-          <div><span class="text-gray-500">وقت الانتهاء:</span> {{ shift.end_time }}
-            <span v-if="shift.status === 'submitted' || shift.status === 'closed'" title="لا يمكن تعديله">🔒</span>
-          </div>
+          <div><span class="text-gray-500">التاريخ:</span> <input v-model="editForm.date" type="date" :disabled="isFieldLocked('date')" class="border rounded px-2 py-1 w-full" /></div>
+          <div><span class="text-gray-500">وقت البدء:</span> <input v-model="editForm.start_time" type="time" :disabled="isFieldLocked('start_time')" class="border rounded px-2 py-1 w-full" /></div>
+          <div><span class="text-gray-500">وقت الانتهاء:</span> <input v-model="editForm.end_time" type="time" :disabled="isFieldLocked('end_time')" class="border rounded px-2 py-1 w-full" /></div>
         </div>
+      </div>
+
+      <div class="bg-white rounded-xl shadow-sm border p-4">
+        <h3 class="font-bold mb-3">ملاحظات</h3>
+        <textarea v-model="editForm.notes" rows="3" class="border rounded px-2 py-1 w-full" placeholder="أضف ملاحظات..."></textarea>
       </div>
 
       <div v-if="shift?.status === 'closed'" class="bg-orange-50 border border-orange-200 rounded-xl p-4 text-sm text-orange-800">
@@ -145,9 +161,35 @@ const formatNum = (v) => v ? Number(v).toLocaleString('en-US') : '0'
 const statusLabel = (s) => SHIFT_STATUS_PRIMARY[s] || s
 const statusClass = (s) => SHIFT_BADGE[s] || 'badge-gray'
 
+const editForm = ref({})
+const isFieldLocked = (field) => {
+  const status = shift.value?.status
+  if (!status || status === 'scheduled' || status === 'open') return false
+  if (status === 'submitted') return ['date', 'start_time', 'end_time'].includes(field)
+  if (status === 'closed') return ['shift_name', 'station', 'definition', 'employee', 'island',
+    'date', 'start_time', 'end_time'].includes(field)
+  return false
+}
+const saveShift = async () => {
+  if (!confirm('هل تريد حفظ التعديلات؟')) return
+  try {
+    const updates = {}
+    for (const field in editForm.value) {
+      if (editForm.value[field] !== shift.value[field]) {
+        updates[field] = editForm.value[field]
+      }
+    }
+    if (Object.keys(updates).length > 0) {
+      await api.put(`/shifts/${id}/`, updates)
+      await load()
+    }
+  } catch (e) { alert(friendlyError(e)) }
+}
+
 const load = async () => {
   const { data } = await api.get(`/shifts/${id}/`)
   shift.value = data
+  editForm.value = { ...data }
 
   const [rRes, cRes, vRes, posRes, reconRes, sRes, iRes, eRes, mRes, fRes] = await Promise.all([
     api.get(`/meter-readings/?shift=${id}`),

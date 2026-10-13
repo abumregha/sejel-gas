@@ -30,6 +30,7 @@
               <span :class="statusClass(s.status)" class="badge">{{ statusLabel(s.status) }}</span>
             </td>
             <td class="flex gap-2">
+              <button @click.stop="$router.push(`/shifts/${s.name}`)" class="text-gray-600 text-sm">تعديل</button>
               <button v-if="s.status === 'scheduled'" @click.stop="activateShift(s)" class="text-blue-600 text-sm">بدء</button>
               <button v-if="s.status === 'open'" @click.stop="submitShift(s)" class="text-yellow-600 text-sm">تقديم</button>
               <button v-if="s.status === 'submitted' && auth.canCloseDay" @click.stop="closeShift(s)" class="text-primary text-sm">إقفال</button>
