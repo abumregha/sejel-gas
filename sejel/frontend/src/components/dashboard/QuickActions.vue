@@ -20,13 +20,22 @@ const actions = [
   { label: 'قراءة عداد', icon: 'meter', to: '/shifts', roles: ['supervisor', 'manager'] },
   { label: 'إقفال مناوبة', icon: 'clock', to: '/shifts', roles: ['supervisor', 'manager'] },
   { label: 'قراءة خزان', icon: 'tank', to: '/inventory/tank-readings', roles: ['supervisor', 'manager'] },
-  { label: 'تسجيل شحنة', icon: 'island', to: '/inventory/deliveries/create', roles: ['supervisor', 'manager'] },
+  { label: 'تعبئة خزان', icon: 'tank', to: '/inventory/tank-readings', roles: ['supervisor', 'manager'] },
+  { label: 'إضافة شحنة', icon: 'island', to: '/inventory/deliveries/create', roles: ['supervisor', 'manager'] },
   { label: 'إضافة تحصيل', icon: 'banknote', to: '/finance/income', roles: ['finance', 'manager'] },
   { label: 'إضافة مصروف', icon: 'wallet', to: '/finance/expenses/create', roles: ['finance', 'manager'] },
   { label: 'مطابقة مناوبة', icon: 'scale', to: '/finance/reconciliations', roles: ['finance', 'manager'] },
   { label: 'عرض التقارير', icon: 'layers', to: '/reports/daily', roles: ['finance', 'manager'] },
   { label: 'إدارة المحطات', icon: 'station', to: '/stations', roles: ['manager'] },
 ]
+
+const getActionUrl = (a) => {
+  if (props.stationId) {
+    if (a.to === '/inventory/deliveries/create') return `${a.to}?station=${props.stationId}`
+    if (a.to === '/inventory/tank-readings') return `${a.to}?station=${props.stationId}`
+  }
+  return a.to
+}
 </script>
 
 <template>
@@ -37,7 +46,7 @@ const actions = [
         v-for="a in actions.filter((x) => can(x.roles))"
         :key="a.label"
         class="inline-flex items-center gap-1.5 bg-gray-50 hover:bg-blue-50 hover:text-blue-800 border border-gray-200 rounded-lg px-3 py-2 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-300"
-        @click="router.push(a.to)"
+        @click="router.push(getActionUrl(a))"
       >
         <Icon :name="a.icon" :size="15" class="text-gray-500" />
         {{ a.label }}

@@ -18,12 +18,28 @@ const gaugeColor = (status) => ({
   normal: '#22c55e', low: '#f59e0b', critical: '#ef4444', empty: '#b91c1c', full: '#3b82f6',
 }[status] || '#9ca3af')
 
-const gauges = computed(() => props.tanks.slice(0, 4).map((t) => ({
-  label: t.name,
-  value: t.percent,
-  color: gaugeColor(t.status),
-  caption: `${t.fuel_type || ''} — ${fmtNum(t.current_level)} / ${fmtNum(t.capacity)} لتر`,
-})))
+const overall = computed(() => {
+  const cap = Number(props.summary?.total_capacity) || props.tanks.reduce((acc, t) => acc + (Number(t.capacity) || 0), 0) || 0
+  const vol = Number(props.summary?.current_volume) || props.tanks.reduce((acc, t) => acc + (Number(t.current_level) || 0), 0) || 0
+  const pct = cap > 0 ? (vol / cap) * 100 : 0
+  const status = pct > 50 ? 'normal' : pct >= 20 ? 'low' : 'critical'
+  return {
+    label: 'إجمالي المخزون',
+    value: pct,
+    color: gaugeColor(status),
+    caption: `${fmtNum(vol)} / ${fmtNum(cap)} لتر`,
+  }
+})
+
+const gauges = computed(() => [
+  overall.value,
+  ...props.tanks.slice(0, 4).map((t) => ({
+    label: t.name,
+    value: t.percent,
+    color: gaugeColor(t.status),
+    caption: `${t.fuel_type || ''} — ${fmtNum(t.current_level)} / ${fmtNum(t.capacity)} لتر`,
+  })),
+])
 
 const series = computed(() => {
   const t = props.trend
@@ -39,7 +55,7 @@ const series = computed(() => {
 <template>
   <section class="space-y-4">
     <!-- gauges row -->
-    <div v-if="gauges.length" class="grid grid-cols-2 md:grid-cols-4 gap-3">
+    <div v-if="gauges.length" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
       <GaugeCard v-for="g in gauges" :key="g.label" v-bind="g" />
     </div>
 

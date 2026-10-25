@@ -24,7 +24,7 @@ export const SHIFT_BADGE = {
 }
 
 export const PAYMENT_STATUS = { unpaid: 'غير مدفوعة', partial: 'مدفوعة جزئياً', paid: 'مدفوعة' }
-export const DELIVERY_STATUS = { ordered: 'طلبية', received: 'مستلمة', claimed: 'مطالبة مقدمة', settled: 'تمت التسوية', closed: 'مغلقة' }
+export const DELIVERY_STATUS = { ordered: 'طلبية', received: 'مستلمة', undelivered: 'غير مسلّمة', transit: 'مرحلة', claimed: 'مطالبة مقدمة', settled: 'تمت التسوية', closed: 'مغلقة' }
 export const REQUEST_STATUS = { pending: 'معلقة', approved: 'معتمدة', dispatched: 'قيد التوريد', received: 'مستلمة', cancelled: 'ملغاة' }
 export const CLAIM_STATUS = { not_claimed: 'غير مطالبة', claimed: 'مطالبة مقدمة', settled: 'تمت التسوية', closed: 'مغلقة' }
 export const EXPENSE_STATUS = { pending: 'معلق', approved: 'معتمد', rejected: 'مرفوض', cancelled: 'ملغى' }

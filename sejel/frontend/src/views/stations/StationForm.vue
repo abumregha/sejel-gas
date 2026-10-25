@@ -15,6 +15,14 @@
         <input v-model="form.day_close_time" type="time" class="w-full border border-gray-300 rounded-lg px-4 py-2.5" />
         <p class="text-xs text-gray-500 mt-1">موعد بدء دورة قراءات اليوم لهذه المحطة (مثال: 11:00 ← 11:00).</p>
       </div>
+      <div class="flex items-start gap-2">
+        <input v-model="form.show_rent" type="checkbox" :true-value="1" :false-value="0"
+          class="mt-1 border border-gray-300 rounded" />
+        <div>
+          <label class="block text-sm font-medium text-gray-700">إظهار الإيجار في التقارير</label>
+          <p class="text-xs text-gray-500 mt-1">عند التفعيل، تظهر مصروفات الإيجار في التقارير المالية. عطّله لإبقاء محاسبة الإيجار منفصلة عن محاسبة الوقود.</p>
+        </div>
+      </div>
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-1">نوع العلاقة</label>
         <select v-model="form.relationship_type" class="w-full border border-gray-300 rounded-lg px-4 py-2.5">
@@ -47,7 +55,7 @@ const saving = ref(false)
 // Global toast: a per-component toast is unmounted by the redirect below and
 // the operator never sees the confirmation.
 const { show } = useToast()
-const form = ref({ station_name: '', address: '', relationship_type: 'owned', day_close_time: '' })
+const form = ref({ station_name: '', address: '', relationship_type: 'owned', day_close_time: '', show_rent: 1 })
 
 onMounted(async () => {
   if (isEdit.value) {
@@ -58,6 +66,7 @@ onMounted(async () => {
       relationship_type: data.relationship_type,
       // Frappe returns a Time as HH:MM:SS; the <input type="time"> wants HH:MM
       day_close_time: (data.day_close_time || '').slice(0, 5),
+      show_rent: data.show_rent,
     }
   }
 })

@@ -33,10 +33,18 @@
           <input v-model="form.order_date" type="datetime-local" required class="w-full border border-gray-300 rounded-lg px-4 py-2.5" />
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">تاريخ الاستلام</label>
-          <input v-model="form.arrival_date" type="datetime-local" class="w-full border border-gray-300 rounded-lg px-4 py-2.5" />
+          <label class="block text-sm font-medium text-gray-700 mb-1">التاريخ المجدول</label>
+          <input v-model="form.scheduled_date" type="date" class="w-full border border-gray-300 rounded-lg px-4 py-2.5" />
         </div>
       </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">تاريخ الاستلام الفعلي</label>
+        <input v-model="form.arrival_date" type="datetime-local" class="w-full border border-gray-300 rounded-lg px-4 py-2.5" />
+      </div>
+      <label class="flex items-center gap-2 text-sm text-gray-700">
+        <input v-model="form.is_unscheduled" type="checkbox" class="rounded border-gray-300" />
+        شحنة غير مجدولة / إضافية
+      </label>
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-1">الكمية المتوقعة (لتر)</label>
         <div class="flex gap-2 mb-2">
@@ -75,10 +83,10 @@
 </template>
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import api from '../../api'
 import { friendlyError } from '../../errors'
-const router = useRouter()
+const router = useRouter(), route = useRoute()
 const error = ref('')
 const saving = ref(false)
 const nowLocal = () => {
@@ -90,7 +98,8 @@ const form = ref({
   station: '', tank: '', fuel_type: '',
   requested_quantity: 40000, expected_quantity: 40000,
   invoice_number: '',
-  order_date: nowLocal(), arrival_date: '',
+  order_date: nowLocal(), arrival_date: '', scheduled_date: '',
+  is_unscheduled: false,
   pre_reading: '', post_reading: '',
 })
 const stations = ref([])
@@ -116,6 +125,13 @@ onMounted(async () => {
     stations.value = sRes.data.results || sRes.data
     tanks.value = tRes.data.results || tRes.data
     fuelTypes.value = fRes.data.results || fRes.data
+    if (route.query.station) form.value.station = route.query.station
+    else if (stations.value.length === 1) form.value.station = stations.value[0].name
+    if (route.query.tank) form.value.tank = route.query.tank
+    if (route.query.date) {
+      form.value.scheduled_date = route.query.date
+      form.value.order_date = `${route.query.date}T08:00`
+    }
   } catch (e) { error.value = 'خطأ في تحميل البيانات' }
 })
 const save = async () => {
@@ -132,9 +148,10 @@ const save = async () => {
       invoice_number: form.value.invoice_number || undefined,
       order_date: toISO(form.value.order_date),
       arrival_date: toISO(form.value.arrival_date),
+      scheduled_date: form.value.scheduled_date || undefined,
+      is_unscheduled: form.value.is_unscheduled ? 1 : 0,
       pre_reading: form.value.pre_reading === '' ? undefined : Number(form.value.pre_reading),
       post_reading: form.value.post_reading === '' ? undefined : Number(form.value.post_reading),
-      // backend calculate_shortage() is not wired to validate(); compute per documented formula
       received_quantity: receivedQty.value === null ? undefined : receivedQty.value,
       shortage: receivedQty.value === null ? undefined : shortage.value,
     }

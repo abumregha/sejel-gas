@@ -189,6 +189,7 @@ const navGroups = computed(() => {
         { to: '/finance/pos', icon: '🏧', label: 'الدفع الإلكتروني', roles: ['admin', 'manager', 'finance'] },
         { to: '/finance/expenses', icon: '🧾', label: 'المصروفات', roles: ['admin', 'manager', 'finance'] },
         { to: '/finance/settlements', icon: '📑', label: 'تسوية القسائم', roles: ['admin', 'manager', 'finance'] },
+        { to: '/finance/deposits', icon: '🏦', label: 'الدفعات المقدمة', roles: ['admin', 'manager', 'finance'] },
       ],
     },
     {
@@ -200,6 +201,7 @@ const navGroups = computed(() => {
         { to: '/inventory/shortages', icon: '⚠️', label: 'النقص', roles: ['admin', 'manager'] },
         { to: '/inventory/fuel-reconciliation', icon: '📉', label: 'تسوية الوقود', roles: ['admin', 'manager', 'finance'] },
         { to: '/inventory/requests', icon: '📝', label: 'طلبات التوريد' },
+        { to: '/inventory/shipment-schedules', icon: '📅', label: 'جدول الشحنات', roles: ['admin', 'manager', 'finance'] },
       ],
     },
     {
@@ -208,6 +210,9 @@ const navGroups = computed(() => {
         { to: '/reports/daily', icon: '📅', label: 'التقرير اليومي' },
         { to: '/reports/monthly', icon: '📆', label: 'التقرير الشهري', roles: ['admin', 'manager', 'finance'] },
         { to: '/reports/inventory', icon: '📦', label: 'المخزون والتوريد' },
+        { to: '/reports/balance', icon: '⚖️', label: 'تقرير الرصيد', roles: ['admin', 'manager', 'finance'] },
+        { to: '/reports/shipments', icon: '📋', label: 'تقرير الشحنات الشهري', roles: ['admin', 'manager', 'finance'] },
+        { to: '/reports/delivery-print', icon: '🖨️', label: 'تقرير التسليم للطباعة', roles: ['admin', 'manager', 'finance'] },
         { to: '/shifts/gaps', icon: '🔍', label: 'فجوات العدادات', roles: ['admin', 'manager', 'supervisor'] },
       ],
     },

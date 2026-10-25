@@ -24,8 +24,8 @@
             <td>{{ stationMap[s.station] || s.station }}</td>
             <td>{{ islandMap[s.island] || '—' }}</td>
             <td>{{ employeeMap[s.employee] || '—' }}</td>
-            <td>{{ s.start_time || '—' }}</td>
-            <td>{{ s.end_time || '—' }}</td>
+            <td>{{ fmtTime(s.start_time) }}</td>
+            <td>{{ fmtTime(s.end_time) }}</td>
             <td>
               <span :class="statusClass(s.status)" class="badge">{{ statusLabel(s.status) }}</span>
             </td>
@@ -50,6 +50,7 @@ import api from '../../api'
 import { SHIFT_STATUS_PRIMARY, SHIFT_BADGE } from '../../utils/labels'
 import { friendlyError } from '../../errors'
 import { useAuthStore } from '../../stores/auth'
+import { fmtTime } from '../../components/dashboard/format'
 const auth = useAuthStore()
 const router = useRouter()
 const items = ref([])

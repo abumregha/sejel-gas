@@ -75,6 +75,9 @@ const routes = [
       { path: 'finance/settlements', name: 'settlements', component: () => import('../views/finance/SettlementList.vue') },
       { path: 'finance/settlements/create', name: 'settlement-create', component: () => import('../views/finance/SettlementForm.vue') },
       { path: 'finance/settlements/:id', name: 'settlement-detail', component: () => import('../views/finance/SettlementDetail.vue') },
+      { path: 'finance/deposits', name: 'deposits', component: () => import('../views/finance/DepositList.vue') },
+      { path: 'finance/deposits/create', name: 'deposit-create', component: () => import('../views/finance/DepositForm.vue') },
+      { path: 'finance/deposits/:id/edit', name: 'deposit-edit', component: () => import('../views/finance/DepositForm.vue') },
       { path: 'finance/reconciliations', name: 'reconciliations', component: () => import('../views/finance/ReconciliationList.vue') },
       { path: 'finance/reconciliations/:id', name: 'reconciliation-detail', component: () => import('../views/finance/ReconciliationDetail.vue') },
 
@@ -90,11 +93,16 @@ const routes = [
       { path: 'inventory/requests', name: 'delivery-requests', component: () => import('../views/inventory/RequestList.vue') },
       { path: 'inventory/requests/create', name: 'request-create', component: () => import('../views/inventory/RequestForm.vue') },
       { path: 'inventory/requests/:id', name: 'request-detail', component: () => import('../views/inventory/RequestDetail.vue') },
+      { path: 'inventory/shipment-schedules', name: 'shipment-schedules', component: () => import('../views/inventory/ShipmentScheduleList.vue') },
+      { path: 'inventory/shipment-schedules/create', name: 'shipment-schedule-create', component: () => import('../views/inventory/ShipmentScheduleForm.vue') },
 
       // Reports
       { path: 'reports/daily', name: 'report-daily', component: () => import('../views/reports/DailyReport.vue') },
       { path: 'reports/monthly', name: 'report-monthly', component: () => import('../views/reports/MonthlyReport.vue') },
       { path: 'reports/inventory', name: 'report-inventory', component: () => import('../views/reports/InventoryReport.vue') },
+      { path: 'reports/balance', name: 'report-balance', component: () => import('../views/reports/BalanceReport.vue') },
+      { path: 'reports/delivery-print', name: 'report-delivery-print', component: () => import('../views/reports/DeliveryPrint.vue') },
+      { path: 'reports/shipments', name: 'report-shipments', component: () => import('../views/reports/ShipmentReport.vue') },
 
       // Settings
       { path: 'settings/users', name: 'users', component: () => import('../views/settings/UsersList.vue') },

@@ -79,7 +79,7 @@
           <div class="min-w-0">
             <div class="font-medium text-sm truncate">{{ s.name }}</div>
             <div class="text-xs text-gray-400 mt-0.5">
-              {{ (s.start_time || '').slice(0, 5) }}–{{ (s.end_time || '').slice(0, 5) }}
+              {{ fmtTime(s.start_time) }}–{{ fmtTime(s.end_time) }}
               <span v-if="s.employee"> · {{ employeeName(s.employee) }}</span>
               <span v-if="s.island"> · {{ islandName(s.island) }}</span>
             </div>
@@ -148,6 +148,7 @@
 // auto-generated shifts (with emergency 24h mode), and the readings grid.
 import { ref, computed, onMounted, watch } from 'vue'
 import api from '../../api'
+import { fmtTime } from '../../components/dashboard/format'
 import { useAuthStore } from '../../stores/auth'
 
 const auth = useAuthStore()

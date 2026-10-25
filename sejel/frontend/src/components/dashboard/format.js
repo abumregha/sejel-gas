@@ -27,5 +27,9 @@ export function fmtTime(v) {
   if (!v) return '—'
   const d = new Date(v)
   if (isNaN(d)) return String(v)
-  return d.toLocaleTimeString('ar-LY-u-nu-latn', { hour: '2-digit', minute: '2-digit' })
+  const h = d.getHours()
+  const period = h < 12 ? 'صباحا' : 'مساء'
+  const h12 = h % 12 || 12
+  const m = String(d.getMinutes()).padStart(2, '0')
+  return `${h12}:${m} ${period}`
 }

@@ -125,6 +125,23 @@ const diffTone = computed(() => {
   return t === 'shortage' ? 'red' : t === 'surplus' ? 'amber' : 'green'
 })
 
+const totalTankPercent = computed(() => {
+  const cap = Number(data.value?.summary?.total_capacity) || (data.value?.tanks || []).reduce((a, t) => a + (Number(t.capacity) || 0), 0)
+  const vol = Number(data.value?.summary?.current_volume) || (data.value?.tanks || []).reduce((a, t) => a + (Number(t.current_level) || 0), 0)
+  return cap > 0 ? Math.round((vol / cap) * 100) : 0
+})
+
+const fuelTotals = computed(() => {
+  const res = {}
+  for (const t of (data.value?.tanks || [])) {
+    if (t.fuel_type) {
+      res[t.fuel_type] = (res[t.fuel_type] || 0) + (Number(t.current_level) || 0)
+    }
+  }
+  return res
+})
+
+
 // ── aggregate mode: who still owes work today? ────────────────────────────────
 function workNeededLabel(s) {
   const r = s.readings_status || {}
@@ -346,10 +363,47 @@ const stationsNeedingWork = computed(() =>
 
           <!-- D. TANKS (§11/§12) -->
           <section>
-            <h2 class="font-bold mb-3 flex items-center gap-2">
-              <Icon name="tank" :size="18" class="text-gray-500" /> الخزانات
-              <span class="text-xs font-normal text-gray-400">إجمالي المخزون {{ fmtNum(data.summary.current_volume) }} / {{ fmtNum(data.summary.total_capacity) }} لتر</span>
-            </h2>
+            <div class="flex items-center justify-between mb-3">
+              <h2 class="font-bold flex items-center gap-2">
+                <Icon name="tank" :size="18" class="text-gray-500" /> الخزانات
+                <span class="text-xs font-normal text-gray-400">إجمالي المخزون {{ fmtNum(data.summary?.current_volume) }} / {{ fmtNum(data.summary?.total_capacity) }} لتر</span>
+              </h2>
+              <div class="flex items-center gap-2">
+                <router-link to="/inventory/tank-readings" class="text-xs text-primary bg-primary/10 hover:bg-primary/20 px-2.5 py-1 rounded-lg transition font-medium">
+                  + قراءة خزان
+                </router-link>
+                <router-link :to="`/inventory/deliveries/create?station=${data.station?.id || ''}&date=${selectedDate}`" class="text-xs text-blue-700 bg-blue-50 hover:bg-blue-100 px-2.5 py-1 rounded-lg transition font-medium">
+                  + إضافة شحنة
+                </router-link>
+              </div>
+            </div>
+
+            <!-- Total tank summary gauge card -->
+            <div v-if="data.tanks?.length" class="bg-white rounded-xl border border-gray-100 shadow-sm p-4 mb-3">
+              <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                <div class="flex items-center gap-2">
+                  <div class="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-sm">
+                    {{ totalTankPercent }}%
+                  </div>
+                  <div>
+                    <div class="font-bold text-sm">إجمالي سعة وتوفر الوقود بالخزانات</div>
+                    <div class="text-xs text-gray-400">{{ fmtNum(data.summary?.current_volume) }} من إجمالي {{ fmtNum(data.summary?.total_capacity) }} لتر</div>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2 text-xs">
+                  <span v-for="(v, f) in fuelTotals" :key="f" class="bg-gray-50 border border-gray-200 rounded-md px-2 py-1">
+                    {{ f }}: <strong>{{ fmtNum(v) }}</strong> لتر
+                  </span>
+                </div>
+              </div>
+              <div class="h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                <div
+                  class="h-full rounded-full transition-all duration-500 bg-emerald-500"
+                  :style="{ width: Math.min(100, totalTankPercent) + '%' }"
+                />
+              </div>
+            </div>
+
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <TankCard v-for="t in data.tanks" :key="t.id" :tank="t" @open="(p) => openDrawer('tank', p)" />
               <div v-if="!data.tanks.length" class="text-sm text-gray-400 bg-white rounded-xl border border-dashed border-gray-200 p-8 text-center sm:col-span-2">

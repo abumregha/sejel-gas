@@ -12,8 +12,8 @@
             <td class="font-medium">{{ d.definition_name }}</td>
             <td>{{ stationMap[d.station] || d.station }}</td>
             <td>{{ islandMap[d.island] || '—' }}</td>
-            <td class="font-mono">{{ d.start_time }}</td>
-            <td class="font-mono">{{ d.end_time }}</td>
+            <td class="font-mono">{{ fmtTime(d.start_time) }}</td>
+            <td class="font-mono">{{ fmtTime(d.end_time) }}</td>
             <td>{{ formatDays(d.days) }}</td>
             <td class="flex gap-2">
               <router-link :to="`/shifts/definitions/${d.name}/edit`" class="text-primary text-sm">تعديل</router-link>
@@ -29,6 +29,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import api from '../../api'
+import { fmtTime } from '../../components/dashboard/format'
 const items = ref([])
 const stationMap = ref({})
 const islandMap = ref({})
