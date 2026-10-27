@@ -2,7 +2,7 @@
   <div>
     <div class="flex items-center justify-between mb-6">
       <h2 class="text-xl font-bold">جدول الشحنات</h2>
-      <router-link to="/inventory/shipment-schedules/create" class="bg-primary text-white px-4 py-2 rounded-xl text-sm">+ إضافة شحنة</router-link>
+      <router-link to="/inventory/shipments/create?type=schedule" class="bg-primary text-white px-4 py-2 rounded-xl text-sm">+ إضافة شحنة</router-link>
     </div>
     <div class="bg-white rounded-xl shadow-sm border overflow-x-auto">
       <table class="data-table">
@@ -18,8 +18,9 @@
             <td class="font-mono font-medium">{{ Number(s.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 3 }) }} د.ل</td>
             <td><span class="badge" :class="statusClass(s.status)">{{ statusLabel(s.status) }}</span></td>
             <td>{{ s.invoice_number || '—' }}</td>
-            <td>
-              <router-link :to="`/inventory/shipment-schedules/${s.name}`" class="text-primary hover:underline text-xs font-semibold">تعديل</router-link>
+            <td class="whitespace-nowrap">
+              <router-link v-if="['scheduled','dispatched'].includes(s.status)" :to="`/inventory/shipments/create?type=arrival&schedule=${s.name}`" class="text-green-700 hover:underline text-xs font-semibold ml-2">استلام</router-link>
+              <router-link :to="`/inventory/shipments/${s.name}?type=schedule`" class="text-primary hover:underline text-xs font-semibold">تعديل</router-link>
             </td>
           </tr>
         </tbody>

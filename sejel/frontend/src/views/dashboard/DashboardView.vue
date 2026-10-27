@@ -372,7 +372,7 @@ const stationsNeedingWork = computed(() =>
                 <router-link to="/inventory/tank-readings" class="text-xs text-primary bg-primary/10 hover:bg-primary/20 px-2.5 py-1 rounded-lg transition font-medium">
                   + قراءة خزان
                 </router-link>
-                <router-link :to="`/inventory/deliveries/create?station=${data.station?.id || ''}&date=${selectedDate}`" class="text-xs text-blue-700 bg-blue-50 hover:bg-blue-100 px-2.5 py-1 rounded-lg transition font-medium">
+                <router-link :to="`/inventory/shipments/create?type=delivery&station=${data.station?.id || ''}&date=${selectedDate}`" class="text-xs text-blue-700 bg-blue-50 hover:bg-blue-100 px-2.5 py-1 rounded-lg transition font-medium">
                   + إضافة شحنة
                 </router-link>
               </div>

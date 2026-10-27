@@ -21,7 +21,7 @@ const actions = [
   { label: 'إقفال مناوبة', icon: 'clock', to: '/shifts', roles: ['supervisor', 'manager'] },
   { label: 'قراءة خزان', icon: 'tank', to: '/inventory/tank-readings', roles: ['supervisor', 'manager'] },
   { label: 'تعبئة خزان', icon: 'tank', to: '/inventory/tank-readings', roles: ['supervisor', 'manager'] },
-  { label: 'إضافة شحنة', icon: 'island', to: '/inventory/deliveries/create', roles: ['supervisor', 'manager'] },
+  { label: 'إضافة شحنة', icon: 'island', to: '/inventory/shipments/create?type=delivery', roles: ['supervisor', 'manager'] },
   { label: 'إضافة تحصيل', icon: 'banknote', to: '/finance/income', roles: ['finance', 'manager'] },
   { label: 'إضافة مصروف', icon: 'wallet', to: '/finance/expenses/create', roles: ['finance', 'manager'] },
   { label: 'مطابقة مناوبة', icon: 'scale', to: '/finance/reconciliations', roles: ['finance', 'manager'] },
@@ -31,7 +31,7 @@ const actions = [
 
 const getActionUrl = (a) => {
   if (props.stationId) {
-    if (a.to === '/inventory/deliveries/create') return `${a.to}?station=${props.stationId}`
+    if (a.to.startsWith('/inventory/shipments/create')) return `${a.to}&station=${props.stationId}`
     if (a.to === '/inventory/tank-readings') return `${a.to}?station=${props.stationId}`
   }
   return a.to
