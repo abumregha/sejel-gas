@@ -17,6 +17,8 @@ const FIELD_LABELS = {
   end_time: 'وقت الانتهاء', days: 'الأيام', date: 'التاريخ', count: 'العدد',
   delivery: 'الشحنة', from_tank: 'من خزان', to_tank: 'إلى خزان', quantity: 'الكمية',
   pre_reading: 'القراءة قبل', post_reading: 'القراءة بعد', reason: 'السبب',
+  invoice_number: 'رقم الفاتورة', supplier: 'المورد', serial_number: 'المسلسل',
+  shipment_schedule: 'جدول الشحنة', deposit: 'الفاتورة / الإيداع',
 }
 
 // DocType names appearing in LinkExistsError messages → Arabic labels

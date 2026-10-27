@@ -83,7 +83,7 @@ const routes = [
 
       // Inventory
       { path: 'inventory/deliveries', name: 'deliveries', component: () => import('../views/inventory/DeliveryList.vue') },
-      { path: 'inventory/deliveries/create', name: 'delivery-create', component: () => import('../views/inventory/DeliveryForm.vue') },
+      { path: 'inventory/deliveries/create', name: 'delivery-create', component: () => import('../views/inventory/ShipmentForm.vue'), meta: { forceType: 'delivery' } },
       { path: 'inventory/deliveries/:id', name: 'delivery-detail', component: () => import('../views/inventory/DeliveryDetail.vue') },
       { path: 'inventory/tank-readings', name: 'tank-readings', component: () => import('../views/inventory/TankReadingList.vue') },
       { path: 'inventory/transfers', name: 'transfers', component: () => import('../views/inventory/TransferList.vue') },
@@ -94,7 +94,9 @@ const routes = [
       { path: 'inventory/requests/create', name: 'request-create', component: () => import('../views/inventory/RequestForm.vue') },
       { path: 'inventory/requests/:id', name: 'request-detail', component: () => import('../views/inventory/RequestDetail.vue') },
       { path: 'inventory/shipment-schedules', name: 'shipment-schedules', component: () => import('../views/inventory/ShipmentScheduleList.vue') },
-      { path: 'inventory/shipment-schedules/create', name: 'shipment-schedule-create', component: () => import('../views/inventory/ShipmentScheduleForm.vue') },
+      { path: 'inventory/shipment-schedules/create', name: 'shipment-schedule-create', component: () => import('../views/inventory/ShipmentForm.vue'), meta: { forceType: 'schedule' } },
+      { path: 'inventory/shipments/create', name: 'shipment-create', component: () => import('../views/inventory/ShipmentForm.vue') },
+      { path: 'inventory/shipments/:id', name: 'shipment-edit', component: () => import('../views/inventory/ShipmentForm.vue') },
 
       // Reports
       { path: 'reports/daily', name: 'report-daily', component: () => import('../views/reports/DailyReport.vue') },
