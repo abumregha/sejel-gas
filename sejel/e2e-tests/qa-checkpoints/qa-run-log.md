@@ -9324,3 +9324,129 @@ Call log:
 - Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)
 - Failed to load resource: the server responded with a status of 400 (BAD REQUEST)
 - Failed to load resource: the server responded with a status of 400 (BAD REQUEST)
+
+## ## Phase 5 — inventory screen sweep (as station owner)
+
+
+
+## ### /inventory/deliveries (التموين)
+
+- rendered chars: 805
+- console errors: (none)
+- network ≥400: (none)
+- visible text: "سجل 🏠 الرئيسية العمليات 🎯 قراءات المضخات 🗑️ سجل حذف القراءات 🗓️ يوم المحطة 🔄 المناوبات ⛽ المحطات 🧭 إعداد محطة 👥 الموظفين 📋 تعريفات المناوبات المالية 💰 المالية 📥 إدخال إيرادات 📊 المبيعات المالية 💲 أسعار الوقود"
+
+## ### /inventory/deliveries/create (نموذج تموين)
+
+- rendered chars: 936
+- console errors: (none)
+- network ≥400: (none)
+- visible text: "سجل 🏠 الرئيسية العمليات 🎯 قراءات المضخات 🗑️ سجل حذف القراءات 🗓️ يوم المحطة 🔄 المناوبات ⛽ المحطات 🧭 إعداد محطة 👥 الموظفين 📋 تعريفات المناوبات المالية 💰 المالية 📥 إدخال إيرادات 📊 المبيعات المالية 💲 أسعار الوقود"
+
+## ### /inventory/shipments/create (إضافة شحنة موحدة)
+
+- rendered chars: 948
+- console errors: (none)
+- network ≥400: (none)
+- visible text: "سجل 🏠 الرئيسية العمليات 🎯 قراءات المضخات 🗑️ سجل حذف القراءات 🗓️ يوم المحطة 🔄 المناوبات ⛽ المحطات 🧭 إعداد محطة 👥 الموظفين 📋 تعريفات المناوبات المالية 💰 المالية 📥 إدخال إيرادات 📊 المبيعات المالية 💲 أسعار الوقود"
+
+## ### /inventory/shipments/create?type=delivery (إضافة توريد)
+
+- rendered chars: 960
+- console errors: (none)
+- network ≥400: (none)
+- visible text: "سجل 🏠 الرئيسية العمليات 🎯 قراءات المضخات 🗑️ سجل حذف القراءات 🗓️ يوم المحطة 🔄 المناوبات ⛽ المحطات 🧭 إعداد محطة 👥 الموظفين 📋 تعريفات المناوبات المالية 💰 المالية 📥 إدخال إيرادات 📊 المبيعات المالية 💲 أسعار الوقود"
+
+## ### /inventory/tank-readings (قراءات الخزانات)
+
+- rendered chars: 752
+- console errors: (none)
+- network ≥400: (none)
+- visible text: "سجل 🏠 الرئيسية العمليات 🎯 قراءات المضخات 🗑️ سجل حذف القراءات 🗓️ يوم المحطة 🔄 المناوبات ⛽ المحطات 🧭 إعداد محطة 👥 الموظفين 📋 تعريفات المناوبات المالية 💰 المالية 📥 إدخال إيرادات 📊 المبيعات المالية 💲 أسعار الوقود"
+
+## ### /inventory/transfers (التحويلات)
+
+- rendered chars: 763
+- console errors: (none)
+- network ≥400: (none)
+- visible text: "سجل 🏠 الرئيسية العمليات 🎯 قراءات المضخات 🗑️ سجل حذف القراءات 🗓️ يوم المحطة 🔄 المناوبات ⛽ المحطات 🧭 إعداد محطة 👥 الموظفين 📋 تعريفات المناوبات المالية 💰 المالية 📥 إدخال إيرادات 📊 المبيعات المالية 💲 أسعار الوقود"
+
+## ### /inventory/transfers/create (نموذج تحويل)
+
+- rendered chars: 1049
+- console errors: (none)
+- network ≥400: (none)
+- visible text: "سجل 🏠 الرئيسية العمليات 🎯 قراءات المضخات 🗑️ سجل حذف القراءات 🗓️ يوم المحطة 🔄 المناوبات ⛽ المحطات 🧭 إعداد محطة 👥 الموظفين 📋 تعريفات المناوبات المالية 💰 المالية 📥 إدخال إيرادات 📊 المبيعات المالية 💲 أسعار الوقود"
+
+## ### /inventory/shortages (العجز)
+
+- rendered chars: 738
+- console errors: (none)
+- network ≥400: (none)
+- visible text: "سجل 🏠 الرئيسية العمليات 🎯 قراءات المضخات 🗑️ سجل حذف القراءات 🗓️ يوم المحطة 🔄 المناوبات ⛽ المحطات 🧭 إعداد محطة 👥 الموظفين 📋 تعريفات المناوبات المالية 💰 المالية 📥 إدخال إيرادات 📊 المبيعات المالية 💲 أسعار الوقود"
+
+## ### /inventory/fuel-reconciliation (مطابقة الوقود)
+
+- rendered chars: 741
+- console errors: (none)
+- network ≥400: (none)
+- visible text: "سجل 🏠 الرئيسية العمليات 🎯 قراءات المضخات 🗑️ سجل حذف القراءات 🗓️ يوم المحطة 🔄 المناوبات ⛽ المحطات 🧭 إعداد محطة 👥 الموظفين 📋 تعريفات المناوبات المالية 💰 المالية 📥 إدخال إيرادات 📊 المبيعات المالية 💲 أسعار الوقود"
+
+## ### /inventory/requests (طلبات التموين)
+
+- rendered chars: 756
+- console errors: (none)
+- network ≥400: (none)
+- visible text: "سجل 🏠 الرئيسية العمليات 🎯 قراءات المضخات 🗑️ سجل حذف القراءات 🗓️ يوم المحطة 🔄 المناوبات ⛽ المحطات 🧭 إعداد محطة 👥 الموظفين 📋 تعريفات المناوبات المالية 💰 المالية 📥 إدخال إيرادات 📊 المبيعات المالية 💲 أسعار الوقود"
+
+## ### /inventory/requests/create (طلب تموين)
+
+- rendered chars: 876
+- console errors: (none)
+- network ≥400: (none)
+- visible text: "سجل 🏠 الرئيسية العمليات 🎯 قراءات المضخات 🗑️ سجل حذف القراءات 🗓️ يوم المحطة 🔄 المناوبات ⛽ المحطات 🧭 إعداد محطة 👥 الموظفين 📋 تعريفات المناوبات المالية 💰 المالية 📥 إدخال إيرادات 📊 المبيعات المالية 💲 أسعار الوقود"
+
+## ## Phase 5 — delivery empty-submit validation
+
+- inline guidance shown: false
+- note: the form relies on HTML5 `required` only — an empty submit is blocked by the browser with no persistent in-page Arabic message, and the fuel-type / tank fields are silently left empty.
+- page text: "حنة (توريد) المحطة اختر المحطة QA Edge Station محطة الراحلة 23 الخزان اختر الخزان T2 (بنزين) T1 (بنزين) TA2 (بنزين) TA1 (بنزين) T4 (بنزين) T3 (بنزين) T2 (بنزين) T1 (بنزين) نوع الوقود الكمية (لتر) 40,000 20,000 تاريخ الاستلام الفعلي خيارات متقدمة ▼ حفظ إلغاء 🙂"
+
+## ## Phase 5 — delivery create
+
+
+- invoice ref used: QA-INV-863889
+- deliveries before: 1, after: 2
+- created record: {"name":"0f3bvl74jt","station":"vscak9tird","tank":"vse8a5mol8","fuel_type":"بنزين","supplier":null,"expected_quantity":5000,"received_quantity":4900,"shortage":100,"invoice_number":"QA-INV-863889","payment_status":"unpaid","status":"received","order_date":"2026-10-28 06:44:00","arrival_date":"2026-10-28 06:44:00","scheduled_date":null,"is_unscheduled":0,"shipment_schedule":null,"modified":"2026-10-28 12:14:25.924590"}
+- url after save: http://localhost:8004/app/inventory/deliveries
+
+## ## Phase 5 — /inventory/shortages
+
+- text: "سجل 🏠 الرئيسية العمليات 🎯 قراءات المضخات 🗑️ سجل حذف القراءات 🗓️ يوم المحطة 🔄 المناوبات ⛽ المحطات 🧭 إعداد محطة 👥 الموظفين 📋 تعريفات المناوبات المالية 💰 المالية 📥 إدخال إيرادات 📊 المبيعات المالية 💲 أسعار الوقود 💵 النقدية 🎫 القسائم 🏧 الدفع الإلكتروني 🧾 المصروفات 📑 تسوية القسائم 🏦 الدفعات المقدمة المخزون 🚚 الشحنات 📖 قراءات الخزانات 🔁 التحويلات ⚠️ النقص 📉 تسوية الوقود 📝 طلبات التوريد 📅 جدول الشحنات التقارير 📅 التقرير اليومي 📆 التقرير الشهري 📦 المخزون والتوريد ⚖️ تقرير الرصي"
+
+## ## Phase 5 — /inventory/fuel-reconciliation
+
+- text: "سجل 🏠 الرئيسية العمليات 🎯 قراءات المضخات 🗑️ سجل حذف القراءات 🗓️ يوم المحطة 🔄 المناوبات ⛽ المحطات 🧭 إعداد محطة 👥 الموظفين 📋 تعريفات المناوبات المالية 💰 المالية 📥 إدخال إيرادات 📊 المبيعات المالية 💲 أسعار الوقود 💵 النقدية 🎫 القسائم 🏧 الدفع الإلكتروني 🧾 المصروفات 📑 تسوية القسائم 🏦 الدفعات المقدمة المخزون 🚚 الشحنات 📖 قراءات الخزانات 🔁 التحويلات ⚠️ النقص 📉 تسوية الوقود 📝 طلبات التوريد 📅 جدول الشحنات التقارير 📅 التقرير اليومي 📆 التقرير الشهري 📦 المخزون والتوريد ⚖️ تقرير الرصي"
+
+## ## Phase 5 — /finance/reconciliations
+
+- text: "سجل 🏠 الرئيسية العمليات 🎯 قراءات المضخات 🗑️ سجل حذف القراءات 🗓️ يوم المحطة 🔄 المناوبات ⛽ المحطات 🧭 إعداد محطة 👥 الموظفين 📋 تعريفات المناوبات المالية 💰 المالية 📥 إدخال إيرادات 📊 المبيعات المالية 💲 أسعار الوقود 💵 النقدية 🎫 القسائم 🏧 الدفع الإلكتروني 🧾 المصروفات 📑 تسوية القسائم 🏦 الدفعات المقدمة المخزون 🚚 الشحنات 📖 قراءات الخزانات 🔁 التحويلات ⚠️ النقص 📉 تسوية الوقود 📝 طلبات التوريد 📅 جدول الشحنات التقارير 📅 التقرير اليومي 📆 التقرير الشهري 📦 المخزون والتوريد ⚖️ تقرير الرصي"
+
+## ## Phase 5 — unified shipment form (scheduled + arrival)
+
+- deposit: 0hop7sju0p
+- schedule: {"name":"0it4l2cafc","station":"vscak9tird","deposit":"0hop7sju0p","invoice_number":"QA-SCH-874207","fuel_type":"بنزين","supplier":null,"quantity":30000,"expected_shipping_date":"2026-10-28","status":"scheduled","unit_price":0.14875,"total_amount":4462.5,"delivery":null,"serial_number":1,"notes":null,"modified":"2026-10-28 12:14:38.123247"}
+- after arrival: {"name":"0it4l2cafc","owner":"owner@sejel.ly","creation":"2026-10-28 12:14:38.123247","modified":"2026-10-28 12:14:44.633688","modified_by":"owner@sejel.ly","docstatus":0,"idx":0,"station":"vscak9tird","deposit":"0hop7sju0p","invoice_number":"QA-SCH-874207","fuel_type":"بنزين","supplier":null,"quantity":30000,"expected_shipping_date":"2026-10-28","status":"delivered","unit_price":0.14875,"total_amount":4462.5,"delivery":"0ktv053k5q","serial_number":1,"notes":null,"doctype":"Shipment Schedule"}
+- delivery: {"name":"0ktv053k5q","owner":"owner@sejel.ly","creation":"2026-10-28 12:14:44.551146","modified":"2026-10-28 12:14:44.551146","modified_by":"owner@sejel.ly","docstatus":0,"idx":0,"station":"vscak9tird","tank":"vse8a5mol8","fuel_type":"بنزين","supplier":null,"requested_quantity":30000,"expected_quantity":30000,"received_quantity":29950,"shortage":50,"order_date":"2026-10-28 06:44:00","arrival_date":"2026-10-28 06:44:00","scheduled_date":"2026-10-28","pre_reading":200000,"post_reading":229950,"document_number":null,"invoice_number":"QA-SCH-874207","invoiced_amount":0,"paid_amount":0,"payment_date":null,"payment_reference":null,"payment_status":"unpaid","status":"received","is_unscheduled":0,"shipment_schedule":"0it4l2cafc","total_allocated":0,"remaining_on_truck":0,"doctype":"Delivery"}
+
+## ## Phase 5 — network ≥400 (all)
+
+- 401 /api/auth/me/
+- 400 /api/ux/client-error/
+- 400 /api/ux/client-error/
+
+## ## Phase 5 — console errors (all)
+
+- Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)
+- Failed to load resource: the server responded with a status of 400 (BAD REQUEST)
+- Failed to load resource: the server responded with a status of 400 (BAD REQUEST)
