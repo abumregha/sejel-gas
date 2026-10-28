@@ -4,14 +4,14 @@
 //   A. Sweep every /inventory/* screen as the station owner (Sejel Manager)
 //      — the role the real user has — and record render + console/network health.
 //   B. Real CRUD on a delivery (create → verify in list → detail → delete)
-//      on «محطة الراحلة 23» so no client data is touched.
+//      on «QA Edge Station» so no client data is touched.
 //   C. Transfer between two tanks (needs >= 2 tanks) and the shortage /
 //      fuel-reconciliation screens.
 //
-// Everything is QA-created data on "محطة الراحلة 23" and is deleted afterwards.
+// Everything is QA-created data on "QA Edge Station" and is deleted afterwards.
 const { appendRun, capture, uiLogin, bodyText, defect, shot, step, summary, launch, apiGet, apiPost, apiPut, qaFillField, qaDelete, qaStationId } = require('./qa')
 
-const EDGE = 'محطة الراحلة 23'
+const EDGE = 'QA Edge Station'
 const INVENTORY_ROUTES = [
   ['/inventory/deliveries', 'التموين'],
   ['/inventory/deliveries/create', 'نموذج تموين'],
@@ -83,7 +83,7 @@ const INVENTORY_ROUTES = [
       'silently left empty.\n- page text: ' + JSON.stringify(t.replace(/\s+/g, ' ').slice(-260)))
   }
 
-  // fill a real delivery on «محطة الراحلة 23»
+  // fill a real delivery on «QA Edge Station»
   const invoice = 'QA-INV-' + Date.now().toString().slice(-6)
   let created = null
   const before = (await apiGet(page, 'deliveries/'))
@@ -118,7 +118,7 @@ const INVENTORY_ROUTES = [
               : (redirected ? 'redirected to list but NOT persisted' : 'no redirect, not persisted'))
     if (!created && redirected) {
       defect({ id: 'QA-19', severity: 'P2', area: 'Inventory — delivery create',
-        repro: '/inventory/deliveries/create → محطة الراحلة 23 + خزان 1 + invoice + quantities → حفظ',
+        repro: '/inventory/deliveries/create → QA Edge Station + T1 + invoice + quantities → حفظ',
         expected: 'redirect to the deliveries list and a new delivery row',
         actual: 'redirect happens but no Delivery document is persisted; the operator believes the load was recorded',
         evidence: 'phase 5 Part B' })
