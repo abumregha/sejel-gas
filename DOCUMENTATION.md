@@ -835,7 +835,7 @@ All resources follow the same pattern. The URL slug maps to a DocType via the `R
 | `expense-categories` | Expense Category | category_name, station, is_active |
 | `voucher-settlements` | Voucher Settlement | station, submission_date, total_value, total_count, denom_5, denom_6, denom_7, denom_8, status, paid_amount |
 | `reconciliations` | Reconciliation | shift, station, total_liters, expected_sales, total_cash, total_vouchers, total_pos, total_collection, difference, difference_type, status |
-| `deliveries` | Delivery | station, fuel_type, supplier, expected_quantity, received_quantity, shortage, invoice_number, payment_status, status, order_date |
+| `deliveries` | Delivery | station, tank, fuel_type, supplier, expected_quantity, received_quantity, shortage, invoice_number, payment_status, status, order_date, shipment_schedule |
 | `delivery-requests` | Delivery Request | station, fuel_type, requested_quantity, priority, status, expected_delivery_date |
 | `tank-readings` | Tank Reading | tank, reading_level, reading_type, recorded_at, recorded_by, notes |
 | `fuel-reconciliations` | Fuel Reconciliation | tank, station, date, received_quantity, transferred_in, transferred_out, sold_quantity, theoretical_level, actual_level, variance, variance_type, status |
@@ -1187,7 +1187,9 @@ Create Station → Create Islands (1, 2) → Create Machines per Island (1, 2)
 | Expenses | `/finance/expenses`, `/finance/expenses/create` | ExpenseList, ExpenseForm |
 | Settlements | `/finance/settlements`, `/finance/settlements/create`, `/finance/settlements/:id` | SettlementList, SettlementForm, SettlementDetail |
 | Reconciliations | `/finance/reconciliations`, `/finance/reconciliations/:id` | ReconciliationList, ReconciliationDetail |
-| Deliveries | `/inventory/deliveries`, `/inventory/deliveries/create`, `/inventory/deliveries/:id` | DeliveryList, DeliveryForm, DeliveryDetail |
+| Deliveries | `/inventory/deliveries`, `/inventory/deliveries/create`, `/inventory/deliveries/:id` | DeliveryList, ShipmentForm, DeliveryDetail |
+| Shipment Schedules | `/inventory/shipment-schedules`, `/inventory/shipment-schedules/create` | ShipmentScheduleList, ShipmentForm |
+| Shipments (unified form) | `/inventory/shipments/create`, `/inventory/shipments/:id` | ShipmentForm |
 | Tank Readings | `/inventory/tank-readings` | TankReadingList |
 | Transfers | `/inventory/transfers`, `/inventory/transfers/create` | TransferList, TransferForm |
 | Shortages | `/inventory/shortages` | ShortageList |
@@ -1197,7 +1199,7 @@ Create Station → Create Islands (1, 2) → Create Machines per Island (1, 2)
 | Settings | `/settings/users`, `/settings/users/create` | UsersList, UserForm |
 | Guide | `/guide` | GuideView |
 
-**Total**: 51 routes (1 login + 50 under DefaultLayout)
+**Total**: 79 routes (1 login + 78 under DefaultLayout)
 
 ### 9.3 API Client Configuration
 
@@ -1688,7 +1690,7 @@ Excel sheet with daily expense entries. Maps to **Expense** DocType.
 │       ├── employees/ (2 views)
 │       ├── shifts/ (7 views)
 │       ├── finance/ (11 views)
-│       ├── inventory/ (9 views)
+│       ├── inventory/ (12 views)
 │       ├── reports/ (3 views)
 │       ├── settings/ (2 views)
 │       └── guide/GuideView.vue
