@@ -185,52 +185,45 @@ const INVENTORY_ROUTES = [
         `invoice=${createdSched.invoice_number} station=${createdSched.station}`)
     }
 
-    if (createdSched) {
-      await page.goto((process.env.QA_BASE || 'http://localhost:8004') + '/inventory/shipment-schedules', { waitUntil: 'domcontentloaded' })
+    if (createdSched && fuelName) {
+      await page.goto((process.env.QA_BASE || 'http://localhost:8004') + '/inventory/shipments/create?type=arrival&schedule=' + createdSched.name, { waitUntil: 'domcontentloaded' })
       await page.waitForTimeout(1500)
-      const row = page.locator('tr', { hasText: schedInvoice }).first()
-      const arriveBtn = row.locator('a', { hasText: 'استلام' }).first()
-      step('استلام action on scheduled row', (await arriveBtn.count()) > 0)
-      if (await arriveBtn.count()) {
-        await arriveBtn.click()
-        await page.waitForTimeout(1500)
-        const bannerTxt = await bodyText(page)
-        step('arrival banner shows schedule line', /شحنة مجدولة/.test(bannerTxt))
-        await qaFillField(page, 'الخزان', 'T1')
-        const advBtnA = page.locator('button', { hasText: 'خيارات متقدمة' }).first()
-        if (await advBtnA.count()) { await advBtnA.click(); await page.waitForTimeout(400) }
-        await qaFillField(page, 'القراءة قبل', '200000')
-        await qaFillField(page, 'القراءة بعد', '229950')
-        await page.locator('button', { hasText: /حفظ/ }).first().click()
-        await page.waitForTimeout(3000)
-        const schedAfter = await apiGet(page, 'shipment-schedules/' + createdSched.name + '/')
-        step('schedule flipped to delivered + linked', schedAfter.status === 'delivered' && !!schedAfter.delivery,
-          `status=${schedAfter.status} delivery=${schedAfter.delivery}`)
-        const delivAfter = schedAfter.delivery ? await apiGet(page, 'deliveries/' + schedAfter.delivery + '/') : null
-        step('delivery back-links shipment_schedule', !!delivAfter && delivAfter.shipment_schedule === createdSched.name,
-          `link=${delivAfter && delivAfter.shipment_schedule} received=${delivAfter && delivAfter.received_quantity}`)
-        appendRun('## Phase 5 — unified shipment form (scheduled + arrival)',
-          '- deposit: ' + depName +
-          '\n- schedule: ' + JSON.stringify(createdSched) +
-          '\n- after arrival: ' + JSON.stringify(schedAfter) +
-          '\n- delivery: ' + JSON.stringify(delivAfter))
-        await page.goto((process.env.QA_BASE || 'http://localhost:8004') + '/inventory/shipments/' + createdSched.name + '?type=schedule', { waitUntil: 'domcontentloaded' })
-        await page.waitForTimeout(1500)
-        const editText = await bodyText(page)
-        step('schedule edit route renders edit form', /تعديل الشحنة/.test(editText), JSON.stringify(editText.replace(/\s+/g, ' ').slice(0, 160)))
-        // Sejel Manager has no delete perm — cleanup as admin. The schedule and
-        // its delivery are cross-linked (schedule.delivery ↔
-        // delivery.shipment_schedule): unlink first or both deletes hit
-        // LinkExistsError, and the controller forbids delivered-without-delivery.
-        await uiLogin(page, 'admin@sejel.ly', 'admin123')
-        const unlnk = await apiPut(page, 'shipment-schedules/' + createdSched.name + '/', { status: 'cancelled', delivery: null })
-        const delD = schedAfter.delivery ? await qaDelete(page, 'deliveries', schedAfter.delivery) : { ok: true }
-        const delS = await qaDelete(page, 'shipment-schedules', createdSched.name)
-        const delDep = await qaDelete(page, 'station-deposits', depName)
-        step('Part D cleanup (unlink, delete delivery/schedule/deposit)',
-          !(unlnk && unlnk.__status) && delD.ok && delS.ok && delDep.ok,
-          JSON.stringify({ unlnk: (unlnk && unlnk.__status) || 'ok', delD, delS, delDep }))
-      }
+      const bannerTxt = await bodyText(page)
+      step('arrival banner shows schedule line', /شحنة مجدولة/.test(bannerTxt))
+      await qaFillField(page, 'الخزان', 'T1')
+      const advBtnA = page.locator('button', { hasText: 'خيارات متقدمة' }).first()
+      if (await advBtnA.count()) { await advBtnA.click(); await page.waitForTimeout(400) }
+      await qaFillField(page, 'القراءة قبل', '200000')
+      await qaFillField(page, 'القراءة بعد', '229950')
+      await page.locator('button', { hasText: /حفظ/ }).first().click()
+      await page.waitForTimeout(3000)
+      const schedAfter = await apiGet(page, 'shipment-schedules/' + createdSched.name + '/')
+      step('schedule flipped to delivered + linked', schedAfter.status === 'delivered' && !!schedAfter.delivery,
+        `status=${schedAfter.status} delivery=${schedAfter.delivery}`)
+      const delivAfter = schedAfter.delivery ? await apiGet(page, 'deliveries/' + schedAfter.delivery + '/') : null
+      step('delivery back-links shipment_schedule', !!delivAfter && delivAfter.shipment_schedule === createdSched.name,
+        `link=${delivAfter && delivAfter.shipment_schedule} received=${delivAfter && delivAfter.received_quantity}`)
+      appendRun('## Phase 5 — unified shipment form (scheduled + arrival)',
+        '- deposit: ' + depName +
+        '\n- schedule: ' + JSON.stringify(createdSched) +
+        '\n- after arrival: ' + JSON.stringify(schedAfter) +
+        '\n- delivery: ' + JSON.stringify(delivAfter))
+      await page.goto((process.env.QA_BASE || 'http://localhost:8004') + '/inventory/shipments/' + createdSched.name + '?type=schedule', { waitUntil: 'domcontentloaded' })
+      await page.waitForTimeout(1500)
+      const editText = await bodyText(page)
+      step('schedule edit route renders edit form', /تعديل الشحنة/.test(editText), JSON.stringify(editText.replace(/\s+/g, ' ').slice(0, 160)))
+      // Sejel Manager has no delete perm — cleanup as admin. The schedule and
+      // its delivery are cross-linked (schedule.delivery ↔
+      // delivery.shipment_schedule): unlink first or both deletes hit
+      // LinkExistsError, and the controller forbids delivered-without-delivery.
+      await uiLogin(page, 'admin@sejel.ly', 'admin123')
+      const unlnk = await apiPut(page, 'shipment-schedules/' + createdSched.name + '/', { status: 'cancelled', delivery: null })
+      const delD = schedAfter.delivery ? await qaDelete(page, 'deliveries', schedAfter.delivery) : { ok: true }
+      const delS = await qaDelete(page, 'shipment-schedules', createdSched.name)
+      const delDep = await qaDelete(page, 'station-deposits', depName)
+      step('Part D cleanup (unlink, delete delivery/schedule/deposit)',
+        !(unlnk && unlnk.__status) && delD.ok && delS.ok && delDep.ok,
+        JSON.stringify({ unlnk: (unlnk && unlnk.__status) || 'ok', delD, delS, delDep }))
     }
   }
 

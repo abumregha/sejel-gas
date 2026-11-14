@@ -6,12 +6,13 @@
     </div>
     <div class="bg-white rounded-xl shadow-sm border overflow-x-auto">
       <table class="data-table">
-        <thead><tr><th>المحطة</th><th>رقم الفاتورة</th><th>تاريخ الفاتورة</th><th>مبلغ الإيداع</th><th>المخصص</th><th>الرصيد</th></tr></thead>
+        <thead><tr><th>المحطة</th><th>رقم الفاتورة</th><th>تاريخ الفاتورة</th><th>عدد الشحنات المحجوزة</th><th>مبلغ الإيداع</th><th>المخصص</th><th>الرصيد</th></tr></thead>
         <tbody>
           <tr v-for="d in items" :key="d.name">
             <td>{{ stationMap[d.station] || d.station }}</td>
             <td>{{ d.invoice_number || '—' }}</td>
             <td>{{ d.invoice_date || '—' }}</td>
+            <td class="text-center">{{ d.shipments_count ?? 0 }}</td>
             <td class="font-mono font-bold">{{ Number(d.deposit_amount).toLocaleString('en-US') }} د.ل</td>
             <td class="font-mono">{{ Number(d.allocated_amount || 0).toLocaleString('en-US') }} د.ل</td>
             <td class="font-mono" :class="d.balance < 0 ? 'text-red-600 font-bold' : 'text-green-600'">{{ Number(d.balance || 0).toLocaleString('en-US') }} د.ل</td>

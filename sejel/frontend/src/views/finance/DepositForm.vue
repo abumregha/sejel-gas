@@ -43,9 +43,15 @@
           </select>
         </div>
       </div>
-      <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">مبلغ الإيداع (د.ل)</label>
-        <input v-model.number="form.deposit_amount" type="number" step="0.01" min="0" required class="w-full border border-gray-300 rounded-lg px-4 py-2.5" />
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">مبلغ الإيداع (د.ل)</label>
+          <input v-model.number="form.deposit_amount" type="number" step="0.01" min="0" required class="w-full border border-gray-300 rounded-lg px-4 py-2.5" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">عدد الشحنات المحجوزة</label>
+          <input :value="form.shipments_count ?? 0" readonly class="w-full border border-gray-200 bg-gray-50 rounded-lg px-4 py-2.5" />
+        </div>
       </div>
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-1">المرجع</label>
@@ -84,6 +90,7 @@ const form = ref({
   deposit_amount: '',
   reference: '',
   notes: '',
+  shipments_count: 0,
 })
 const stations = ref([])
 const fuelProducts = ref([])
@@ -104,6 +111,7 @@ onMounted(async () => {
       deposit_amount: data.deposit_amount,
       reference: data.reference || '',
       notes: data.notes || '',
+      shipments_count: data.shipments_count ?? 0,
     }
   }
 })

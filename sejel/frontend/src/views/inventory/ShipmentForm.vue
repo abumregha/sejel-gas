@@ -18,11 +18,26 @@
       </div>
 
       <div v-if="type === 'schedule'">
-        <label class="block text-sm font-medium text-gray-700 mb-1">الفاتورة / الإيداع</label>
-        <select v-model="form.deposit" @change="onDepositChange" class="w-full border border-gray-300 rounded-lg px-4 py-2.5">
-          <option value="">بدون</option>
-          <option v-for="dep in deposits" :key="dep.name" :value="dep.name">{{ dep.invoice_number }} — {{ dep.station_name || dep.station }}</option>
+        <label class="block text-sm font-medium text-gray-700 mb-1">الفاتورة / الإيداع <span class="text-red-500">*</span></label>
+        <select v-model="form.deposit" @change="onDepositChange" required class="w-full border border-gray-300 rounded-lg px-4 py-2.5">
+          <option value="">اختر الفاتورة / الإيداع</option>
+          <option v-for="dep in depositsForStation" :key="dep.name" :value="dep.name">{{ dep.invoice_number }} — {{ stationName(dep.station) }} — {{ fmtMoney(dep.deposit_amount) }}</option>
         </select>
+        <div v-if="form.station && !depositsForStation.length" class="mt-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-3">
+          لا توجد فاتورة إيداع لهذه المحطة.
+          <router-link :to="`/finance/deposits/create?station=${form.station}`" class="text-primary font-semibold underline mr-1">سجّل فاتورة الإيداع أولاً</router-link>
+        </div>
+      </div>
+      <div v-if="type === 'schedule' && depositMoney" class="rounded-xl border p-4 text-sm" :class="depositMoney.overCommit ? 'bg-red-50 border-red-200' : 'bg-emerald-50 border-emerald-200'">
+        <div class="font-bold mb-2">بيانات الإيداع</div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>فاتورة الإيداع: <strong>{{ depositMoney.invoice }}</strong></div>
+          <div>مبلغ الإيداع: <strong>{{ fmtMoney(depositMoney.amount) }}</strong></div>
+          <div>المحجوز (الجداول المرفقة): <strong>{{ fmtMoney(depositMoney.committed) }}</strong></div>
+          <div>المتبقي: <strong>{{ fmtMoney(depositMoney.remaining) }}</strong></div>
+        </div>
+        <div v-if="depositMoney.overCommit" class="mt-2 text-red-700 font-semibold">تنبيه: الكمية الحالية ستتجاوز مبلغ الإيداع (مسموح بالحفظ مع التحذير).</div>
+        <div v-if="depositMoney.fuelMismatch" class="mt-2 text-amber-700">تنبيه: منتج الوقود يختلف عن منتج الإيداع ({{ depositMoney.depositFuelName }}).</div>
       </div>
 
       <div>
@@ -191,6 +206,7 @@ const arrivalDoc = ref(null)
 const confirmArrival = ref(true)
 const showAdvanced = ref(false)
 const type = ref(resolveInitialType())
+const depositSchedules = ref([])
 
 const stations = ref([])
 const tanks = ref([])
@@ -233,7 +249,6 @@ const pageTitle = computed(() => {
   return type.value === 'schedule' ? 'إضافة شحنة مجدولة' : 'إضافة شحنة (توريد)'
 })
 const filteredTanks = computed(() => form.value.station ? tanks.value.filter(t => t.station == form.value.station) : tanks.value)
-const fuelTypeName = (name) => (fuelTypes.value.find(f => f.name === name) || {}).fuel_name || name || '—'
 const totalAmount = computed(() => (Number(form.value.quantity) || 0) * (Number(form.value.unit_price) || 0))
 const receivedQty = computed(() => {
   if (type.value !== 'delivery' || form.value.pre_reading === '' || form.value.post_reading === '') return null
@@ -326,21 +341,53 @@ async function loadForArrival() {
   if (match.length === 1) form.value.tank = match[0].name
 }
 
+const stationName = id => stations.value.find(x => x.name === id)?.station_name || stations.value.find(x => x.name === id)?.name || id || ''
+const fuelTypeName = id => fuelTypes.value.find(x => x.name === id)?.fuel_name || fuelTypes.value.find(x => x.name === id)?.name || id || ''
+const fmtMoney = v => Number(v || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' د.ل'
+
+const depositsForStation = computed(() => {
+  if (!form.value.station) return deposits.value
+  return deposits.value.filter(d => d.station === form.value.station)
+})
+
+const depositMoney = computed(() => {
+  if (type.value !== 'schedule' || !form.value.deposit) return null
+  const dep = deposits.value.find(d => d.name === form.value.deposit)
+  if (!dep) return null
+  const amount = Number(dep.deposit_amount || 0)
+  const rows = depositSchedules.value || []
+  const otherCommitted = rows
+    .filter(x => !isEdit.value || x.name !== route.params.id)
+    .reduce((sum, x) => sum + Number(x.total_amount || (Number(x.quantity||0)*Number(x.unit_price||0)) || 0), 0)
+  const inList = rows.some(x => x.name === route.params.id)
+  const current = (!isEdit.value || !inList) ? (Number(form.value.quantity || 0) * Number(form.value.unit_price || 0)) : 0
+  const committed = otherCommitted + current
+  const remaining = amount - committed
+  const depFuel = dep.fuel_product || dep.fuel_type || ''
+  const fuelMismatch = !!(depFuel && form.value.fuel_type && depFuel !== form.value.fuel_type)
+  const depositFuelName = fuelTypeName(depFuel) || depFuel
+  return { invoice: dep.invoice_number || dep.name, amount, committed, remaining, overCommit: committed > amount + 0.001, fuelMismatch, depositFuelName }
+})
+
 async function onDepositChange() {
   const dep = deposits.value.find(d => d.name === form.value.deposit)
+  depositSchedules.value = []
   if (!dep) return
   form.value.invoice_number = dep.invoice_number || ''
-  form.value.station = dep.station || ''
-  if (dep.fuel_product && !form.value.fuel_type) form.value.fuel_type = dep.fuel_product
-  if (!isEdit.value) {
-    try {
-      const { data } = await api.get('/shipment-schedules/', { params: { deposit: dep.name } })
-      const existing = data.results || data || []
-      const maxSerial = existing.reduce((max, item) => Math.max(max, Number(item.serial_number) || 0), 0)
-      if (maxSerial < 15) form.value.serial_number = maxSerial + 1
-    } catch (e) {
-      if (!form.value.serial_number) form.value.serial_number = 1
-    }
+  form.value.station = dep.station || form.value.station
+  const depFuel = dep.fuel_product || dep.fuel_type || ''
+  if (depFuel && !form.value.fuel_type) form.value.fuel_type = depFuel
+  const st = stations.value.find(x => x.name === form.value.station)
+  if (!form.value.supplier && st && st.marketing_company) form.value.supplier = st.marketing_company
+  try {
+    const { data } = await api.get('/shipment-schedules/', { params: { deposit: dep.name } })
+    const existing = data.results || data || []
+    depositSchedules.value = existing
+    const maxSerial = existing.reduce((max, item) => Math.max(max, Number(item.serial_number) || 0), 0)
+    if (maxSerial < 15) form.value.serial_number = maxSerial + 1
+    else if (!form.value.serial_number) form.value.serial_number = 1
+  } catch (e) {
+    if (!form.value.serial_number) form.value.serial_number = 1
   }
 }
 
@@ -358,6 +405,7 @@ onMounted(async () => {
 
     if (isEdit.value) {
       await loadForEdit()
+      if (form.value.deposit) await onDepositChange()
     } else if (arrival) {
       await loadForArrival()
     } else {
@@ -431,27 +479,38 @@ const save = async () => {
       shortage: receivedQty.value === null ? undefined : shortage.value,
       shipment_schedule: arrival || undefined,
     }
-    Object.keys(payload).forEach(k => payload[k] === undefined && delete payload[k])
-
-    let deliveryName = route.params.id
-    if (isEdit.value && !arrival) {
-      await api.put(`/deliveries/${route.params.id}/`, payload)
-    } else {
-      const res = await api.post('/deliveries/', payload)
-      deliveryName = res.data.name || deliveryName
-    }
-
-    if (arrival) {
-      const schedPayload = { delivery: deliveryName }
-      if (confirmArrival.value) schedPayload.status = 'delivered'
-      try {
-        await api.put(`/shipment-schedules/${arrival}/`, schedPayload)
-      } catch (e) {
-        warning.value = 'تم حفظ الشحنة، تعذر تحديث حالة الجدول — حدّثها يدوياً'
-        saving.value = false
-        return
+    Object.keys(payload).forEach(k => payload[k] === undefined && delete payload[k])      // On an arrival-from-schedule we POST a Delivery with the link and, if
+      // the operator checked «تأكيد الاستلام», immediately patch the schedule
+      // to delivered in the same save action so the pair stays one-to-one.
+      let deliveryName = route.params.id
+      if (isEdit.value && !arrival) {
+        await api.put(`/deliveries/${route.params.id}/`, payload)
+      } else {
+        const res = await api.post('/deliveries/', payload)
+        deliveryName = res.data.name || deliveryName
       }
-    }
+
+      if (arrival) {
+        // schedule confirmation is a PUT to the schedule's own doc; the backend
+        // emits the Stock Entry only when status reaches delivered with a link.
+        const schedPayload = { delivery: deliveryName }
+        if (confirmArrival.value) schedPayload.status = 'delivered'
+        try {
+          const schedRes = await api.put(`/shipment-schedules/${arrival}/`, schedPayload)
+          if (schedRes.data && schedRes.data.status === 'delivered') {
+            // reload the schedule so the arrival-banner refresh below reflects
+            // the new status; the frontend only re-fetches on next navigation.
+            try {
+              const refreshed = await api.get(`/shipment-schedules/${arrival}/`)
+              arrivalDoc.value = refreshed.data || arrivalDoc.value
+            } catch (_) { /* keep the just-saved payload on failure */ }
+          }
+        } catch (e) {
+          warning.value = 'تم حفظ الشحنة، تعذر تحديث حالة الجدول — حدّثها يدوياً'
+          saving.value = false
+          return
+        }
+      }
     router.push('/inventory/deliveries')
   } catch (e) {
     error.value = friendlyError(e)
