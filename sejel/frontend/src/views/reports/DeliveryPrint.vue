@@ -1,12 +1,11 @@
 <template>
   <div>
     <div class="no-print flex flex-wrap items-center justify-between gap-3 mb-6">
-      <h2 class="text-xl font-bold">تقرير التسليم للطباعة</h2>
+      <div>
+        <h2 class="text-xl font-bold">تقرير التسليم للطباعة</h2>
+        <p class="text-sm text-gray-500 mt-0.5" v-if="stationStore.currentStationName">المحطة: {{ stationStore.currentStationName }}</p>
+      </div>
       <div class="flex flex-wrap items-center gap-2 sm:gap-3">
-        <select v-model="selectedStation" class="border border-gray-300 rounded-lg px-4 py-2">
-          <option value="">اختر المحطة</option>
-          <option v-for="s in stations" :key="s.name" :value="s.name">{{ s.station_name || s.name }}</option>
-        </select>
         <div class="flex items-center gap-1">
           <button @click="setPreset('thisWeek')" :class="presetBtnClass('thisWeek')">هذا الأسبوع</button>
           <button @click="setPreset('lastWeek')" :class="presetBtnClass('lastWeek')">الأسبوع الماضي</button>
@@ -20,7 +19,8 @@
         <button @click="printReport" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm">🖨️ طباعة</button>
       </div>
     </div>
-    <div v-if="report" class="space-y-6">
+    <div v-if="!stationStore.currentStation" class="text-center py-12 text-gray-400">اختر محطة من القائمة الجانبية</div>
+    <div v-else-if="report" class="space-y-6">
       <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
         <div class="kpi-card"><div class="kpi-label">إجمالي المسلّم</div><div class="kpi-value">{{ formatNum(report.total_delivered) }}</div></div>
         <div class="kpi-card"><div class="kpi-label">إجمالي غير المسلّم</div><div class="kpi-value text-red-600">{{ formatNum(report.total_undelivered) }}</div></div>
@@ -28,7 +28,7 @@
         <div class="kpi-card"><div class="kpi-label">إجمالي الكمية المستلمة</div><div class="kpi-value text-green-600">{{ formatNum(report.total_quantity_received) }}</div></div>
       </div>
       <div class="bg-white rounded-xl shadow-sm border p-4">
-        <h3 class="font-bold mb-3">تفاصيل التسليمات — {{ report.station_name }}</h3>
+        <h3 class="font-bold mb-3">تفاصيل التسليمات — {{ report.station_name || stationStore.currentStationName }}</h3>
         <div class="table-scroll">
           <table class="data-table">
             <thead><tr><th>رقم الفاتورة</th><th>تاريخ التسليم</th><th>نوع الوقود</th><th>الخزان</th><th>الكمية المتوقعة</th><th>الكمية المستلمة</th><th>الحالة</th></tr></thead>
@@ -40,28 +40,27 @@
                 <td>{{ d.tank }}</td>
                 <td class="font-mono">{{ formatNum(d.expected_quantity) }}</td>
                 <td class="font-mono">{{ formatNum(d.received_quantity) }}</td>
-                <td>
-                  <span :class="flagClass(d.flag)" class="badge">{{ flagLabel(d.flag) }}</span>
-                </td>
+                <td><span :class="flagClass(d.flag)" class="badge">{{ flagLabel(d.flag) }}</span></td>
               </tr>
             </tbody>
           </table>
         </div>
       </div>
     </div>
-    <div v-else class="text-center py-12 text-gray-400">اختر المحطة ونطاق التاريخ لعرض التقرير</div>
+    <div v-else class="text-center py-12 text-gray-400">جاري تحميل التقرير...</div>
   </div>
 </template>
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import api from '../../api'
-const stations = ref([])
-const selectedStation = ref('')
+import { useStationStore } from '../../stores/station'
+
+const stationStore = useStationStore()
 const startDate = ref('')
 const endDate = ref('')
 const activePreset = ref('')
 const report = ref(null)
-const formatNum = (v) => v ? Number(v).toLocaleString('en-US') : '0'
+const formatNum = (v) => (v || v === 0) ? Number(v).toLocaleString('en-US') : '0'
 const flagLabel = (flag) => {
   if (flag === 'مرحلة') return 'مرحلة'
   if (flag === 'undelivered') return 'غير مسلّم'
@@ -102,32 +101,22 @@ const setPreset = (preset) => {
 }
 const presetBtnClass = (preset) => [
   'px-3 py-1.5 rounded-lg text-sm border transition',
-  activePreset.value === preset
-    ? 'bg-primary text-white border-primary'
-    : 'bg-white border-gray-200 hover:border-primary'
+  activePreset.value === preset ? 'bg-primary text-white border-primary' : 'bg-white border-gray-200 hover:border-primary'
 ]
 const loadReport = async () => {
-  if (!selectedStation.value && stations.value.length > 0) {
-    selectedStation.value = stations.value[0].name
-  }
-  if (!selectedStation.value) { alert('اختر المحطة'); return }
+  if (!stationStore.currentStation) { report.value = null; return }
   try {
     const { data } = await api.get('/delivery-print/', {
-      params: { station: selectedStation.value, start_date: startDate.value, end_date: endDate.value }
+      params: { start_date: startDate.value, end_date: endDate.value }
     })
     report.value = data
-  } catch (e) { alert('خطأ في تحميل التقرير') }
+  } catch (e) { report.value = null }
 }
 const printReport = () => window.print()
 onMounted(async () => {
+  if (!stationStore.loaded) await stationStore.init()
   setPreset('thisMonth')
-  try {
-    const { data } = await api.get('/stations/')
-    stations.value = data.results || data
-    if (stations.value.length > 0 && !selectedStation.value) {
-      selectedStation.value = stations.value[0].name
-      loadReport()
-    }
-  } catch (e) {}
+  loadReport()
 })
+watch(() => stationStore.currentStation, loadReport)
 </script>

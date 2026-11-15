@@ -7,6 +7,11 @@ const routes = [
     meta: { public: true },
   },
   {
+    path: '/select-station/',
+    component: () => import('../views/stations/SelectStationView.vue'),
+    meta: { requiresAuth: true, selectStation: true },
+  },
+  {
     path: '/',
     component: () => import('../layouts/DefaultLayout.vue'),
     children: [
@@ -100,6 +105,7 @@ const routes = [
 
       // Reports
       { path: 'reports/daily', name: 'report-daily', component: () => import('../views/reports/DailyReport.vue') },
+      { path: 'reports/daily-statement', name: 'report-daily-statement', component: () => import('../views/reports/DailyStatementReport.vue') },
       { path: 'reports/monthly', name: 'report-monthly', component: () => import('../views/reports/MonthlyReport.vue') },
       { path: 'reports/inventory', name: 'report-inventory', component: () => import('../views/reports/InventoryReport.vue') },
       { path: 'reports/balance', name: 'report-balance', component: () => import('../views/reports/BalanceReport.vue') },
@@ -122,17 +128,37 @@ const router = createRouter({
 })
 
 import { useAuthStore } from '../stores/auth'
+import { useStationStore } from '../stores/station'
 
 router.beforeEach(async (to, from, next) => {
   if (to.meta.public) return next()
   const auth = useAuthStore()
-  // Wait for the boot-time session check so a hard load never evaluates the
-  // guard before /auth/me/ has resolved.
+  const stationStore = useStationStore()
   await auth.restore()
   if (!auth.isLoggedIn) {
-    // genuinely not signed in → login page
     return next('/login/')
   }
+
+  // Initialize station context (loads stations, enforces bound station)
+  if (!stationStore.loaded) {
+    await stationStore.init()
+  } else {
+    stationStore.ensureSelection()
+  }
+
+  // Bound users or users with a selected station can proceed
+  const needsStation = !auth.stationId && !stationStore.currentStation
+  if (to.meta.selectStation) {
+    if (!needsStation) return next(to.query.redirect || '/')
+    return next()
+  }
+
+  // When user logs in / uses app: require selecting a station to manage and view.
+  // All functions operate within the selected station (isolated entity).
+  if (needsStation && stationStore.stations.length > 0) {
+    return next({ path: '/select-station/', query: { redirect: to.fullPath } })
+  }
+
   next()
 })
 

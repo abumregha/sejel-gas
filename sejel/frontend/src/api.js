@@ -15,11 +15,43 @@ const api = axios.create({
   withCredentials: true,
 })
 
+// Endpoints that should not receive automatic station scoping
+const NO_STATION_SCOPE = [
+  '/auth/', '/stations/', '/fuel-types/', '/fuel-prices/', '/marketing-companies/',
+  '/voucher-categories/', '/users/', '/settings', '/reference-data', '/setup-station',
+]
+
 api.interceptors.request.use((config) => {
   const method = (config.method || '').toLowerCase()
   if (csrfToken && ['post', 'put', 'patch', 'delete'].includes(method)) {
     config.headers['X-Frappe-CSRF-Token'] = csrfToken
   }
+
+  // Global station context: when a station is selected, scope all functions to it
+  // so each station behaves as a separate isolated entity in views and reports.
+  try {
+    const station = localStorage.getItem('sejel-current-station')
+    if (station) {
+      const url = config.url || ''
+      const skip = NO_STATION_SCOPE.some(p => url.includes(p)) || url.startsWith('http')
+      if (!skip) {
+        if (method === 'get') {
+          config.params = config.params || {}
+          // Don't override explicit station; don't force on dashboard when caller wants aggregate
+          if ((config.params.station === undefined || config.params.station === '' || config.params.station === null) && !config.params.all_stations) {
+            config.params.station = station
+          }
+        } else if (['post', 'put', 'patch'].includes(method)) {
+          if (config.data && typeof config.data === 'object' && !(config.data instanceof FormData) && !Array.isArray(config.data)) {
+            if (config.data.station === undefined || config.data.station === '' || config.data.station === null) {
+              config.data.station = station
+            }
+          }
+        }
+      }
+    }
+  } catch { /* ignore */ }
+
   return config
 })
 

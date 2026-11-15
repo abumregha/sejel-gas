@@ -3,10 +3,12 @@
 // any analytics; verified in a real browser by sejel/e2e-tests/phase5-dashboard.js.
 // One API load per render (§24): GET /api/dashboard-station/ returns the whole
 // payload; all numbers displayed are backend values (§27).
+// Station-first isolation: all functions operate within the globally selected station.
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '../../api'
 import { useAuthStore } from '../../stores/auth'
+import { useStationStore } from '../../stores/station'
 import Icon from '../../components/dashboard/Icon.vue'
 import KpiCard from '../../components/dashboard/KpiCard.vue'
 import StationMap from '../../components/dashboard/StationMap.vue'
@@ -22,18 +24,17 @@ import { fmtNum, fmtMoney, fmtTime } from '../../components/dashboard/format'
 import { SHIFT_STATUS_PRIMARY, label, countReadings, countExceptions } from '../../utils/labels'
 
 const auth = useAuthStore()
+const stationStore = useStationStore()
 const router = useRouter()
 
 const loading = ref(true)
 const error = ref('')
 const data = ref(null)
-const stations = ref([]) // for the owner selector
 
-// selected station: supervisor is locked to their binding (§3.1)
-const selected = ref(auth.stationId || '')
-
-const isAggregate = computed(() => !selected.value)
-const canSwitch = computed(() => auth.isAdmin || ['manager', 'finance'].includes(auth.role))
+// Always operate within the globally selected station (isolated entity)
+const selected = computed(() => stationStore.currentStation)
+const isAggregate = computed(() => false)
+const canSwitch = computed(() => stationStore.canSwitch)
 
 // ---- drawer state ----------------------------------------------------------
 const drawer = ref({ open: false, kind: '', payload: null })
@@ -71,15 +72,16 @@ const readingDate = computed(() => {
 
 // ---- data loading ----------------------------------------------------------
 async function load() {
+  if (!selected.value) {
+    loading.value = false
+    data.value = null
+    return
+  }
   loading.value = true
   error.value = ''
   try {
-    const params = {}
-    if (selected.value) params.station = selected.value
-    const { data: d } = await api.get('/dashboard-station/', { params })
+    const { data: d } = await api.get('/dashboard-station/', { params: { station: selected.value } })
     data.value = d
-    if (d.mode === 'aggregate') stations.value = d.stations
-    else if (!stations.value.length) await loadStationList()
   } catch (e) {
     error.value = e.response?.data?.exception || 'تعذر تحميل لوحة التحكم'
   } finally {
@@ -87,32 +89,13 @@ async function load() {
   }
 }
 
-async function loadStationList() {
-  try {
-    const { data: d } = await api.get('/stations/')
-    stations.value = (d.results || d).map((s) => ({
-      id: s.name,
-      name: s.station_name || s.name,
-      address: s.address,
-    }))
-  } catch {
-    stations.value = []
-  }
-}
-
-// keep the selector populated even in single-station mode
 onMounted(async () => {
   if (!auth.user) await auth.restore()
-  if (!auth.stationId && !stations.value.length) await loadStationList()
-  // A station with one site should land straight on "what do I do today"
-  // instead of the all-stations analytics view.
-  if (!auth.stationId && !selected.value && stations.value.length === 1) {
-    selected.value = stations.value[0].id
-  }
+  if (!stationStore.loaded) await stationStore.init()
   await load()
 })
 
-watch(selected, load)
+watch(() => stationStore.currentStation, () => load())
 
 function fmtDiff(v) {
   if (v === null || v === undefined) return '—'
@@ -178,19 +161,7 @@ const stationsNeedingWork = computed(() =>
     <!-- ============ TODAY: what this employee must do now ============ -->
     <TodayPanel v-if="!isAggregate && data?.station" :data="data" />
 
-    <!-- When several stations exist, the day starts by choosing one. -->
-    <div v-if="isAggregate && canSwitch && stations.length > 1"
-      class="mb-6 bg-primary/5 border border-primary/20 rounded-2xl p-4 sm:p-5 flex flex-wrap items-center justify-between gap-3">
-      <div>
-        <p class="font-bold text-gray-800">ابدأ يومك</p>
-        <p class="text-sm text-gray-600">اختر المحطة التي تعمل بها لعرض قراءات اليوم وإقفالها.</p>
-      </div>
-      <select v-model="selected" data-testid="start-station-picker"
-        class="border border-gray-300 rounded-lg px-3 py-3 bg-white text-sm min-h-[44px]">
-        <option value="" disabled>اختر المحطة...</option>
-        <option v-for="s in stations" :key="s.id" :value="s.id">{{ s.name }}</option>
-      </select>
-    </div>
+    <!-- Station context is global (sidebar selector). Each station is managed as an isolated entity. -->
 
     <!-- ============ A. HEADER / STATION CONTEXT (§3) ============ -->
     <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
@@ -204,14 +175,12 @@ const stationsNeedingWork = computed(() =>
       </div>
 
       <div class="flex items-center gap-2">
-        <!-- دليل الاستخدام — direct link from the dashboard (client request) -->
         <router-link to="/guide" title="دليل الاستخدام"
           class="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 text-gray-500 flex items-center gap-1.5 text-sm">
           <Icon name="info" :size="16" />
           <span class="hidden md:inline">الدليل</span>
         </router-link>
-        <!-- Excel export of this station's data (client request) -->
-        <a v-if="!isAggregate && data?.station?.id"
+        <a v-if="data?.station?.id"
           :href="`/api/export/?view=station&name=${data.station.id}`"
           class="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 text-gray-500 flex items-center gap-1.5 text-sm"
           title="تصدير بيانات المحطة إلى Excel">
@@ -221,17 +190,8 @@ const stationsNeedingWork = computed(() =>
         <button class="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 text-gray-500" title="تحديث" @click="load">
           <Icon name="refresh" :size="16" :class="{ 'animate-spin': loading }" />
         </button>
-        <select
-          v-if="canSwitch"
-          v-model="selected"
-          data-testid="station-selector"
-          class="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white min-w-[180px]"
-        >
-          <option value="">جميع المحطات</option>
-          <option v-for="s in stations" :key="s.id" :value="s.id">{{ s.name }}</option>
-        </select>
-        <span v-else-if="auth.stationId" class="text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded-lg px-3 py-2">
-          محطتك: {{ data?.station?.name || auth.stationId }}
+        <span v-if="stationStore.currentStationName" class="text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded-lg px-3 py-2">
+          المحطة: {{ stationStore.currentStationName }}
         </span>
       </div>
     </div>
@@ -239,70 +199,11 @@ const stationsNeedingWork = computed(() =>
     <!-- loading / error -->
     <div v-if="loading && !data" data-testid="dashboard-loading" class="text-center text-gray-400 py-20">جارٍ التحميل…</div>
     <div v-else-if="error" data-testid="dashboard-error" class="bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 text-sm">{{ error }}</div>
-
-    <!-- ============ AGGREGATE MODE (§3: all stations) ============ -->
-    <div v-else-if="isAggregate" class="space-y-4">
-      <!-- The first question is never "how much money?" — it is "which station
-           still owes readings today?". Answer it above the money. -->
-      <div v-if="stationsNeedingWork.length" class="bg-amber-50 border border-amber-200 rounded-2xl p-4"
-        data-testid="stations-needing-work">
-        <p class="font-bold text-amber-900 mb-1">محطات تحتاج تدخلًا اليوم ({{ stationsNeedingWork.length }})</p>
-        <ul class="flex flex-wrap gap-2">
-          <li v-for="s in stationsNeedingWork" :key="s.id">
-            <button class="bg-white border border-amber-300 text-amber-900 rounded-lg px-3 py-2 text-sm min-h-[44px] hover:bg-amber-50"
-              @click="selected = s.id">{{ s.name }} — {{ workNeededLabel(s) }}</button>
-          </li>
-        </ul>
-      </div>
-
-      <AlertsPanel v-if="data?.alerts?.length" :alerts="data.alerts" />
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <button
-          v-for="s in data?.stations || []"
-          :key="s.id"
-          class="text-right bg-white rounded-xl border border-gray-100 shadow-sm p-5 hover:shadow-md hover:border-blue-200 transition-all focus:outline-none focus:ring-2 focus:ring-blue-300"
-          @click="selected = s.id"
-        >
-          <div class="flex items-center justify-between mb-3">
-            <b class="text-lg flex items-center gap-2"><Icon name="station" :size="18" class="text-gray-400" />{{ s.name }}</b>
-            <span v-if="s.open_shifts" class="text-[11px] bg-green-50 text-green-700 border border-green-200 rounded-full px-2 py-0.5">
-              {{ s.open_shifts }} مناوبة مفتوحة
-            </span>
-          </div>
-          <div v-if="s.address" class="text-xs text-gray-400 mb-3">{{ s.address }}</div>
-
-          <!-- today's operational state of this station -->
-          <div class="rounded-lg border px-3 py-2 mb-3 text-sm" :class="dayTone(s).box">
-            <div class="flex items-center justify-between">
-              <span class="text-xs">دورة اليوم</span>
-              <span class="font-semibold tabular-nums">{{ (s.day_close_time || '').slice(0, 5) || 'غير مضبوطة' }}</span>
-            </div>
-            <div class="flex items-center justify-between mt-1">
-              <span class="text-xs">القراءات</span>
-              <span class="font-semibold tabular-nums">{{ s.readings_status?.done || 0 }} / {{ s.readings_status?.total || 0 }}</span>
-            </div>
-            <div class="text-xs mt-1" :class="dayTone(s).text">{{ workNeededLabel(s) }}</div>
-          </div>
-
-          <div class="grid grid-cols-3 gap-2 text-center text-sm mb-3">
-            <div class="bg-gray-50 rounded-lg py-2"><div class="text-[11px] text-gray-500">اللترات</div><b class="tabular-nums">{{ fmtNum(s.total_liters ?? 0) }}</b></div>
-            <div class="bg-gray-50 rounded-lg py-2"><div class="text-[11px] text-gray-500">التحصيل</div><b class="tabular-nums">{{ fmtNum(s.total_collection ?? 0) }}</b></div>
-            <div class="bg-gray-50 rounded-lg py-2"><div class="text-[11px] text-gray-500">الفرق</div><b class="tabular-nums">{{ fmtDiff(s.difference) }}</b></div>
-          </div>
-          <div class="flex items-center gap-3 text-xs text-gray-500">
-            <span class="flex items-center gap-1"><Icon name="tank" :size="13" />{{ s.tanks }} خزانات</span>
-            <span v-if="s.low_tanks" class="text-amber-700 flex items-center gap-1"><Icon name="alert" :size="13" />{{ s.low_tanks }} منخفضة</span>
-            <span class="mr-auto tabular-nums">المخزون {{ s.volume_pct ?? 0 }}%</span>
-          </div>
-        </button>
-      </div>
-      <div v-if="data && !data.stations.length" class="text-center text-gray-400 py-16">
-        لا توجد محطات نشطة — ابدأ من
-        <router-link to="/stations/setup-wizard" class="text-blue-700 hover:underline">إعداد محطة جديدة</router-link>
-      </div>
+    <div v-else-if="!selected" class="text-center text-gray-500 py-20">
+      اختر محطة من القائمة الجانبية لعرض بياناتها.
     </div>
 
-    <!-- ============ SINGLE STATION MODE ============ -->
+    <!-- ============ STATION VIEW (isolated) ============ -->
     <div v-else-if="data" class="space-y-6">
       <!-- B. KPI SUMMARY (§4) — Arabic explanations on "?" hover -->
       <div class="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-3">

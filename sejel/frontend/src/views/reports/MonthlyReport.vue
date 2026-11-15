@@ -15,20 +15,9 @@
           </svg>
           طباعة
         </button>
-        <!-- QA-25: this link was rendered only when the report covered exactly ONE
-             station. The manager role is precisely the multi-station case, so the
-             audience that most needs an export was the only one that could never
-             reach it. The endpoint takes a single station, so the operator now
-             picks which one explicitly instead of the control disappearing. -->
-        <template v-if="report?.stations?.length >= 1">
-          <select v-if="report.stations.length > 1" v-model="exportStation"
-            data-testid="export-station" class="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white">
-            <option v-for="s in report.stations" :key="s.id" :value="s.id">{{ s.name }}</option>
-          </select>
-          <a :href="`/api/export/?view=station&name=${exportStation}`"
-            data-testid="export-excel"
-            class="border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm hover:bg-gray-50">⬇ Excel</a>
-        </template>
+        <a v-if="stationStore.currentStation" :href="`/api/export/?view=station&name=${stationStore.currentStation}`"
+          data-testid="export-excel"
+          class="border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm hover:bg-gray-50">⬇ Excel</a>
       </div>
     </div>
 
@@ -70,9 +59,9 @@
         </table>
       </div>
 
-      <!-- per-station comparison -->
+      <!-- station summary (isolated) -->
       <div v-if="report.stations?.length" class="bg-white rounded-xl shadow-sm border p-4 print:border">
-        <h3 class="font-bold mb-3">مقارنة المحطات</h3>
+        <h3 class="font-bold mb-3">ملخص المحطة{{ stationStore.currentStationName ? ': ' + stationStore.currentStationName : '' }}</h3>
         <table class="data-table">
           <thead><tr><th>المحطة</th><th>المناوبات</th><th>اللترات</th><th>المبيعات</th><th>التحصيل</th><th>الفرق</th></tr></thead>
           <tbody>
@@ -112,10 +101,12 @@
   </div>
 </template>
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import api from '../../api'
+import { useStationStore } from '../../stores/station'
 const route = useRoute()
+const stationStore = useStationStore()
 const now = new Date()
 const reportMonth = ref(Number(route.query.month) || now.getMonth() + 1)
 const reportYear = ref(Number(route.query.year) || now.getFullYear())
@@ -132,20 +123,16 @@ const monthName = computed(() => months.find(m => m.v === Number(reportMonth.val
 const formatNum = (v) => (v || v === 0) ? Number(v).toLocaleString('en-US', { maximumFractionDigits: 2 }) : '0'
 const fuelName = (name) => fuelMap.value[name] || name
 
-// Defaults to the first station in the report, so the Excel link always points
-// somewhere real after the report loads.
-const exportStation = ref('')
-
 const loadReport = async () => {
+  if (!stationStore.currentStation) { report.value = null; return }
   try {
     const { data } = await api.get(`/reports/monthly/?year=${reportYear.value}&month=${reportMonth.value}`)
     report.value = data
-    const ids = (data && data.stations || []).map((s) => s.id).filter(Boolean)
-    if (!ids.includes(exportStation.value)) exportStation.value = ids[0] || ''
   } catch (e) { alert('خطأ في تحميل التقرير') }
 }
 
 onMounted(async () => {
+  if (!stationStore.loaded) await stationStore.init()
   try {
     const fRes = await api.get('/fuel-types/')
     fuelMap.value = Object.fromEntries((fRes.data.results || fRes.data).map(f => [f.name, f.fuel_name]))
@@ -153,6 +140,7 @@ onMounted(async () => {
   await loadReport()
 })
 
-// wait for the next frame so the DOM reflects the selected month before printing
+watch(() => stationStore.currentStation, loadReport)
+
 const printReport = () => window.print()
 </script>

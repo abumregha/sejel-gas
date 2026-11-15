@@ -21,11 +21,13 @@ import { ref, computed, onMounted, watch } from 'vue'
 import api from '../../api'
 import { friendlyError } from '../../errors'
 import { useAuthStore } from '../../stores/auth'
+import { useStationStore } from '../../stores/station'
 import Icon from '../../components/dashboard/Icon.vue'
 import { fmtNum, fmtMoney } from '../../components/dashboard/format'
 import { countReadings, countExceptions } from '../../utils/labels'
 
 const auth = useAuthStore()
+const stationStore = useStationStore()
 
 const loading = ref(true)
 const saving = ref(false)
@@ -35,12 +37,10 @@ const notice = ref('')
 const date = ref(new Date().toISOString().slice(0, 10))
 const data = ref(null)
 const stations = ref([])
-// remember the chosen station across navigations — the operator returns to
-// this screen many times during the day (dashboard → readings → dashboard)
-const stationSel = ref(auth.stationId || sessionStorage.getItem('sejel-readings-station') || '')
-watch(stationSel, (v) => sessionStorage.setItem('sejel-readings-station', v || ''))
+// Global station context: one major station selector in side menu for all functions
+const stationSel = computed(() => stationStore.currentStation)
 
-const canSwitch = computed(() => auth.isAdmin || ['manager', 'finance'].includes(auth.role))
+const canSwitch = computed(() => stationStore.canSwitch)
 
 // rows[meterId] = entry state per gun
 const rows = ref({})
@@ -223,9 +223,11 @@ async function loadStations() {
 
 onMounted(async () => {
   if (!auth.user) await auth.restore()
-  if (!auth.stationId) await loadStations()
+  if (!stationStore.loaded) await stationStore.init()
   await load()
 })
+
+watch(() => stationStore.currentStation, () => load())
 
 // ---- save -------------------------------------------------------------------
 // The day-close container (is_day_close=1) — the station's reading/closing
@@ -780,10 +782,7 @@ async function closeDay() {
       </div>
       <div class="flex items-center gap-2 flex-wrap">
         <input v-model="date" type="date" data-testid="readings-date" class="border border-gray-300 rounded-lg px-3 py-2" @change="load" />
-        <select v-if="canSwitch" v-model="stationSel" data-testid="readings-station" class="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white min-w-[160px]" @change="load">
-          <option value="" disabled>اختر المحطة</option>
-          <option v-for="s in stations" :key="s.id" :value="s.id">{{ s.name }}</option>
-        </select>
+        <!-- Station is selected globally from the sidebar (isolated per-station context) -->
         <!-- Closing the day books the day’s reconciliation, a manager-only action.
              A supervisor used to be offered this button, confirmed the dialog,
              and was then refused with «ليست لديك صلاحية» — say who does it
@@ -807,9 +806,8 @@ async function closeDay() {
     <div v-if="error" class="bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 mb-4 text-sm">{{ error }}</div>
     <div v-if="notice" class="bg-green-50 border border-green-200 text-green-700 rounded-xl p-4 mb-4 text-sm">{{ notice }}</div>
 
-    <!-- station picker for multi-station managers -->
-    <div v-if="canSwitch && !stationSel" class="text-center text-gray-400 py-16">
-      اختر محطة لعرض مسدساتها
+    <div v-if="!stationSel" class="text-center text-gray-400 py-16">
+      اختر محطة من القائمة الجانبية لعرض مسدساتها
     </div>
 
     <div v-else-if="loading && !data" class="text-center text-gray-400 py-16">جارٍ التحميل…</div>

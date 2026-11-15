@@ -1,7 +1,10 @@
 <template>
   <div>
     <div class="flex items-center justify-between mb-6">
-      <h2 class="text-xl font-bold">تقرير الرصيد الشهري</h2>
+      <div>
+        <h2 class="text-xl font-bold">تقرير الرصيد الشهري</h2>
+        <p class="text-sm text-gray-500 mt-0.5" v-if="stationStore.currentStationName">المحطة: {{ stationStore.currentStationName }}</p>
+      </div>
       <div class="flex gap-2">
         <input v-model.number="year" type="number" class="w-24 border border-gray-300 rounded-lg px-3 py-2 text-center" placeholder="السنة" />
         <input v-model.number="month" type="number" min="1" max="12" class="w-20 border border-gray-300 rounded-lg px-3 py-2 text-center" placeholder="الشهر" />
@@ -52,14 +55,17 @@
   </div>
 </template>
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import api from '../../api'
+import { useStationStore } from '../../stores/station'
+const stationStore = useStationStore()
 const year = ref(new Date().getFullYear())
 const month = ref(new Date().getMonth() + 1)
 const data = ref(null)
 const loading = ref(false)
 const totals = ref({})
 const load = async () => {
+  if (!stationStore.currentStation) { data.value = null; totals.value = {}; return }
   loading.value = true
   try {
     const { data: res } = await api.get(`/reports/balance/?year=${year.value}&month=${month.value}`)
@@ -69,5 +75,6 @@ const load = async () => {
     data.value = null
   } finally { loading.value = false }
 }
-onMounted(load)
+onMounted(async () => { if (!stationStore.loaded) await stationStore.init(); load() })
+watch(() => stationStore.currentStation, load)
 </script>

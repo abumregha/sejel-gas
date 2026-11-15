@@ -11,8 +11,30 @@
     >
       <div class="p-2">
         <!-- Logo -->
-        <div class="flex items-center gap-2 mb-6 px-2">
+        <div class="flex items-center gap-2 mb-3 px-2">
           <span class="text-xl font-bold">سجل</span>
+        </div>
+
+        <!-- Global station selector: one major selector for all functions -->
+        <div class="mb-4 px-1">
+          <div class="text-[11px] text-gray-400 mb-1 px-1">المحطة الحالية</div>
+          <div v-if="stationStore.isBound" class="bg-gray-800 border border-gray-700 rounded-xl px-3 py-2 text-sm">
+            <div class="font-semibold text-white truncate">{{ stationStore.currentStationName || auth.user?.station_id || 'محطتك' }}</div>
+            <div class="text-[11px] text-gray-400 mt-0.5">محطة مرتبطة بحسابك</div>
+          </div>
+          <div v-else>
+            <select
+              v-model="selectedStation"
+              @change="onStationChange"
+              class="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+            >
+              <option value="" disabled>اختر المحطة...</option>
+              <option v-for="s in stationStore.stations" :key="s.name" :value="s.name">
+                {{ s.station_name || s.name }}
+              </option>
+            </select>
+            <div v-if="!stationStore.stations.length && !stationStore.loading" class="text-xs text-gray-400 mt-1 px-1">لا توجد محطات</div>
+          </div>
         </div>
         <!-- Nav links (grouped + role-filtered, Q1/Q3) — icons AND labels always visible -->
         <nav class="space-y-1">
@@ -118,18 +140,36 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import { useStationStore } from '../stores/station'
 import UxFeedbackWidget from '../components/UxFeedbackWidget.vue'
 import { useToast } from '../composables/useToast'
 
 const { toast, dismiss } = useToast()
 
 const auth = useAuthStore()
+const stationStore = useStationStore()
 const router = useRouter()
 const route = useRoute()
 const sidebarOpen = ref(false)
+const selectedStation = ref(stationStore.currentStation)
+
+watch(() => stationStore.currentStation, (v) => { selectedStation.value = v || '' })
+
+function onStationChange() {
+  if (!selectedStation.value) return
+  if (selectedStation.value === stationStore.currentStation) return
+  stationStore.setCurrent(selectedStation.value)
+  // Reload to apply station context to all functions/views cleanly
+  window.location.reload()
+}
+
+onMounted(async () => {
+  if (!stationStore.loaded) await stationStore.init()
+  selectedStation.value = stationStore.currentStation
+})
 
 // History-aware back button: only meaningful if there is in-app history
 // beyond the current entry (vue-router tracks position in history.state).
@@ -208,6 +248,7 @@ const navGroups = computed(() => {
       title: 'التقارير',
       items: [
         { to: '/reports/daily', icon: '📅', label: 'التقرير اليومي' },
+        { to: '/reports/daily-statement', icon: '📒', label: 'كشف الحساب اليومي', roles: ['admin', 'manager', 'finance'] },
         { to: '/reports/monthly', icon: '📆', label: 'التقرير الشهري', roles: ['admin', 'manager', 'finance'] },
         { to: '/reports/inventory', icon: '📦', label: 'المخزون والتوريد' },
         { to: '/reports/balance', icon: '⚖️', label: 'تقرير الرصيد', roles: ['admin', 'manager', 'finance'] },

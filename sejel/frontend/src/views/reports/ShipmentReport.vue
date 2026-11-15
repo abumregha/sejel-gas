@@ -1,12 +1,11 @@
 <template>
   <div>
     <div class="no-print flex flex-wrap items-center justify-between gap-3 mb-6">
-      <h2 class="text-xl font-bold">تقرير الشحنات الشهري</h2>
+      <div>
+        <h2 class="text-xl font-bold">تقرير الشحنات الشهري</h2>
+        <p class="text-sm text-gray-500 mt-0.5" v-if="stationStore.currentStationName">المحطة: {{ stationStore.currentStationName }}</p>
+      </div>
       <div class="flex flex-wrap items-center gap-2 sm:gap-3">
-        <select v-model="selectedStation" class="border border-gray-300 rounded-lg px-4 py-2">
-          <option value="">اختر المحطة</option>
-          <option v-for="s in stations" :key="s.name" :value="s.name">{{ s.station_name || s.name }}</option>
-        </select>
         <select v-model="reportMonth" class="border border-gray-300 rounded-lg px-3 py-2">
           <option v-for="m in months" :key="m.v" :value="m.v">{{ m.n }}</option>
         </select>
@@ -16,7 +15,8 @@
       </div>
     </div>
     <div v-if="error" class="bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 mb-4 text-sm">{{ error }}</div>
-    <div v-if="report" class="space-y-6">
+    <div v-if="!stationStore.currentStation" class="text-center py-12 text-gray-400">اختر محطة من القائمة الجانبية</div>
+    <div v-else-if="report" class="space-y-6">
       <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         <div class="kpi-card"><div class="kpi-label">إجمالي المجدول</div><div class="kpi-value">{{ formatNum(report.total_scheduled) }}</div></div>
         <div class="kpi-card"><div class="kpi-label">إجمالي المسلّم</div><div class="kpi-value text-green-600">{{ formatNum(report.total_delivered) }}</div></div>
@@ -25,7 +25,7 @@
         <div class="kpi-card"><div class="kpi-label">إجمالي الكمية المستلمة</div><div class="kpi-value text-green-600">{{ formatNum(report.total_quantity_received) }}</div></div>
       </div>
       <div class="bg-white rounded-xl shadow-sm border p-4">
-        <h3 class="font-bold mb-3">تفاصيل الشحنات — {{ report.station_name }} — {{ monthName }} {{ reportYear }}</h3>
+        <h3 class="font-bold mb-3">تفاصيل الشحنات — {{ report.station_name || stationStore.currentStationName }} — {{ monthName }} {{ reportYear }}</h3>
         <div class="table-scroll">
           <table class="data-table">
             <thead><tr><th>رقم الفاتورة</th><th>التاريخ المجدول</th><th>تاريخ التسليم الفعلي</th><th>نوع الوقود</th><th>الخزان</th><th>الكمية المتوقعة</th><th>الكمية المستلمة</th><th>الحالة</th><th>العلامة</th></tr></thead>
@@ -39,25 +39,23 @@
                 <td class="font-mono">{{ formatNum(d.expected_quantity) }}</td>
                 <td class="font-mono">{{ formatNum(d.received_quantity) }}</td>
                 <td>{{ d.status }}</td>
-                <td>
-                  <span :class="flagClass(d.flag)" class="badge">{{ flagLabel(d.flag) }}</span>
-                </td>
+                <td><span :class="flagClass(d.flag)" class="badge">{{ flagLabel(d.flag) }}</span></td>
               </tr>
             </tbody>
           </table>
         </div>
       </div>
     </div>
-    <div v-else class="text-center py-12 text-gray-400">اختر المحطة والشهر لعرض التقرير</div>
+    <div v-else class="text-center py-12 text-gray-400">جاري تحميل التقرير...</div>
   </div>
 </template>
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import api from '../../api'
 import { friendlyError } from '../../errors'
+import { useStationStore } from '../../stores/station'
 
-const stations = ref([])
-const selectedStation = ref('')
+const stationStore = useStationStore()
 const now = new Date()
 const reportMonth = ref(now.getMonth() + 1)
 const reportYear = ref(now.getFullYear())
@@ -71,7 +69,7 @@ const months = [
 ]
 const monthName = computed(() => months.find(m => m.v === Number(reportMonth.value))?.n || reportMonth.value)
 
-const formatNum = (v) => v ? Number(v).toLocaleString('en-US') : '0'
+const formatNum = (v) => (v || v === 0) ? Number(v).toLocaleString('en-US') : '0'
 const flagLabel = (flag) => {
   if (flag === 'مرحلة') return 'مرحلة'
   if (flag === 'undelivered') return 'غير مسلّم'
@@ -86,33 +84,21 @@ const flagClass = (flag) => {
 }
 const loadReport = async () => {
   error.value = ''
-  if (!selectedStation.value && stations.value.length > 0) {
-    selectedStation.value = stations.value[0].name
-  }
-  if (!selectedStation.value) {
-    error.value = 'يرجى اختيار المحطة أولاً'
-    return
-  }
+  if (!stationStore.currentStation) { report.value = null; return }
   try {
     const { data } = await api.get('/reports/monthly-shipments/', {
-      params: { station: selectedStation.value, year: reportYear.value, month: reportMonth.value }
+      params: { year: reportYear.value, month: reportMonth.value }
     })
     report.value = data
   } catch (e) {
     error.value = friendlyError(e) || 'خطأ في تحميل التقرير'
+    report.value = null
   }
 }
 const printReport = () => window.print()
 onMounted(async () => {
-  try {
-    const { data } = await api.get('/stations/')
-    stations.value = data.results || data
-    if (stations.value.length > 0 && !selectedStation.value) {
-      selectedStation.value = stations.value[0].name
-      loadReport()
-    }
-  } catch (e) {
-    error.value = friendlyError(e)
-  }
+  if (!stationStore.loaded) await stationStore.init()
+  loadReport()
 })
+watch(() => stationStore.currentStation, loadReport)
 </script>
