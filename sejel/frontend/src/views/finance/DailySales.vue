@@ -1,7 +1,7 @@
 <template>
   <div>
     <div class="flex items-center justify-between mb-6">
-      <h2 class="text-xl font-bold">المبيعات المالية اليومية</h2>
+      <h2 class="text-xl font-bold">المبيعات المالية اليومية — {{ stationName || station || '' }}</h2>
       <div class="flex items-center gap-3">
         <input v-model="reportDate" type="date" class="border border-gray-300 rounded-lg px-4 py-2" />
         <button @click="loadReport" class="bg-primary text-white px-4 py-2 rounded-lg text-sm">عرض</button>
@@ -10,6 +10,10 @@
     </div>
 
     <div v-if="loading" class="text-center py-12 text-gray-400">جاري التحميل...</div>
+
+    <div v-else-if="report && report.station_required" class="text-center py-12 text-gray-500">
+      اختر محطة من القائمة الجانبية لعرض المبيعات المالية اليومية.
+    </div>
 
     <div v-else-if="report" class="space-y-6">
       <!-- Summary Cards -->
@@ -68,45 +72,40 @@
           </div>
         </div>
       </div>
-
-      <!-- Station Comparison -->
-      <div v-if="report.stations?.length" class="bg-white rounded-xl shadow-sm border p-4">
-        <h3 class="font-bold mb-3">مقارنة المحطات</h3>
-        <table class="data-table">
-          <thead><tr><th>المحطة</th><th>نقد</th><th>كوبونات</th><th>إلكتروني</th><th>الإجمالي</th></tr></thead>
-          <tbody>
-            <tr v-for="s in report.stations" :key="s.id">
-              <td class="font-medium">{{ s.name }}</td>
-              <td class="font-mono">{{ formatNum(s.cash) }}</td>
-              <td class="font-mono">{{ formatNum(s.coupons) }}</td>
-              <td class="font-mono">{{ formatNum(s.epayment) }}</td>
-              <td class="font-mono font-bold text-primary">{{ formatNum(s.total) }} د.ل</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
     </div>
 
     <div v-else class="text-center py-12 text-gray-400">اختر تاريخاً لعرض التقرير</div>
   </div>
 </template>
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import api from '../../api'
+import { useStationStore } from '../../stores/station'
+
 const route = useRoute()
+const stationStore = useStationStore()
+const station = computed(() => stationStore.currentStation)
+const stationName = computed(() => report.value?.station_name || stationStore.currentStationName || '')
+
 const reportDate = ref(route.query.date || new Date().toISOString().split('T')[0])
 const report = ref(null)
 const loading = ref(false)
 const formatNum = (v) => v ? Number(v).toLocaleString('en-US') : '0'
+
 const loadReport = async () => {
+  if (!station.value) { report.value = { station_required: true }; return }
   loading.value = true
   try {
-    const { data: res } = await api.get(`/reports/daily-sales/?date=${reportDate.value}`)
+    const { data: res } = await api.get('/reports/daily-sales/', {
+      params: { station: station.value, date: reportDate.value }
+    })
     report.value = res
   } catch (e) { report.value = null }
   loading.value = false
 }
 const printReport = () => window.print()
+
 onMounted(loadReport)
+watch(station, loadReport)
 </script>
