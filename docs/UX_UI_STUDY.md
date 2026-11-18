@@ -321,4 +321,8 @@ candidates). Key corrections to the numbers above:
 - The latest round (2026-11-18) also collapsed `/shifts/day` + `/shifts` into one sidebar
   entry with a day/list toggle (M1), moved `/employees` and `/shifts/definitions` out of the
   sidebar (M2), and added a read-only "today's log" to SimpleHome (S1).
+- Round 2 (2026-11-18): added dashboard daily-task quick actions (M3), SimpleHome shift
+  name/status strip (S2), role-gated InventoryHub cards with shared `canSee` in ReportHub
+  (M4), and low-tank alerts on SimpleHome (S3). The e2e suite is idempotent —
+  **28/28 ALL PASS** on `:8007`.
 - Full detail, decisions, and next candidates: **`docs/INTERFACE_MINIMIZATION.md`**.

@@ -15,14 +15,13 @@
 <script setup>
 import { computed } from 'vue'
 import { useAuthStore } from '../../stores/auth'
+import { canSee } from '../../utils/roles'
 
 // Reports triage: the sidebar used to carry all of these as 8 flat entries;
 // they now live behind this one hub. Routes are unchanged — direct URLs and
-// deep links keep working.
+// deep links keep working. Role gate is shared with the other hubs via
+// utils/roles.js — `owner` counts as manager-level everywhere.
 const auth = useAuthStore()
-const can = (roles) => !roles || auth.isAdmin
-  || roles.includes(auth.role)
-  || (auth.role === 'owner' && roles.includes('manager'))
 
 const REPORTS = [
   { to: '/reports/daily', icon: '📅', label: 'التقرير اليومي', desc: 'مبيعات وتحصيلات اليوم لكل مناوبة' },
@@ -34,5 +33,5 @@ const REPORTS = [
   { to: '/reports/delivery-print', icon: '🖨️', label: 'تقرير التسليم للطباعة', roles: ['admin', 'manager', 'finance'], desc: 'نسخة قابلة للطباعة لتسليم الوقود' },
 ]
 
-const visible = computed(() => REPORTS.filter((r) => can(r.roles)))
+const visible = computed(() => REPORTS.filter((r) => canSee(auth.user, r.roles)))
 </script>

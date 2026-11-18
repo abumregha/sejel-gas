@@ -160,6 +160,16 @@ All are frontend-only and reversible.
   Before the first reading it shows "لم تُبدأ بعد / انتظار أول قراءة" instead of
   nothing, so the operator always knows where the next save will land.
 
+### M4: Role-gate inventory hub + shared `canSee` in reports hub
+- **Files:** `views/inventory/InventoryHub.vue`, `views/reports/ReportHub.vue`, `utils/roles.js`
+- **Change:** `utils/roles.js` exports `canSee(user, roles)` (shared gate: omitted roles = everyone; `is_staff`/admin sees all; `owner` counts as manager-level). `InventoryHub.vue` now renders a role-gated `CARDS` list (transfers/shortages → admin, manager; fuel reconciliation/shipment schedules → admin, manager, finance; others unrestricted) with an empty-state message. `ReportHub.vue` switched from a local `can()` to `canSee`.
+- **Result:** verified on `:8007` — admin sees all 7 inventory cards and all 7 report cards with correct routes. Supervisors (non-manager-level) are redirected from manager hubs to `/simple` by the router guard, so restricted hub cards are not exposed in Simple Mode; hidden ≠ deleted remains true via direct URLs.
+
+### S3: Low-tank alert on SimpleHome
+- **File:** `views/simple/SimpleHome.vue`
+- **Change:** Tanks at or below 20% now show a summary low-tank count (`data-testid="simple-tank-alert"`) above the tank strip and a per-row "منخفض" badge (`data-testid="simple-tank-low"`), in addition to the existing red bar styling.
+- **Result:** verified on `:8007` — tank strip renders; alert/badge elements appear when any tank is ≤20% (none in the current QA fixture, so counts were 0).
+
 ### E2E suite made idempotent (was 26/27, now **28/28 ALL PASS**)
 The suite is **stateful**: the operator is unbound, so their dashboard defaults to
 whichever station the last run left readings on. A supervisor cannot reset it
@@ -170,7 +180,7 @@ counter, deletes every reading, and cascades-deletes every day-close Shift
 / Shift Fuel Summary first, since the Shift DELETE is 417 LinkExistsError otherwise).
 The opening-badge assertion was also made idempotent: it counts only unsaved guns
 whose previous reading is empty or `0` (the reset state), matching the app's own
-`!g.prev` rule.
+`!g.prev` rule. M4/S3 verification and the full `simple-mode-verify.js` suite both pass on `:8007`.
 
 ---
 

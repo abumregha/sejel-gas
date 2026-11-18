@@ -37,3 +37,17 @@ export function canCloseDay(user) {
 export function landingPath(user) {
   return isManagerLevel(user) ? '/' : '/simple'
 }
+
+/**
+ * Generic role gate, mirroring DefaultLayout's sidebar `can()`: `roles` omitted
+ * = everyone; admin (and Frappe is_staff) sees everything; `owner` counts as
+ * manager-level. Reused by the hub screens so they share one definition of
+ * "who may see this" instead of each one re-typing the list.
+ */
+export function canSee(user, roles) {
+  if (!roles) return true
+  if (!user) return false
+  if (user.is_staff) return true
+  if (roles.includes(user.role)) return true
+  return user.role === 'owner' && roles.includes('manager')
+}

@@ -88,11 +88,19 @@
            the level removes the "call the manager and ask" step. Same payload
            Manager Mode's gauges use (current_level / capacity / percent). -->
       <div v-if="!loading && !error && tanks.length" data-testid="simple-tanks" class="mt-4 pt-3 border-t border-gray-100 space-y-2">
-        <div class="text-[11px] text-gray-500">الخزانات</div>
+        <div class="flex items-center justify-between text-[11px] text-gray-500">
+          <span>الخزانات</span>
+          <span v-if="lowTanks.length" data-testid="simple-tank-alert" class="text-red-600 font-bold">
+            {{ lowTanks.length }} خزان منخفض
+          </span>
+        </div>
         <div v-for="t in tanks" :key="t.id" class="flex items-center gap-3">
           <div class="flex-1">
             <div class="flex justify-between text-[11px] text-gray-600 mb-1">
-              <span>{{ t.name }}</span>
+              <span class="flex items-center gap-1">
+                {{ t.name }}
+                <span v-if="t.percent <= 20" data-testid="simple-tank-low" class="text-[10px] text-red-600 bg-red-50 border border-red-200 rounded-full px-1.5 py-0.5">منخفض</span>
+              </span>
               <span class="tabular-nums">{{ fmtNum(t.current_level) }} / {{ fmtNum(t.capacity) }} لتر</span>
             </div>
             <div class="h-2 rounded-full bg-gray-100 overflow-hidden">
@@ -194,6 +202,10 @@ const totalIncome = computed(() => {
 // Operator context (read-only, same payloads Manager Mode uses):
 // tank levels, today's deliveries, and a compact "today's log".
 const tanks = computed(() => dash.value?.tanks || [])
+// S3: a tank at or below 20 % is a low-tank alert. The bar was
+// already red, but nothing said so in words — now there is a summary count
+// above the strip and a badge on the row itself.
+const lowTanks = computed(() => tanks.value.filter((t) => Number(t.percent || 0) <= 20))
 const deliveriesToday = ref(0)
 const deliveriesList = ref([])
 const tankReadings = ref([])
