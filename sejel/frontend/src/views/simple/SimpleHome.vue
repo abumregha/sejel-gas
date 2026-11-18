@@ -48,6 +48,23 @@
       <div v-if="loading" class="text-sm text-gray-400 py-4 text-center">جارٍ التحميل…</div>
       <div v-else-if="error" class="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">{{ error }}</div>
       <div v-else>
+        <!-- Which shift the operator is posting to — auto-resolved, never chosen.
+             Always shown: even before the first reading, the operator knows the
+             day has not started and where the next save will land. -->
+        <div data-testid="simple-day-shift"
+          class="flex items-center justify-between gap-2 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 mb-3 text-xs">
+          <span class="text-gray-500">المناوبة</span>
+          <span v-if="dayShiftStatus" class="font-bold text-gray-800 truncate">{{ dayShiftStatus.name }}</span>
+          <span v-else class="text-gray-400">لم تُبدأ بعد</span>
+          <span v-if="dayShiftStatus" class="text-[11px] rounded-full px-2 py-0.5"
+            :class="dayShiftStatus.closed ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-amber-50 text-amber-700 border border-amber-200'">
+            {{ dayShiftStatus.status }}
+          </span>
+          <span v-else class="text-[11px] rounded-full px-2 py-0.5 bg-gray-100 text-gray-500 border border-gray-200">
+            انتظار أول قراءة
+          </span>
+        </div>
+
         <div class="grid grid-cols-3 gap-3 text-center">
           <div class="rounded-xl bg-gray-50 p-3">
             <div data-testid="simple-today-readings" class="text-xl font-bold tabular-nums">{{ readingsDone }}/{{ readingsTotal }}</div>
@@ -136,6 +153,15 @@ const canDeliver = computed(() => isManagerLevel(auth.user))
 const showManagerMode = computed(() => isManagerLevel(auth.user))
 
 const dateStr = new Date().toISOString().slice(0, 10)
+
+// The day-close shift the operator is posting to: its name and status, shown
+// so they know exactly which shift their readings/income are landing in.
+const dayShiftStatus = computed(() => {
+  const s = activeDayShift.value
+  if (!s) return null
+  const labels = { open: 'جارية', in_progress: 'جارية', submitted: 'بانتظار الإقفال', closed: 'مغلقة' }
+  return { name: s.shift_name || s.name, status: labels[s.status] || s.status, closed: s.status === 'closed' }
+})
 
 const activeDayShift = computed(() => {
   const list = dash.value?.shifts || []

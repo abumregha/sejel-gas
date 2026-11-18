@@ -34,6 +34,89 @@ async function apiLogin(page) {
 ;(async () => {
   const browser = await chromium.launch()
 
+  // The operator's station is unbound, so the dashboard defaults to whichever
+  // station the fixture's last run left readings on. The suite is therefore
+  // stateful: an admin must reset that station's counters and today's readings
+  // before the operator flow, otherwise every gun shows "saved" and the input
+  // field is hidden. (A supervisor cannot do this — Meter PUT and reading DELETE
+  // are 403 for that role, which is the point of B1.) Admin only, on :8007.
+  const admReset = await browser.newContext({ viewport: { width: 390, height: 844 } })
+  const admR = await admReset.newPage()
+  admR.on('dialog', d => d.accept())
+  await admR.goto(BASE + '/login/', { waitUntil: 'domcontentloaded' })
+  await admR.waitForFunction(() => {
+    const el = document.querySelector('#app'); return el && el.__vue_app__
+  }, { timeout: 20000 }).catch(() => {})
+  await admR.locator('input').nth(0).fill('admin@sejel.ly')
+  await admR.locator('input').nth(1).fill('admin123')
+  await admR.locator('button[type="submit"]').click()
+  await admR.waitForURL((u) => !u.pathname.includes('login'), { timeout: 20000 })
+  if (admR.url().includes('select-station')) {
+    await admR.locator('button').first().click()
+    await admR.waitForURL((u) => !u.pathname.includes('select-station'), { timeout: 20000 })
+  }
+  const resetCsrf = await admR.evaluate(async () =>
+    (await (await fetch('/api/auth/me/', { credentials: 'include' })).json()).message.csrf_token)
+  // Reset EVERY station's meters on this disposable QA site. The operator is
+  // unbound, so their dashboard defaults to whichever station the last run
+  // left readings on; targeting one station by name is fragile. :8007 is the
+  // isolated, disposable copy — nothing here is production data.
+  const resetMeters = await admR.evaluate(async ({ csrf }) => {
+    const list = await (await fetch('/api/meters/?limit_page_length=0', { credentials: 'include' })).json()
+    const rows = (list.message || list).results || []
+    for (const m of rows) {
+      await fetch(`/api/meters/${m.name}/`, { method: 'PUT', credentials: 'include',
+        headers: { 'Content-Type': 'application/json', 'X-Frappe-CSRF-Token': csrf },
+        body: JSON.stringify({ current_reading: 0 }) })
+    }
+    return rows.map((m) => m.name)
+  }, { csrf: resetCsrf })
+  const resetReadings = await admR.evaluate(async ({ csrf }) => {
+    const list = await (await fetch('/api/meter-readings/?limit_page_length=0', { credentials: 'include' })).json()
+    const rows = (list.message || list).results || []
+    for (const r of rows) {
+      await fetch(`/api/meter-readings/${r.name}/`, { method: 'DELETE', credentials: 'include',
+        headers: { 'X-Frappe-CSRF-Token': csrf } })
+    }
+    return rows.length
+  }, { csrf: resetCsrf })
+  // The day-close Shift (is_day_close=1) is what SimpleReadings' dayClosed
+  // computed keys on — if it is still `closed`, every gun input is disabled
+  // and the suite cannot type. Delete it too, so the next run starts from a
+  // day that is genuinely open. A day-close shift is linked to Cash Collection,
+  // Voucher Record and POS Record, so those have to go first or the DELETE
+  // comes back 417 LinkExistsError.
+  const resetShifts = await admR.evaluate(async ({ csrf }) => {
+    const list = await (await fetch('/api/shifts/?limit_page_length=0', { credentials: 'include' })).json()
+    const rows = (list.message || list).results || []
+    const hit = rows.filter((s) => s.is_day_close)
+    for (const s of hit) {
+      for (const res of ['cash-collections', 'voucher-records', 'pos-records']) {
+        const r = await (await fetch(`/api/${res}/?shift=${s.name}&limit_page_length=0`, { credentials: 'include' })).json()
+        for (const d of ((r.message || r).results || [])) {
+          await fetch(`/api/${res}/${d.name}/`, { method: 'DELETE', credentials: 'include',
+            headers: { 'X-Frappe-CSRF-Token': csrf } })
+        }
+      }
+      const recons = await (await fetch(`/api/reconciliations/?shift=${s.name}&limit_page_length=0`, { credentials: 'include' })).json()
+      for (const rc of ((recons.message || recons).results || [])) {
+        const sums = await (await fetch(`/api/shift-fuel-summaries/?reconciliation=${rc.name}&limit_page_length=0`, { credentials: 'include' })).json()
+        for (const sm of ((sums.message || sums).results || [])) {
+          await fetch(`/api/shift-fuel-summaries/${sm.name}/`, { method: 'DELETE', credentials: 'include',
+            headers: { 'X-Frappe-CSRF-Token': csrf } })
+        }
+        await fetch(`/api/reconciliations/${rc.name}/`, { method: 'DELETE', credentials: 'include',
+          headers: { 'X-Frappe-CSRF-Token': csrf } })
+      }
+      await fetch(`/api/shifts/${s.name}/`, { method: 'DELETE', credentials: 'include',
+        headers: { 'X-Frappe-CSRF-Token': csrf } })
+    }
+    return hit.length
+  }, { csrf: resetCsrf })
+  step('operator: fixture station reset to a clean day (admin)', resetMeters.length > 0,
+    `${resetMeters.length} meter(s) zeroed, ${resetReadings} reading(s) deleted, ${resetShifts} day-close shift(s) removed`)
+  await admReset.close()
+
   // ---------- OPERATOR (supervisor, bound to station) ----------
   const op = await (await browser.newContext({ viewport: { width: 390, height: 844 } })).newPage()
   op.on('dialog', d => d.accept())
@@ -63,6 +146,12 @@ async function apiLogin(page) {
   // --- Action 1: pump readings (2 taps: nav + save) ---
   await op.goto(BASE + '/simple/readings')
   await op.waitForSelector('[data-testid="simple-gun-input"]', { timeout: 15000 })
+  const gunCards2 = op.locator('[data-testid="simple-gun-card"]')
+  let unsaved = 0
+  for (let i = 0; i < (await gunCards2.count()); i++) {
+    if ((await gunCards2.nth(i).getAttribute('data-saved')) === 'false') unsaved++
+  }
+  step('operator: at least one gun is unsaved (day is open)', unsaved >= 1, `unsaved=${unsaved}`)
   const guns = await op.locator('[data-testid="simple-gun-input"]').count()
   step('operator: one field per gun', guns >= 2, `guns=${guns}`)
   // exception fields must be hidden initially
@@ -81,12 +170,14 @@ async function apiLogin(page) {
   // Idempotent check: the badge must appear for exactly the guns that are
   // unsaved AND have no previous reading. On a reused fixture station the guns
   // have history, so a hardcoded "2 fresh guns" expectation would fail.
+  // "No previous reading" matches the app's rule (!g.prev): a counter of 0
+  // (the reset state) counts as fresh too, not just an empty attribute.
   const gunCards = op.locator('[data-testid="simple-gun-card"]')
   let expectedOpening = 0
   for (let i = 0; i < (await gunCards.count()); i++) {
     const saved = await gunCards.nth(i).getAttribute('data-saved')
     const prev = await gunCards.nth(i).getAttribute('data-prev')
-    if (saved === 'false' && prev === '') expectedOpening++
+    if (saved === 'false' && (prev === '' || prev === '0' || prev === null)) expectedOpening++
   }
   const openingBadges = await op.locator('[data-testid="simple-gun-opening"]').count()
   step('operator: opening-reading badge exactly on fresh guns', openingBadges === expectedOpening,
