@@ -13,7 +13,9 @@ const router = useRouter()
 const auth = useAuthStore()
 
 // can(roles): admin sees everything (same logic as the sidebar's can()).
+// `owner` counts as manager-level (role-mismatch fix — utils/roles.js).
 const can = (roles) => !roles || auth.isAdmin || roles.includes(auth.role)
+  || (auth.role === 'owner' && roles.includes('manager'))
 
 const actions = [
   { label: 'قراءات المضخات', icon: 'gauge', to: '/readings' },

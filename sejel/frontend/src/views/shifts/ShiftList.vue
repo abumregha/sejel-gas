@@ -2,7 +2,18 @@
   <div>
     <div class="flex items-center justify-between mb-6">
       <h2 class="text-xl font-bold">المناوبات</h2>
-      <router-link to="/shifts/create" class="bg-primary text-white px-4 py-2 rounded-xl text-sm">+ إضافة مناوبة</router-link>
+      <div class="flex items-center gap-2">
+        <!-- setup-time screen, reachable here instead of the sidebar (triage) -->
+        <router-link to="/shifts/definitions" class="text-sm text-gray-500 hover:text-primary px-3 py-2">تعريفات المناوبات</router-link>
+        <router-link to="/shifts/create" class="bg-primary text-white px-4 py-2 rounded-xl text-sm">+ إضافة مناوبة</router-link>
+      </div>
+    </div>
+    <!-- One sidebar entry, two views: the flat list and the station-day screen. -->
+    <div class="flex gap-1 mb-4 bg-gray-100 rounded-lg p-1 text-sm w-fit">
+      <router-link to="/shifts" exact-active-class="bg-white shadow-sm text-gray-900"
+        class="px-3 py-1.5 rounded-md text-gray-500 hover:text-gray-900">القائمة</router-link>
+      <router-link to="/shifts/day" active-class="bg-white shadow-sm text-gray-900"
+        class="px-3 py-1.5 rounded-md text-gray-500 hover:text-gray-900">يوم المحطة</router-link>
     </div>
     <div class="flex gap-2 mb-4 flex-wrap">
       <button v-for="f in statusFilters" :key="f.value" @click="statusFilter = f.value"

@@ -141,7 +141,11 @@ import { friendlyError } from '../../errors'
 import { useAuthStore } from '../../stores/auth'
 const auth = useAuthStore()
 const route = useRoute(), router = useRouter()
-const isAdmin = computed(() => auth.role === 'System Manager' || auth.role === 'Owner')
+// Reopen-for-correction is a manager-level action. The old check compared
+// SPA roles against Frappe profile role strings ('System Manager'/'Owner')
+// and never matched — owner/manager could not reopen. Fixed to use the SPA
+// role values, with `owner` honored as manager-level (utils/roles.js).
+const isAdmin = computed(() => auth.isAdmin || ['manager', 'owner'].includes(auth.role))
 const corrections = ref([])
 const id = route.params.id
 const shift = ref(null)

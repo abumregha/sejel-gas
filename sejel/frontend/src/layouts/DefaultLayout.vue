@@ -196,7 +196,9 @@ const isActive = (path) => {
 // Role-based visibility (Q3). `roles` omitted = everyone. Admin sees all.
 // Infrastructure lists (islands/machines/meters/tanks) are managed inside the
 // station page tabs + wizard, so they're no longer in the nav (Q2).
+// `owner` counts as manager-level (role-mismatch fix — utils/roles.js).
 const can = (roles) => !roles || auth.isAdmin || roles.includes(auth.role)
+  || (auth.role === 'owner' && roles.includes('manager'))
 
 const navGroups = computed(() => {
   const groups = [
@@ -208,52 +210,41 @@ const navGroups = computed(() => {
       title: 'العمليات',
       items: [
         { to: '/readings', icon: '🎯', label: 'قراءات المضخات' },
-        { to: '/readings/deletions', icon: '🗑️', label: 'سجل حذف القراءات', roles: ['admin', 'manager', 'finance'] },
-        { to: '/shifts/day', icon: '🗓️', label: 'يوم المحطة' },
+        // Triage: the deletion log, setup wizard, station-day view, employees
+        // and shift definitions left the sidebar — every route still works by
+        // direct URL and is linked from its natural screen (ReadingsView,
+        // StationList, the Shifts list/day toggle).
         { to: '/shifts', icon: '🔄', label: 'المناوبات' },
         { to: '/stations', icon: '⛽', label: 'المحطات', roles: ['admin', 'manager'] },
-        { to: '/stations/setup-wizard', icon: '🧭', label: 'إعداد محطة', roles: ['admin', 'manager'] },
-        { to: '/employees', icon: '👥', label: 'الموظفين', roles: ['admin', 'manager'] },
-        { to: '/shifts/definitions', icon: '📋', label: 'تعريفات المناوبات', roles: ['admin', 'manager', 'supervisor'] },
       ],
     },
     {
       title: 'المالية',
       items: [
+        // Triage: the hub stays, plus the two daily-use entries. Cash,
+        // vouchers, POS, settlements, deposits, daily sales and fuel prices
+        // are reachable from the hub (and by direct URL) — they were noise
+        // next to the daily items.
         { to: '/finance', icon: '💰', label: 'المالية', roles: ['admin', 'manager', 'finance'] },
         { to: '/finance/income', icon: '📥', label: 'إدخال إيرادات' },
-        { to: '/finance/daily-sales', icon: '📊', label: 'المبيعات المالية' },
-        { to: '/finance/fuel-prices', icon: '💲', label: 'أسعار الوقود', roles: ['admin', 'manager'] },
-        { to: '/finance/cash', icon: '💵', label: 'النقدية', roles: ['admin', 'manager', 'finance'] },
-        { to: '/finance/vouchers', icon: '🎫', label: 'القسائم', roles: ['admin', 'manager', 'finance'] },
-        { to: '/finance/pos', icon: '🏧', label: 'الدفع الإلكتروني', roles: ['admin', 'manager', 'finance'] },
         { to: '/finance/expenses', icon: '🧾', label: 'المصروفات', roles: ['admin', 'manager', 'finance'] },
-        { to: '/finance/settlements', icon: '📑', label: 'تسوية القسائم', roles: ['admin', 'manager', 'finance'] },
-        { to: '/finance/deposits', icon: '🏦', label: 'الدفعات المقدمة', roles: ['admin', 'manager', 'finance'] },
       ],
     },
     {
       title: 'المخزون',
       items: [
-        { to: '/inventory/deliveries', icon: '🚚', label: 'الشحنات' },
-        { to: '/inventory/tank-readings', icon: '📖', label: 'قراءات الخزانات' },
-        { to: '/inventory/transfers', icon: '🔁', label: 'التحويلات', roles: ['admin', 'manager'] },
-        { to: '/inventory/shortages', icon: '⚠️', label: 'النقص', roles: ['admin', 'manager'] },
-        { to: '/inventory/fuel-reconciliation', icon: '📉', label: 'تسوية الوقود', roles: ['admin', 'manager', 'finance'] },
-        { to: '/inventory/requests', icon: '📝', label: 'طلبات التوريد' },
-        { to: '/inventory/shipment-schedules', icon: '📅', label: 'جدول الشحنات', roles: ['admin', 'manager', 'finance'] },
+        // Triage: one hub instead of 7 sidebar entries. Transfers,
+        // shortages, fuel-reconciliation, requests, shipment-schedules
+        // remain reachable from the hub and by direct URL.
+        { to: '/inventory', icon: '📦', label: 'المخزون' },
       ],
     },
     {
       title: 'التقارير',
       items: [
-        { to: '/reports/daily', icon: '📅', label: 'التقرير اليومي' },
-        { to: '/reports/daily-statement', icon: '📒', label: 'كشف الحساب اليومي', roles: ['admin', 'manager', 'finance'] },
-        { to: '/reports/monthly', icon: '📆', label: 'التقرير الشهري', roles: ['admin', 'manager', 'finance'] },
-        { to: '/reports/inventory', icon: '📦', label: 'المخزون والتوريد' },
-        { to: '/reports/balance', icon: '⚖️', label: 'تقرير الرصيد', roles: ['admin', 'manager', 'finance'] },
-        { to: '/reports/shipments', icon: '📋', label: 'تقرير الشحنات الشهري', roles: ['admin', 'manager', 'finance'] },
-        { to: '/reports/delivery-print', icon: '🖨️', label: 'تقرير التسليم للطباعة', roles: ['admin', 'manager', 'finance'] },
+        // Triage: one hub instead of 8 sidebar entries. Gaps stays here —
+        // it is an operational check, not a periodic report.
+        { to: '/reports', icon: '📊', label: 'التقارير' },
         { to: '/shifts/gaps', icon: '🔍', label: 'فجوات العدادات', roles: ['admin', 'manager', 'supervisor'] },
       ],
     },
@@ -276,7 +267,7 @@ const mobileNavItems = [
   { to: '/readings', icon: '🎯', label: 'القراءات' },
   { to: '/shifts', icon: '🔄', label: 'المناوبات' },
   { to: '/finance/income', icon: '💰', label: 'الإيرادات' },
-  { to: '/reports/daily', icon: '📊', label: 'التقارير' },
+  { to: '/reports', icon: '📊', label: 'التقارير' },
 ]
 
 const handleLogout = async () => {

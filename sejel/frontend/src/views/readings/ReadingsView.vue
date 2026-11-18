@@ -272,6 +272,8 @@ const prevEditError = ref('')
 const prevEditSaving = ref(false)
 
 const canEstablishBaseline = computed(() => auth.canCloseDay && !dayClosed.value)
+// Deletion-audit log is a manager-level view (same gating the sidebar used).
+const canViewAudit = computed(() => auth.isAdmin || ['manager', 'owner', 'finance'].includes(auth.role))
 // The previous value used to be offered only to the day-closing roles, only on
 // an open day, and only while it was still 0. A supervisor who inherited a
 // mistyped previous value had no way back except booking a 0-litre exception
@@ -782,6 +784,10 @@ async function closeDay() {
       </div>
       <div class="flex items-center gap-2 flex-wrap">
         <input v-model="date" type="date" data-testid="readings-date" class="border border-gray-300 rounded-lg px-3 py-2" @change="load" />
+        <!-- Triage: the deletion audit log left the sidebar (rare screen); it
+             lives here now, next to the data it audits. Manager-level only. -->
+        <router-link v-if="canViewAudit" to="/readings/deletions" data-testid="readings-deletions-link"
+          class="border border-gray-200 text-gray-500 px-3 py-2 rounded-lg text-sm hover:bg-gray-50">سجل الحذف</router-link>
         <!-- Station is selected globally from the sidebar (isolated per-station context) -->
         <!-- Closing the day books the day’s reconciliation, a manager-only action.
              A supervisor used to be offered this button, confirmed the dialog,

@@ -6,6 +6,19 @@ const routes = [
     component: () => import('../views/auth/LoginView.vue'),
     meta: { public: true },
   },
+  // Simple Mode — daily operator UI. Own layout, no sidebar, no Manager Mode
+  // chrome. Old routes remain fully working (Manager Mode).
+  {
+    path: '/simple',
+    component: () => import('../layouts/SimpleLayout.vue'),
+    children: [
+      { path: '', name: 'simple-home', component: () => import('../views/simple/SimpleHome.vue') },
+      { path: 'readings', name: 'simple-readings', component: () => import('../views/simple/SimpleReadings.vue') },
+      { path: 'income', name: 'simple-income', component: () => import('../views/simple/SimpleIncome.vue') },
+      { path: 'tank-reading', name: 'simple-tank-reading', component: () => import('../views/simple/SimpleTankReading.vue') },
+      { path: 'delivery', name: 'simple-delivery', component: () => import('../views/simple/SimpleDelivery.vue') },
+    ],
+  },
   {
     path: '/select-station/',
     component: () => import('../views/stations/SelectStationView.vue'),
@@ -87,6 +100,7 @@ const routes = [
       { path: 'finance/reconciliations/:id', name: 'reconciliation-detail', component: () => import('../views/finance/ReconciliationDetail.vue') },
 
       // Inventory
+      { path: 'inventory', name: 'inventory-hub', component: () => import('../views/inventory/InventoryHub.vue') },
       { path: 'inventory/deliveries', name: 'deliveries', component: () => import('../views/inventory/DeliveryList.vue') },
       { path: 'inventory/deliveries/create', name: 'delivery-create', component: () => import('../views/inventory/ShipmentForm.vue'), meta: { forceType: 'delivery' } },
       { path: 'inventory/deliveries/:id', name: 'delivery-detail', component: () => import('../views/inventory/DeliveryDetail.vue') },
@@ -104,6 +118,7 @@ const routes = [
       { path: 'inventory/shipments/:id', name: 'shipment-edit', component: () => import('../views/inventory/ShipmentForm.vue') },
 
       // Reports
+      { path: 'reports', name: 'report-hub', component: () => import('../views/reports/ReportHub.vue') },
       { path: 'reports/daily', name: 'report-daily', component: () => import('../views/reports/DailyReport.vue') },
       { path: 'reports/daily-statement', name: 'report-daily-statement', component: () => import('../views/reports/DailyStatementReport.vue') },
       { path: 'reports/monthly', name: 'report-monthly', component: () => import('../views/reports/MonthlyReport.vue') },
@@ -129,6 +144,7 @@ const router = createRouter({
 
 import { useAuthStore } from '../stores/auth'
 import { useStationStore } from '../stores/station'
+import { isManagerLevel } from '../utils/roles'
 
 router.beforeEach(async (to, from, next) => {
   if (to.meta.public) return next()
@@ -146,7 +162,19 @@ router.beforeEach(async (to, from, next) => {
     stationStore.ensureSelection()
   }
 
-  // Bound users or users with a selected station can proceed
+  // Landing split: supervisors/operators live in Simple Mode. Deep nav into
+  // the Manager-Mode routes bounces them to Simple Mode home — they reach old
+  // screens only through the Manager Mode link, which is rendered solely for
+  // manager-level roles. The station picker is exempt: an unbound operator
+  // must be able to pick a station, otherwise /simple -> /select-station/ ->
+  // /simple would loop forever.
+  const isStationPicker = to.path.startsWith('/select-station')
+  if (!to.path.startsWith('/simple') && !isStationPicker && !isManagerLevel(auth.user)) {
+    return next('/simple')
+  }
+
+  // When user logs in / uses app: require selecting a station to manage and view.
+  // All functions operate within the selected station (isolated entity).
   const needsStation = !auth.stationId && !stationStore.currentStation
   if (to.meta.selectStation) {
     if (!needsStation) return next(to.query.redirect || '/')

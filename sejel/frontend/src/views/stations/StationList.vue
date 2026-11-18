@@ -2,7 +2,11 @@
   <div>
     <div class="flex items-center justify-between mb-6">
       <h2 class="text-xl font-bold">المحطات</h2>
-      <div class="flex gap-2">
+      <div class="flex gap-2 flex-wrap">
+        <!-- employees left the sidebar (triage); this is their natural home -->
+        <router-link to="/employees" class="px-4 py-2 rounded-xl text-sm border border-gray-300 hover:bg-gray-50 transition">
+          الموظفين
+        </router-link>
         <router-link to="/stations/setup-wizard" class="bg-primary text-white px-4 py-2 rounded-xl text-sm hover:bg-primary/90 transition">
           ⚡ إعداد محطة جديدة
         </router-link>

@@ -18,7 +18,17 @@
           class="border border-red-300 text-red-700 px-4 py-2 rounded-lg text-sm hover:bg-red-50 disabled:opacity-50">
           ⚡ وضع الطوارئ (24 ساعة)
         </button>
+        <!-- setup-time screen, reachable here instead of the sidebar (triage) -->
+        <router-link to="/shifts/definitions" class="text-sm text-gray-500 hover:text-primary px-3 py-2">تعريفات المناوبات</router-link>
       </div>
+    </div>
+
+    <!-- One sidebar entry, two views: the flat list and the station-day screen. -->
+    <div class="flex gap-1 mb-4 bg-gray-100 rounded-lg p-1 text-sm w-fit">
+      <router-link to="/shifts" exact-active-class="bg-white shadow-sm text-gray-900"
+        class="px-3 py-1.5 rounded-md text-gray-500 hover:text-gray-900">القائمة</router-link>
+      <router-link to="/shifts/day" active-class="bg-white shadow-sm text-gray-900"
+        class="px-3 py-1.5 rounded-md text-gray-500 hover:text-gray-900">يوم المحطة</router-link>
     </div>
 
     <div v-if="genMsg" class="rounded-xl px-4 py-3 mb-4 text-sm" :class="genOk ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-amber-50 text-amber-800 border border-amber-200'">
@@ -163,7 +173,7 @@ const stationSel = ref(auth.stationId || '')
 const fuelMap = ref({})
 const employeeMap = ref({})
 
-const canSwitch = computed(() => auth.isAdmin || ['manager', 'finance'].includes(auth.role))
+const canSwitch = computed(() => auth.isAdmin || ['manager', 'owner', 'finance'].includes(auth.role))
 
 // /dashboard-station/ answers in one of two shapes. With a station selected it
 // returns that station's shifts and meters; with "all stations" selected (the

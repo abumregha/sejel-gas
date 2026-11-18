@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Phase 1 — Disk Investigation (sejel VPS)</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 24px; line-height: 1.5; color: #111; }
+    h1,h2,h3 { line-height: 1.2; }
+    pre { background: #f6f8fa; padding: 12px; overflow: auto; border: 1px solid #e5e7eb; border-radius: 6px; }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    table { border-collapse: collapse; width: 100%; margin: 12px 0 24px; font-size: 14px; }
+    th, td { border: 1px solid #d0d7de; padding: 8px; vertical-align: top; text-align: left; }
+    th { background: #f6f8fa; }
+    .note { background: #fff8c5; border: 1px solid #d4a72c; padding: 10px 12px; border-radius: 6px; }
+  </style>
+</head>
+<body>
+<h1>Phase 1 — Read-only disk investigation (sejel VPS)</h1>
+<p><strong>Date:</strong> 2026-11-14<br>
+<strong>Scope:</strong> Read-only investigation only. No files removed, no destructive actions taken.<br>
+<strong>Context:</strong> <code>/</code> is 39G total, 34G used, 4.7G available (88%). Sejel backups are ~125M total but disk pressure is driven by other consumers.</p>
+
+<h2>Commands &amp; raw output</h2>
+
+<h3>1) <code>du -xh / --max-depth=2 2>/dev/null | sort -rh | head -30</code></h3>
+<pre><code>34G	/
+9.0G	/var
+8.6G	/var/lib
+6.3G	/home
+5.7G	/root
+5.2G	/usr
+5.0G	/home/frappe
+2.6G	/root/.vscode-server
+2.4G	/usr/lib
+1.6G	/opt
+1.3G	/usr/local
+1.3G	/home/ibrahim
+1.2G	/root/.local
+941M	/opt/tiles
+658M	/usr/bin
+651M	/opt/geo-services
+637M	/root/.shokunin
+512M	/root/projects
+445M	/root/.config
+402M	/usr/share
+281M	/usr/src
+158M	/root/.duckdb
+154M	/var/cache
+147M	/var/backups
+140M	/var/log
+131M	/root/.cache
+111M	/boot
+104M	/usr/sbin
+95M	/usr/include
+84M	/usr/libexec</code></pre>
+
+<h3>2) <code>docker system df -v</code> (Docker installed)</h3>
+<pre><code>Images space usage:
+
+REPOSITORY                  TAG         IMAGE ID       CREATED        SIZE      SHARED SIZE   UNIQUE SIZE   CONTAINERS
+postgres                    16-alpine   cf78e76683b9   3 months ago   420MB     9.073MB       410.6MB       1
+ghcr.io/plankanban/planka   latest      125f45330853   3 months ago   591MB     9.073MB       581.6MB       1
+postgres                    15          6acdbbbcb182   3 months ago   633MB     0B            632.8MB       1
+mediagis/nominatim          4.4         b772911424d3   2 years ago    1.62GB    0B            1.616GB       1
+osrm/osrm-backend           latest      af5d4a83fb90   5 years ago    151MB     0B            150.8MB       1
+
+Containers space usage:
+
+CONTAINER ID   IMAGE                              COMMAND                  LOCAL VOLUMES   SIZE      CREATED        STATUS                  NAMES
+27c704dec1be   ghcr.io/plankanban/planka:latest   "docker-entrypoint.s…"   1               8.66MB    2 months ago   Up 2 months (healthy)   planka-planka-1
+c3e098321a5c   postgres:16-alpine                 "docker-entrypoint.s…"   1               20.5kB    2 months ago   Up 2 months (healthy)   planka-postgres-1
+43957b641a83   osrm/osrm-backend                  "osrm-routed --algor…"   0               8.19kB    3 months ago   Up 10 days              osrm
+41bd81882311   mediagis/nominatim:4.4             "/app/start.sh"          1               2.78GB    3 months ago   Up 3 months             nominatim
+2b42fc39afc7   postgres:15                        "docker-entrypoint.s…"   1               20.5kB    3 months ago   Up 3 months             nominatim-db
+
+Local Volumes space usage:
+
+VOLUME NAME        LINKS     SIZE
+nominatim-pgdata   1         48MB
+nominatim-data     1         0B
+planka_data        1         0B
+planka_db-data     1         50.43MB
+
+Build cache usage: 0B
+
+CACHE ID   CACHE TYPE   SIZE      CREATED   LAST USED   USAGE     SHARED</code></pre>
+
+<p><strong><code>docker ps -s --no-trunc</code></strong></p>
+<pre><code>CONTAINER ID                                                       IMAGE                              COMMAND                                                CREATED        STATUS                  PORTS                                NAMES                             SIZE
+27c704dec1be443b0194f0df7fa8e3322067c9a3fca7532c12bc2651e397f4d6   ghcr.io/plankanban/planka:latest   "docker-entrypoint.sh ./start.sh"                      2 months ago   Up 2 months (healthy)   127.0.0.1:1337->1337/tcp             planka-planka-1                   8.66MB (virtual 464MB)
+c3e098321a5c1e7b1214e303a28ebcf18714851bcf245b05329f9485174d7aee   postgres:16-alpine                 "docker-entrypoint.sh postgres"                        2 months ago   Up 2 months (healthy)   5432/tcp                             planka-postgres-1                 20.5kB (virtual 303MB)
+43957b641a8332b143dd06d3594b529064f27857a4f019c7ffc44bdae9742fe0   osrm/osrm-backend                  "osrm-routed --algorithm ch /data/libya-latest.osrm"   3 months ago   Up 10 days              127.0.0.1:5000->5000/tcp             osrm                              8.19kB (virtual 111MB)
+41bd8188231143defda07afb2c1fea2ef5bb1224a30ac91ef4108346f5262124   mediagis/nominatim:4.4             "/app/start.sh"                                        3 months ago   Up 3 months             5432/tcp, 127.0.0.1:8080->8080/tcp   nominatim                         2.78GB (virtual 3.99GB)
+2b42fc39afc77f5fe27b24ab20d30c3359df58ef9ee98219ce96ab18c03c1906   postgres:15                        "docker-entrypoint.sh postgres"                        3 months ago   Up 3 months             127.0.0.1:5433->5432/tcp             nominatim-db,nominatim/database   20.5kB (virtual 469MB)</code></pre>
+
+<h3>3) <code>journalctl --disk-usage</code> / <code>du -sh /var/log /var/cache/apt /var/lib/docker /home /root /tmp</code></h3>
+<pre><code>Archived and active journals take up 88.0M in the file system.
+---
+140M	/var/log
+137M	/var/cache/apt
+5.1G	/var/lib/docker
+6.3G	/home
+5.7G	/root
+14M	/tmp</code></pre>
+
+<h3>4) Containerd / Docker / swap / key file breakdowns</h3>
+<p><strong><code>du -sh /var/lib/docker/*</code></strong></p>
+<pre><code>5.0G	/var/lib/docker/rootfs
+95M	/var/lib/docker/volumes
+2.0M	/var/lib/docker/containers
+404K	/var/lib/docker/buildkit
+84K	/var/lib/docker/network
+8.0K	/var/lib/docker/tmp
+8.0K	/var/lib/docker/plugins
+4.0K	/var/lib/docker/swarm
+4.0K	/var/lib/docker/runtimes
+4.0K	/var/lib/docker/engine-id</code></pre>
+
+<p><strong><code>du -sh /var/lib/containerd/*</code></strong></p>
+<pre><code>5.0G	/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs
+816M	/var/lib/containerd/io.containerd.content.v1.content
+1.8M	/var/lib/containerd/io.containerd.metadata.v1.bolt
+28K	/var/lib/containerd/io.containerd.runtime.v2.task
+8.0K	/var/lib/containerd/io.containerd.snapshotter.v1.native
+8.0K	/var/lib/containerd/io.containerd.grpc.v1.introspection
+4.0K	/var/lib/containerd/tmpmounts
+4.0K	/var/lib/containerd/io.containerd.snapshotter.v1.erofs
+4.0K	/var/lib/containerd/io.containerd.snapshotter.v1.btrfs
+4.0K	/var/lib/containerd/io.containerd.snapshotter.v1.blockfile
+4.0K	/var/lib/containerd/io.containerd.sandbox.controller.v1.shim</code></pre>
+
+<p><strong><code>du -sh /var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots</code></strong></p>
+<pre><code>5.0G	/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots</code></pre>
+
+<p><strong>Swap</strong></p>
+<pre><code>ls -lh /swapfile /swapfile2
+-rw------- 1 root root 2.0G Jul  1 08:12 /swapfile
+-rw------- 1 root root 4.0G Aug 19 08:53 /swapfile2
+
+swapon --show
+NAME       TYPE SIZE USED PRIO
+/swapfile  file   2G 1.1G   -2
+/swapfile2 file   4G   0B   -3</code></pre>
+
+<p><strong>Specific large files (<code>ls -lh</code>)</strong></p>
+<pre><code>-rwxr-xr-x 1 ibrahim ibrahim 224M Oct 30 20:10 /home/ibrahim/.gemini/bin/agy
+-rw------- 1 ibrahim ibrahim 325M Nov  7 03:57 /home/ibrahim/.local/share/opencode/opencode.db
+-rwxr-xr-x 1 root    root    269M Nov 14 04:53 /root/.local/bin/agy
+-rwxr-xr-x 1 root    root    267M Nov 12 08:51 /root/.local/bin/agy.1794632003877903228.old
+-rw------- 1 root    root    612M Nov 14 06:02 /root/.local/share/opencode/opencode.db
+-rw-r--r-x 1 root    root    315M Nov  3 02:43 /root/.shokunin/memory/chroma_db/b173a015-e7a1-42ad-b8e6-c1ae40bcd9d9/data_level0.bin
+-rw-r--r-x 1 root    root    265M Nov 14 06:12 /root/.shokunin/memory/chroma_db/chroma.sqlite3
+-r--r--r-- 1 root    root    383M Aug  5 06:55 /var/lib/containerd/io.containerd.content.v1.content/blobs/sha256/49591c29dd2581d518aec207f22ff96f64160ad2c97637a0617c68e351b9ac1d</code></pre>
+
+<p><strong>Large files on root fs (&gt;200M, <code>find / -xdev -type f -size +200M</code>)</strong></p>
+<pre><code>/swapfile
+/home/ibrahim/.gemini/bin/agy
+/home/ibrahim/.local/share/opencode/opencode.db
+/home/ibrahim/.local/share/claude/versions/2.1.303
+/opt/tiles/data/sources/natural_earth_vector.sqlite.zip
+/usr/lib/node_modules/@opencode/cli/node_modules/@opencode/cli-linux-x64-baseline-musl/bin/opencode
+/usr/lib/node_modules/@opencode/cli/node_modules/@opencode/cli-linux-x64-baseline/bin/opencode
+/usr/lib/node_modules/@opencode/cli/node_modules/@opencode/cli-linux-x64/bin/opencode
+/usr/lib/node_modules/@opencode/cli/node_modules/@opencode/cli-linux-x64-musl/bin/opencode
+/usr/lib/node_modules/@opencode/cli/bin/opencode.exe
+/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/32/fs/var/lib/postgresql/14/main/base/16386/19422
+/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/32/fs/var/lib/postgresql/14/main/base/16386/19429
+/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/32/fs/var/lib/postgresql/14/main/base/16386/19427
+/var/lib/containerd/io.containerd.content.v1.content/blobs/sha256/49591c29dd2581d518aec207f22ff96f64160ad2c97637a0617c68e351b9ac1d
+/swapfile2
+/root/.shokunin/memory/chroma_db/chroma.sqlite3
+/root/.shokunin/memory/chroma_db/b173a015-e7a1-42ad-b8e6-c1ae40bcd9d9/data_level0.bin
+/root/.local/share/opencode/opencode.db
+/root/.local/bin/agy
+/root/.local/bin/agy.1794632003877903228.old</code></pre>
+
+<h3>5) Benches / IDE caches / snaps / apt / logs / core dumps / node_modules</h3>
+<p><strong><code>/home/frappe</code> benches</strong></p>
+<pre><code>du -sh /home/frappe/*
+2.0G	/home/frappe/diwan-base
+1.6G	/home/frappe/erpnext-base
+1.3G	/home/frappe/bench
+1.5M	/home/frappe/panel
+160K	/home/frappe/diwan-p0-tenancy-2026-11-08.bundle
+8.0K	/home/frappe/logs
+8.0K	/home/frappe/diwan.erpnext.local
+...
+
+Breakdown:
+572M	/home/frappe/erpnext-base/env
+1.4G	/home/frappe/erpnext-base/apps
+49M	/home/frappe/erpnext-base/sites
+571M	/home/frappe/diwan-base/env
+1.4G	/home/frappe/diwan-base/apps
+37M	/home/frappe/diwan-base/sites
+703M	/home/frappe/bench/env
+517M	/home/frappe/bench/apps
+23M	/home/frappe/bench/sites
+6.2M	/home/frappe/bench/logs
+
+/home/frappe/bench/archived: 780K</code></pre>
+
+<p><strong>IDE/tool caches &amp; related</strong></p>
+<pre><code>/root/.vscode-server:
+2.0G	/root/.vscode-server/cli
+465M	/root/.vscode-server/extensions
+151M	/root/.vscode-server/data
+32M	/root/.vscode-server/code-4fe60c8b1cdac1c4c174f2fb180d0d758272d713
+
+/home/ibrahim/.antigravity-ide-server 221M
+/home/ibrahim/.local/share/claude     273M
+/home/frappe/erpnext-base/apps/hrms/frontend/node_modules 549M</code></pre>
+
+<p><strong>Snaps / apt / journal</strong></p>
+<pre><code>1.6G	/snap
+Name    Version        Rev    Tracking       Publisher    Notes
+core20  20260410       2866   latest/stable  canonical**  base,disabled
+core20  20260901       2922   latest/stable  canonical**  base
+core22  20260410       2437   latest/stable  canonical**  base,disabled
+core22  20260824       2955   latest/stable  canonical**  base
+lxd     5.0.9-ea18dad  40575  5.0/stable/…   canonical**  -
+snapd   2.77.1         28254  latest/stable  canonical**  snapd,disabled
+snapd   2.78           28332  latest/stable  canonical**  snapd
+
+APT cache: 40K  /var/cache/apt/archives
+Journal:   88.0M archived/active in file system</code></pre>
+
+<p><strong>Checks (logs/cores/dumps/backup dirs)</strong></p>
+<pre><code>Large log files in /var/log (&gt;50M): none found
+Core dump files (*.core/core*): none found as files (matches were code dirs named "core")
+/var/backups/sejel: 122M (db: 9 dumps ~1.3M each + pre_restore_20261003_0921.dump 1.0M; files: 30-day tar.gz retention)
+/home/frappe/bench/sites/sejel.local/private/backups: 3.3M (4 recent backup sets)</code></pre>
+
+<h2>Ranked table — major consumers</h2>
+<table>
+  <thead>
+    <tr><th>Rank</th><th>Path</th><th>Size (evidence)</th><th>What it is</th><th>Safe to remove?</th><th>Risk / notes</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>1</td><td><code>/var/lib/containerd</code> (overlayfs snapshots ~5.0G, content ~816M) &amp; <code>/var/lib/docker</code> (rootfs ~5.0G reported)</td><td>~5.8G attributed to containerd dirs; Docker/containerd store for running containers</td><td>Container images/layers + writable layers for <strong>nominatim</strong> (2.78GB writable, <code>mediagis/nominatim:4.4</code> 1.62GB, Up 3 months), osrm, planka, postgres containers</td><td><strong>Needs my decision</strong></td><td>Removing/pruning can stop or break geo/planka services and delete container data/layers. Only safe via deliberate <code>docker</code> cleanup of unused images/containers/volumes/build cache you confirm are unneeded; do <strong>not</strong> prune blindly while services are in use.</td></tr>
+    <tr><td>2</td><td><code>/swapfile2</code></td><td>4.0G (USED 0B, prio -3)</td><td>Secondary swap file, currently unused (<code>swapon --show</code>)</td><td><strong>Needs my decision</strong></td><td>Frees ~4G if removed, but reduces total swap capacity (swapfile 2G remains, 1.1G used now). Must <code>swapoff</code> before removal and update <code>/etc/fstab</code> if referenced; removing needed swap can cause OOM under memory pressure.</td></tr>
+    <tr><td>3</td><td><code>/root/.vscode-server</code> (cli 2.0G, extensions 465M, data 151M, code-* 32M)</td><td>~2.6G</td><td>VS Code Remote server binaries/extensions/cache for root sessions</td><td><strong>Needs my decision</strong> (often yes for old/unused versions)</td><td>Deleting active server files can break current/future remote VS Code sessions until reinstalled; may remove extensions/settings caches. Verify no active root VS Code session and which subdirs (old CLI hashes) are unused.</td></tr>
+    <tr><td>4</td><td>Frappe benches: <code>/home/frappe/diwan-base</code> 2.0G, <code>/home/frappe/erpnext-base</code> 1.6G, <code>/home/frappe/bench</code> 1.3G</td><td>~4.9G total</td><td>App code, Python envs, node_modules (e.g. hrms frontend node_modules 549M), sites data/logs</td><td><strong>No (generally)</strong> / selective <strong>needs my decision</strong></td><td><code>erpnext-base</code> and <code>bench</code> host active Frappe sites (sejel runs from <code>/home/frappe/bench</code>, site <code>sejel.local</code>); <code>diwan-base</code> appears separate. Deleting envs/apps/sites breaks services. Possible selective cleanup (old build artifacts/caches/node_modules if reproducible) requires knowing what’s unused — <strong>needs decision</strong>.</td></tr>
+    <tr><td>5</td><td><code>/snap</code> (disabled revisions: core20 rev 2866, core22 rev 2437, snapd rev 28254)</td><td>1.6G total</td><td>Snap packages; multiple revisions kept</td><td><strong>Needs my decision</strong> (likely yes for disabled old revisions)</td><td><code>snap remove &lt;name&gt; --revision=&lt;rev&gt;</code> for disabled revisions usually safe and can reclaim space, but verify revisions not in use/needed for rollback.</td></tr>
+    <tr><td>6</td><td><code>/root/.local/share/opencode/opencode.db</code> (612M), <code>/home/ibrahim/.local/share/opencode/opencode.db</code> (325M)</td><td>937M combined</td><td>OpenCode local databases (root and ibrahim)</td><td><strong>Needs my decision</strong></td><td>App/user data; deleting loses local history/state for those users.</td></tr>
+    <tr><td>7</td><td><code>/root/.shokunin/memory/chroma_db</code> (chroma.sqlite3 265M, data_level0.bin 315M)</td><td>~580M</td><td>Shokunin memory/Chroma vector DB</td><td><strong>No</strong> (likely needed) unless you confirm disposable</td><td>Removing breaks stored memory/context for that tooling.</td></tr>
+    <tr><td>8</td><td><code>/root/.local/bin/agy</code> (269M) + <code>/root/.local/bin/agy.1794632003877903228.old</code> (267M), <code>/home/ibrahim/.gemini/bin/agy</code> (224M)</td><td>760M combined</td><td><code>agy</code> binaries (current + old/duplicate copies)</td><td><strong>Needs my decision</strong> (old <code>.old</code> copy likely removable)</td><td><code>/root/.local/bin/agy.1794632003877903228.old</code> appears to be a previous version — plausible to remove if not needed; confirm active binary/path usage before deleting current copies.</td></tr>
+    <tr><td>9</td><td><code>/opt/tiles</code> (941M, incl. natural_earth_vector.sqlite.zip &gt;200M)</td><td>941M</td><td>Tile/geo source data</td><td><strong>Needs my decision</strong></td><td>May be required by geo services (OSRM/Nominatim/tiles stack). Removing can break map/routing features.</td></tr>
+    <tr><td>10</td><td><code>/var/backups/sejel</code> 122M, <code>sites/sejel.local/private/backups</code> 3.3M</td><td>~125M</td><td>Sejel DB/file/bench backups (subject to retention scripts)</td><td><strong>No</strong> (until Phase 4 verified &amp; you approve Phase 5)</td><td>Backups to protect/upload first; do not prune per ground rules.</td></tr>
+    <tr><td>11</td><td><code>/var/log</code> 140M (journals 88M)</td><td>140M</td><td>System/app logs, journald</td><td><strong>Needs my decision</strong> (small gain)</td><td><code>journalctl --vacuum-*</code> can free some space but removes logs; check retention/compliance needs.</td></tr>
+    <tr><td>12</td><td><code>/var/cache/apt/archives</code> 40K</td><td>40K</td><td>APT package cache</td><td><strong>Yes</strong> (low risk) but minimal gain</td><td><code>apt-get clean</code> generally safe; frees very little here.</td></tr>
+  </tbody>
+</table>
+
+<p><strong>Notable negatives/checks:</strong> no large <code>/var/log</code> files &gt;50M found; no core dump files found; <code>/home/frappe/bench/archived</code> only 780K; no obvious stale multi-GB DB dumps outside known backup locations.</p>
+
+<h2>Phase 1 status</h2>
+<ul>
+  <li><strong>Read-only investigation complete</strong> with raw evidence above. <strong>No files removed, no destructive actions taken.</strong></li>
+  <li>Biggest real consumers are <strong>Docker/containerd (~5–6G, driven by nominatim writable layer/images/layers)</strong> and <strong>unused swapfile2 (4G)</strong>; secondary gains possible from IDE caches, old snap revisions, and old/duplicate binaries — all <strong>need your explicit decision</strong>.</li>
+</ul>
+
+<h2>Blocked / waiting for your approval &amp; input (per task ground rules)</h2>
+<div class="note">
+<ol>
+  <li><strong>Phase 1 cleanup approvals (if any):</strong> for each item you want removed, reply with explicit approval. Before any destructive action I will list the exact command(s), exact targets, and estimated space freed, and ask again before executing.</li>
+  <li><strong>Phase 2+ cannot start yet (placeholders unresolved):</strong> provide the actual offsite target details to proceed in order:
+    <ul>
+      <li><strong>Provider/endpoint/bucket:</strong> <code>[PROVIDER, e.g. Backblaze B2] / endpoint [ENDPOINT] / bucket [BUCKET]</code></li>
+      <li><strong>Credentials:</strong> will you place them in <code>/root/.config/sejel-backup/env</code> yourself (preferred), or should I provide exact variable/instruction templates for you to fill? (I will not print secrets.)</li>
+      <li><strong>Healthcheck:</strong> <code>[HEALTHCHECKS URL, or "skip for now"]</code></li>
+    </ul>
+  </li>
+</ol>
+</div>
+</body>
+</html>

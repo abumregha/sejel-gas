@@ -30,6 +30,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../../stores/auth'
+import { landingPath } from '../../utils/roles'
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -41,7 +42,7 @@ const handleLogin = async () => {
   error.value = ''
   try {
     await auth.login(username.value, password.value)
-    router.push('/')
+    router.push(landingPath(auth.user))
   } catch (e) {
     error.value = e.response?.data?.error || 'خطأ في بيانات الدخول'
   }

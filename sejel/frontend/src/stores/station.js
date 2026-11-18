@@ -26,7 +26,7 @@ export const useStationStore = defineStore('station', {
     canSwitch(state) {
       const auth = useAuthStore()
       if (auth.stationId) return false
-      return (auth.isAdmin || ['manager', 'finance'].includes(auth.role)) && state.stations.length > 1
+      return (auth.isAdmin || ['manager', 'owner', 'finance'].includes(auth.role)) && state.stations.length > 1
     },
     hasSelection(state) {
       return !!state.currentStation
