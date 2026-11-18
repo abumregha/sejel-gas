@@ -141,6 +141,39 @@ All are frontend-only and reversible.
 
 ---
 
+## 10. Round 2 — M3 + S2 (2026-11-18, verified on :8007)
+
+### M3: Dashboard quick actions for the four daily tasks
+- **File:** `components/dashboard/QuickActions.vue`
+- **Change:** Added a prominent 2×2 row of big blue buttons at the top of the
+  "actions سريعة" panel — readings, income, tank reading, delivery — so the four
+  things an operator does every day have **one** path instead of 2–3 scattered
+  ones (the readings banner, the tank header, and 11 small buttons).
+- **Result:** verified on `:8007` — all 4 buttons render for admin and navigate to
+  the right routes (`/readings`, `/finance/income`,
+  `/inventory/tank-readings?station=…`, `/inventory/shipments/create?type=delivery&station=…`).
+
+### S2: Shift name/status on SimpleHome
+- **File:** `views/simple/SimpleHome.vue`
+- **Change:** Added a `simple-day-shift` strip above the Today summary showing
+  the auto-resolved shift name and status (جارة / بانتظار الإقفال / مغلقة).
+  Before the first reading it shows "لم تُبدأ بعد / انتظار أول قراءة" instead of
+  nothing, so the operator always knows where the next save will land.
+
+### E2E suite made idempotent (was 26/27, now **28/28 ALL PASS**)
+The suite is **stateful**: the operator is unbound, so their dashboard defaults to
+whichever station the last run left readings on. A supervisor cannot reset it
+(Meter PUT and reading DELETE are 403 — the point of B1), so the suite now has an
+admin pre-step that, on the disposable `:8007` site only, zeroes every meter
+counter, deletes every reading, and cascades-deletes every day-close Shift
+(clearing its linked Cash Collection / Voucher Record / POS Record / Reconciliation
+/ Shift Fuel Summary first, since the Shift DELETE is 417 LinkExistsError otherwise).
+The opening-badge assertion was also made idempotent: it counts only unsaved guns
+whose previous reading is empty or `0` (the reset state), matching the app's own
+`!g.prev` rule.
+
+---
+
 ## 8. Reproduce / verify / deploy
 
 ```bash
